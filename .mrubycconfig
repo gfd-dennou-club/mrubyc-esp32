@@ -1,9 +1,8 @@
 ---
-target: esp32
-mruby_version: mruby-1.4.1
-cruby_version: 2.6.1
-mrubyc_repo_dir: .mrubyc
-mrubyc_src_dir: components/mrubyc/mrubyc_src
-mrubyc_mrblib_dir: components/mrubyc/mrubyc_mrblib
-mruby_lib_dir: mrblib
-...
+test_dir: test
+test_tmp_dir: test/tmp
+mrubyc_src_dir: src
+mrubyc_mrblib_dir: mrblib
+mruby_lib_dir: test
+mruby_version: mruby-2.1.0
+cruby_version: 2.7.0

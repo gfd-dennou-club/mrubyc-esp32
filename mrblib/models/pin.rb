@@ -10,16 +10,16 @@ class Pin
   def initialize(pin, inout, pullup)
     @pin = pin
     
-    if (inout == OUT)
+    if (inout == Pin::OUT)
       GPIO.set_mode_output(@pin)
       puts "GPIO output mode #{@pin}"
     end
     
-    if (inout == IN)
+    if (inout == Pin::IN)
       GPIO.set_mode_input(@pin)
       puts "GPIO input mode #{@pin}"
       
-      if (pullup == PULL_UP)
+      if (pullup == Pin::PULL_UP)
         GPIO.set_pullup(@pin)
         puts "GPIO pull_up #{@pin}"
       end
