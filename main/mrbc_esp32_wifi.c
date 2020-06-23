@@ -30,9 +30,10 @@ static WIFI_CONNECTION_STATUS connection_status = DISCONNECTED;
 /*! WiFi イベントハンドラ
   各種 WiFi イベントが発生した際に呼び出される
 */
-static esp_err_t wifi_event_handler(void* ctx, system_event_t* event)
+static void wifi_event_handler(void* ctx, esp_event_base_t event_base,
+                                int32_t event_id, void* event_data)
 {
-  switch (event->event_id) {
+  switch (event_id) {
     // IP Address が取得できた
     case SYSTEM_EVENT_STA_GOT_IP:
       ESP_LOGI(tag, "Got an IP ... ready to go!");
@@ -67,8 +68,6 @@ static esp_err_t wifi_event_handler(void* ctx, system_event_t* event)
       esp_wifi_connect();
       break;
   }
-
-  return ESP_OK;
 }
 
 
@@ -101,7 +100,7 @@ mrbc_esp32_wifi_start(mrb_vm* vm, mrb_value* v, int argc)
 {
   ESP_LOGI(tag, "WiFi started.");
   //  tcpip_adapter_init();
-  ESP_ERROR_CHECK( esp_event_loop_init(wifi_event_handler, NULL) );
+  ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL));
   ESP_ERROR_CHECK( esp_wifi_start() );
 }
 
