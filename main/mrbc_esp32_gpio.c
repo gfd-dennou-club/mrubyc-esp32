@@ -86,6 +86,27 @@ mrbc_esp32_gpio_set_floating(mrb_vm* vm, mrb_value* v, int argc)
   gpio_set_pull_mode(pin, GPIO_FLOATING);
 }
 
+/*! メソッド set_hold_enable(pin) 本体 : wrapper for gpio_hold_en
+
+  @param pin GPIO ピン番号
+*/
+static void
+mrbc_esp32_gpio_set_hold_enable(mrb_vm* vm, mrb_value* v, int argc)
+{
+  int pin = GET_INT_ARG(1);
+  gpio_hold_en(pin);
+}
+
+/*! メソッド set_hold_enable(pin) 本体 : wrapper for gpio_hold_dis
+
+  @param pin GPIO ピン番号
+*/
+static void
+mrbc_esp32_gpio_set_hold_disable(mrb_vm* vm, mrb_value* v, int argc)
+{
+  int pin = GET_INT_ARG(1);
+  gpio_hold_dis(pin);
+}
 
 /*! メソッド set_mode_input(pin) 本体 : wrapper for gpio_set_direction
   GPIO_MODE_INPUT 専用
@@ -156,6 +177,8 @@ mrbc_mruby_esp32_gpio_gem_init(struct VM* vm)
 GPIO.set_pullup(pin)
 GPIO.set_pulldown(pin)
 GPIO.set_floating(pin)
+GPIO.set_hold_enable(pin)
+GPIO.set_hold_disable(pin)
 GPIO.set_mode_input(pin)
 GPIO.set_mode_output(pin)
 GPIO.set_level(pin, level)
@@ -168,6 +191,8 @@ GPIO.get_level(pin)
   mrbc_define_method(vm, mrbc_class_esp32_gpio, "set_pullup",      mrbc_esp32_gpio_set_pullup);
   mrbc_define_method(vm, mrbc_class_esp32_gpio, "set_pulldown",    mrbc_esp32_gpio_set_pulldown);
   mrbc_define_method(vm, mrbc_class_esp32_gpio, "set_floating",    mrbc_esp32_gpio_set_floating);
+  mrbc_define_method(vm, mrbc_class_esp32_gpio, "set_hold_enable", mrbc_esp32_gpio_set_hold_enable);
+  mrbc_define_method(vm, mrbc_class_esp32_gpio, "set_hold_disable",mrbc_esp32_gpio_set_hold_disable);
   mrbc_define_method(vm, mrbc_class_esp32_gpio, "set_mode_input",  mrbc_esp32_gpio_set_mode_input);
   mrbc_define_method(vm, mrbc_class_esp32_gpio, "set_mode_output", mrbc_esp32_gpio_set_mode_output);
   mrbc_define_method(vm, mrbc_class_esp32_gpio, "set_level",       mrbc_esp32_gpio_set_level);

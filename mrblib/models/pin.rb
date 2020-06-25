@@ -6,28 +6,21 @@ class Pin
   IN  = 1
   PULL_UP = 2
   PULL_DOWN = 3
+  PULL_HOLD = 4
 
   # 初期化
-  def initialize(pin, inout, pull_mode)
+  def initialize(pin, mode, pull_mode)
     @pin = pin
     
-    if (inout == Pin::OUT)
+    if (mode == Pin::OUT)
       GPIO.set_mode_output(@pin)
       puts "GPIO output mode #{@pin}"
-    end
-    
-    if (inout == Pin::IN)
+    elsif (mode == Pin::IN)
       GPIO.set_mode_input(@pin)
       puts "GPIO input mode #{@pin}"
-      
-      if (pull_mode == Pin::PULL_UP)
-        GPIO.set_pullup(@pin)
-        puts "GPIO pull_up #{@pin}"
-      elsif (pull_mode == Pin::PULL_DOWN)
-        GPIO.set_pulldown(@pin)
-        puts "GPIO pull_down #{@pin}"
-      end
     end
+
+    set_pull_mode(pull_mode)
   end
 
   # ピンを "on" (high) レベルに設定
@@ -47,4 +40,21 @@ class Pin
     GPIO.get_level(@pin)
   end
 
+  # pullmode を設定 hold を解除したければ "nil" を渡す
+  def set_pull_mode(pull_mode)
+    case pull_mode
+    when Pin::PULL_UP then
+      GPIO.set_pullup(@pin)
+      puts "GPIO pull_up #{@pin}"
+    when Pin::PULL_DOWN then
+      GPIO.set_pulldown(@pin)
+      puts "GPIO pull_down #{@pin}"
+    when Pin::PULL_HOLD then
+      GPIO.set_hold_enable(@pin)
+      puts "GPIO hold_enable #{@pin}"
+    else
+      GPIO.set_hold_disable(@pin)
+      puts "GPIO hold_disable #{@pin}"
+    end
+  end
 end
