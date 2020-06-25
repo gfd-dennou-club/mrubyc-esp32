@@ -62,6 +62,17 @@ mrbc_esp32_gpio_set_pullup(mrb_vm* vm, mrb_value* v, int argc)
   gpio_set_pull_mode(pin, GPIO_PULLUP_ONLY);
 }
 
+/*! メソッド set_pulldown(pin) 本体 : wrapper for gpio_set_pull_mode
+  GPIO_PULLUP_DOWN 専用
+
+  @param pin GPIO ピン番号
+*/
+static void
+mrbc_esp32_gpio_set_pulldown(mrb_vm* vm, mrb_value* v, int argc)
+{
+  int pin = GET_INT_ARG(1);
+  gpio_set_pull_mode(pin, GPIO_PULLDOWN_ONLY);
+}
 
 /*! メソッド set_floating(pin) 本体 : wrapper for gpio_set_pull_mode
   GPIO_FLOATING 専用
@@ -143,6 +154,7 @@ mrbc_mruby_esp32_gpio_gem_init(struct VM* vm)
 {
 /*
 GPIO.set_pullup(pin)
+GPIO.set_pulldown(pin)
 GPIO.set_floating(pin)
 GPIO.set_mode_input(pin)
 GPIO.set_mode_output(pin)
@@ -154,6 +166,7 @@ GPIO.get_level(pin)
 
   // 各メソッド定義（mruby/c ではインスタンスメソッドをクラスメソッドとしても呼び出し可能）
   mrbc_define_method(vm, mrbc_class_esp32_gpio, "set_pullup",      mrbc_esp32_gpio_set_pullup);
+  mrbc_define_method(vm, mrbc_class_esp32_gpio, "set_pulldown",    mrbc_esp32_gpio_set_pulldown);
   mrbc_define_method(vm, mrbc_class_esp32_gpio, "set_floating",    mrbc_esp32_gpio_set_floating);
   mrbc_define_method(vm, mrbc_class_esp32_gpio, "set_mode_input",  mrbc_esp32_gpio_set_mode_input);
   mrbc_define_method(vm, mrbc_class_esp32_gpio, "set_mode_output", mrbc_esp32_gpio_set_mode_output);

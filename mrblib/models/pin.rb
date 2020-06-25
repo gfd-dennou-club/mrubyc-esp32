@@ -5,9 +5,10 @@ class Pin
   OUT = 0
   IN  = 1
   PULL_UP = 2
+  PULL_DOWN = 3
 
   # 初期化
-  def initialize(pin, inout, pullup)
+  def initialize(pin, inout, pullmode)
     @pin = pin
     
     if (inout == OUT)
@@ -19,9 +20,12 @@ class Pin
       GPIO.set_mode_input(@pin)
       puts "GPIO input mode #{@pin}"
       
-      if (pullup == PULL_UP)
+      if (pullmode == PULL_UP)
         GPIO.set_pullup(@pin)
         puts "GPIO pull_up #{@pin}"
+      elsif (pullmode == PULL_DOWN)
+        GPIO.set_pulldown(@pin)
+        puts "GPIO pull_down #{@pin}"
       end
     end
   end
