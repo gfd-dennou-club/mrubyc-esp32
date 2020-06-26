@@ -15,7 +15,6 @@ class ADC
   
   # 初期化
   def initialize(pin, atten, width)
-
     CHANNEL_ALL = {
       # ADC1
       "GPIO36" => 0, "GPIO37" => 1, "GPIO38" => 2, "GPIO39" => 3,
@@ -26,7 +25,7 @@ class ADC
       "GPIO25" => 8, "GPIO26" => 9
     }
 
-    @channel = CHANNEL_ALL["GPIO#{pin}"]
+    @channel = ADC::CHANNEL_ALL["GPIO#{pin}"]
     @atten = atten
     @width = width       
     @unit  = 1
