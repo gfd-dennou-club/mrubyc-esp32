@@ -17,7 +17,7 @@ gpio-2:
 	ln -sf master.rb.gpio-2 ./mrblib/loops/master.rb
 
 i2c:
-	ln -sf master.rb.i2c./mrblib/loops/master.rb
+	ln -sf master.rb.i2c ./mrblib/loops/master.rb
 
 pwm:
 	ln -sf master.rb.pwm ./mrblib/loops/master.rb
