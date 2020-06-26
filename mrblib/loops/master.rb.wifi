@@ -2,7 +2,7 @@
 
 WiFi.init()
 #WiFi.setup_ent_peap("id", "ssid", "username", "password")
-WiFi.setup_psk("itoc_g", "itoc2015hello")
+WiFi.setup_psk("ssid", "key")
 WiFi.start()
 
 sleep 3
