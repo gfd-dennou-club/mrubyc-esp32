@@ -26,9 +26,21 @@ class Pin
   IRQ_HIGH_LEVEL = 14
 
   # 初期化
-  def initialize(pin, mode, pull_mode)
+  def initialize(pin, mode = -1, pull_mode = -1, value = -1)
     @pin = pin
     
+    init(mode, pull_mode, value)
+  end
+
+  # コンストラクタ外からの再初期化
+  def init(mode = -1, pull_mode = -1, value = -1)
+    if(mode == Pin::OUT || mode == Pin::OPEN_DRAIN)
+      if(value == 0)
+        off()
+      elsif(value == 1)
+        on()
+      end
+    end
     set_mode(mode)
     set_pull_mode(pull_mode)
   end
