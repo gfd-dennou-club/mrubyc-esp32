@@ -2,11 +2,28 @@
 class Pin
 
   # 定数
+  # for mode
   OUT = 0
   IN  = 1
-  PULL_UP = 2
-  PULL_DOWN = 3
-  PULL_HOLD = 4
+  OPEN_DRAIN = 2
+  ALT = 3
+  ALT_OPEN_DRAIN = 4
+
+  # for pull_mode
+  PULL_UP = 5
+  PULL_DOWN = 6
+  PULL_HOLD = 7
+
+  # for drive
+  LOW_POWER = 8
+  MED_POWER = 9
+  HIGH_POWER = 10
+
+  # for irq trigger
+  IRQ_FALLING = 11
+  IRQ_RISING = 12
+  IRQ_LOW_LEVEL = 13
+  IRQ_HIGH_LEVEL = 14
 
   # 初期化
   def initialize(pin, mode, pull_mode)
