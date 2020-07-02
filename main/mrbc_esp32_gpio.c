@@ -136,6 +136,18 @@ mrbc_esp32_gpio_set_mode_output(mrb_vm* vm, mrb_value* v, int argc)
   gpio_set_direction(pin, GPIO_MODE_OUTPUT);
 }
 
+/*! メソッド set_mode_open_drain(pin) 本体 : wrapper for gpio_set_direction
+  GPIO_MODE_INPUT_OUTPUT_OD 専用
+
+  @param pin GPIO ピン番号
+*/
+static void
+mrbc_esp32_gpio_set_mode_open_drain(mrb_vm* vm, mrb_value* v, int argc)
+{
+  int pin = GET_INT_ARG(1);
+  gpio_pad_select_gpio(pin);
+  gpio_set_direction(pin, GPIO_MODE_INPUT_OUTPUT_OD);
+}
 
 /*! メソッド set_level(pin, level) 本体 : wrapper for gpio_set_level
 
@@ -181,6 +193,7 @@ GPIO.set_hold_enable(pin)
 GPIO.set_hold_disable(pin)
 GPIO.set_mode_input(pin)
 GPIO.set_mode_output(pin)
+GPIO.set_mode_open_drain(pin)
 GPIO.set_level(pin, level)
 GPIO.get_level(pin)
 */
@@ -188,14 +201,15 @@ GPIO.get_level(pin)
   mrbc_class_esp32_gpio = mrbc_define_class(vm, "GPIO", mrbc_class_object);
 
   // 各メソッド定義（mruby/c ではインスタンスメソッドをクラスメソッドとしても呼び出し可能）
-  mrbc_define_method(vm, mrbc_class_esp32_gpio, "set_pullup",      mrbc_esp32_gpio_set_pullup);
-  mrbc_define_method(vm, mrbc_class_esp32_gpio, "set_pulldown",    mrbc_esp32_gpio_set_pulldown);
-  mrbc_define_method(vm, mrbc_class_esp32_gpio, "set_floating",    mrbc_esp32_gpio_set_floating);
-  mrbc_define_method(vm, mrbc_class_esp32_gpio, "set_hold_enable", mrbc_esp32_gpio_set_hold_enable);
-  mrbc_define_method(vm, mrbc_class_esp32_gpio, "set_hold_disable",mrbc_esp32_gpio_set_hold_disable);
-  mrbc_define_method(vm, mrbc_class_esp32_gpio, "set_mode_input",  mrbc_esp32_gpio_set_mode_input);
-  mrbc_define_method(vm, mrbc_class_esp32_gpio, "set_mode_output", mrbc_esp32_gpio_set_mode_output);
-  mrbc_define_method(vm, mrbc_class_esp32_gpio, "set_level",       mrbc_esp32_gpio_set_level);
-  mrbc_define_method(vm, mrbc_class_esp32_gpio, "get_level",       mrbc_esp32_gpio_get_level);
-  mrbc_define_method(vm, mrbc_class_esp32_gpio, "nop",             mrbc_nop);
+  mrbc_define_method(vm, mrbc_class_esp32_gpio, "set_pullup",          mrbc_esp32_gpio_set_pullup);
+  mrbc_define_method(vm, mrbc_class_esp32_gpio, "set_pulldown",        mrbc_esp32_gpio_set_pulldown);
+  mrbc_define_method(vm, mrbc_class_esp32_gpio, "set_floating",        mrbc_esp32_gpio_set_floating);
+  mrbc_define_method(vm, mrbc_class_esp32_gpio, "set_hold_enable",     mrbc_esp32_gpio_set_hold_enable);
+  mrbc_define_method(vm, mrbc_class_esp32_gpio, "set_hold_disable",    mrbc_esp32_gpio_set_hold_disable);
+  mrbc_define_method(vm, mrbc_class_esp32_gpio, "set_mode_input",      mrbc_esp32_gpio_set_mode_input);
+  mrbc_define_method(vm, mrbc_class_esp32_gpio, "set_mode_output",     mrbc_esp32_gpio_set_mode_output);
+  mrbc_define_method(vm, mrbc_class_esp32_gpio, "set_mode_open_drain", mrbc_esp32_gpio_set_mode_open_drain);
+  mrbc_define_method(vm, mrbc_class_esp32_gpio, "set_level",           mrbc_esp32_gpio_set_level);
+  mrbc_define_method(vm, mrbc_class_esp32_gpio, "get_level",           mrbc_esp32_gpio_get_level);
+  mrbc_define_method(vm, mrbc_class_esp32_gpio, "nop",                 mrbc_nop);
 }

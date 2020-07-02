@@ -29,14 +29,7 @@ class Pin
   def initialize(pin, mode, pull_mode)
     @pin = pin
     
-    if (mode == Pin::OUT)
-      GPIO.set_mode_output(@pin)
-      puts "GPIO output mode #{@pin}"
-    elsif (mode == Pin::IN)
-      GPIO.set_mode_input(@pin)
-      puts "GPIO input mode #{@pin}"
-    end
-
+    set_mode(mode)
     set_pull_mode(pull_mode)
   end
 
@@ -55,6 +48,21 @@ class Pin
   # 値 0 または 1 を取得
   def value
     GPIO.get_level(@pin)
+  end
+
+  # mode を設定
+  def set_mode(mode)
+    case mode
+    when Pin::OUT then
+      GPIO.set_mode_output(@pin)
+      puts "GPIO output mode #{@pin}"
+    when Pin::IN then
+      GPIO.set_mode_input(@pin)
+      puts "GPIO input mode #{@pin}"
+    when Pin::OPEN_DRAIN then
+      GPIO.set_mode_open_drain(@pin)
+      puts "GPIO open_drain mode #{@pin}"
+    end
   end
 
   # pullmode を設定 hold を解除したければ "nil" を渡す
