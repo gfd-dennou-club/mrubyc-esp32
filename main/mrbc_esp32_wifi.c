@@ -9,19 +9,20 @@
 
 #include <string.h>
 #include <stdlib.h>
-
+#include "freertos/FreeRTOS.h"
+#include "freertos/event_groups.h"
 #include "esp_wifi.h"
 #include "esp_wpa2.h"
 #include "esp_event.h"
 #include "esp_log.h"
 #include "esp_system.h"
 #include "esp_event.h"
+#include "esp_netif.h"
 
 typedef enum {
   DISCONNECTED = 0,
   CONNECTED
 } WIFI_CONNECTION_STATUS;
-
 
 static struct RClass* mrbc_class_esp32_wifi;
 static char* tag = "main";
@@ -207,7 +208,155 @@ mrbc_esp32_wifi_is_connected(mrb_vm* vm, mrb_value* v, int argc)
     SET_FALSE_RETURN();
   }
 }
+/*! メソッド scan() 本体
+  引数なし
+  @return hash in array : [{ssid: "SSID", bssid: "BSSID", channel: channnel, rssi: "RSSI", authmode: "AUTHMODE", hidden: false} ]
 
+*/
+
+static void
+mrbc_esp32_wifi_scan(mrb_vm* vm, mrb_value* v, int argc)
+{
+  wifi_mode_t mode;
+  ESP_ERROR_CHECK(esp_wifi_get_mode(&mode));
+  if((mode & WIFI_MODE_STA) == 0){
+    ESP_LOGD(tag, "STA is connecting. scan are not allowd");
+  }
+  wifi_init_config_t config = WIFI_INIT_CONFIG_DEFAULT();
+  ESP_ERROR_CHECK(esp_wifi_init(&config));
+  
+  uint16_t scan_size = 10;
+  uint16_t number = scan_size;
+  wifi_ap_record_t ap_info[scan_size];
+  uint16_t ap_count = 0;
+
+  mrb_value result = mrbc_array_new(vm, 0);
+  
+  memset(ap_info, 0, sizeof(ap_info));
+
+  ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+  ESP_ERROR_CHECK(esp_wifi_start());
+
+  if(esp_wifi_scan_start(NULL, true) == ESP_OK){
+    ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records(&number, ap_info));
+    ESP_ERROR_CHECK(esp_wifi_scan_get_ap_num(&ap_count));
+  
+    for(uint16_t i = 0; i < ap_count; i++){
+      mrbc_value mrbc_ap_records;
+      mrbc_value key;
+      mrbc_value value;
+      char buf[20];
+      mrbc_ap_records = mrbc_hash_new(vm, 0);
+
+      key = mrbc_string_new_cstr(vm, "ssid");
+      value = mrbc_string_new_cstr(vm, (char *)ap_info[i].ssid);
+      mrbc_hash_set(&mrbc_ap_records, &key, &value);
+
+      key = mrbc_string_new_cstr(vm, "bssid");
+      // TODO: macアドレスの生成に使えるので後で関数化するかもしれない
+      sprintf(buf,
+              "%02X:%02X:%02X:%02X:%02X:%02X",
+              ap_info[i].bssid[0],
+              ap_info[i].bssid[1],
+              ap_info[i].bssid[2],
+              ap_info[i].bssid[3],
+              ap_info[i].bssid[4],
+              ap_info[i].bssid[5]);
+      value = mrbc_string_new_cstr(vm, buf);
+      mrbc_hash_set(&mrbc_ap_records, &key, &value);
+
+      key = mrbc_string_new_cstr(vm, "channel");
+      value = mrbc_fixnum_value(ap_info[i].primary);
+      mrbc_hash_set(&mrbc_ap_records, &key, &value);
+
+      key = mrbc_string_new_cstr(vm, "rssi");
+      value = mrbc_fixnum_value(ap_info[i].rssi);
+      mrbc_hash_set(&mrbc_ap_records, &key, &value);
+
+      // 別関数にした方がいいかもしれない
+      char *authmode;
+      switch(ap_info[i].authmode){
+      case WIFI_AUTH_OPEN:
+        authmode = "OPEN";
+        break;
+      case WIFI_AUTH_WEP:
+        authmode = "WEP";
+        break;
+      case WIFI_AUTH_WPA_PSK:
+        authmode = "WPA PSK";
+        break;
+      case WIFI_AUTH_WPA2_PSK:
+        authmode = "WPA2 PSK";
+        break;
+      case WIFI_AUTH_WPA_WPA2_PSK:
+        authmode = "WPA/WPA2 PSK";
+        break;
+      default:
+        authmode = "Unknown";
+        break;
+      }
+      key = mrbc_string_new_cstr(vm, "authmode");
+      value = mrbc_string_new_cstr(vm, authmode);
+      mrbc_hash_set(&mrbc_ap_records, &key, &value);
+
+      // TODO: micropythonの仕様に合わせているが必ずfalseになるので要らない気がする
+      key = mrbc_string_new_cstr(vm, "hidden");
+      value = mrbc_false_value();
+      mrbc_hash_set(&mrbc_ap_records, &key, &value);
+    
+      mrbc_array_set(&result, i, &mrbc_ap_records);
+    }
+  }
+  SET_RETURN(result);
+}
+/*! メソッド config() 本体
+  引数なし
+
+*/
+static void
+mrbc_esp32_wifi_config(mrb_vm* vm, mrb_value* v, int argc)
+{
+  tcpip_adapter_ip_info_t ip;
+  mrb_value value;
+  const char *args = (const char *)GET_STRING_ARG(1);
+  memset(&ip, 0, sizeof(tcpip_adapter_ip_info_t));
+  if(tcpip_adapter_get_ip_info(ESP_IF_WIFI_STA, &ip) == 0){
+    if(strcmp(args,"mac") == 0 || strcmp(args,"MAC") == 0){
+      char buf[20];
+      uint8_t mac[6];
+      ESP_ERROR_CHECK(esp_read_mac(mac, 0));
+      sprintf(buf,
+              "%02X:%02X:%02X:%02X:%02X:%02X",
+              mac[0],
+              mac[1],
+              mac[2],
+              mac[3],
+              mac[4],
+              mac[5]
+              );
+      value = mrbc_string_new_cstr(vm, buf);
+      SET_RETURN(value);
+    }
+  } else {
+    SET_FALSE_RETURN();
+  }
+}
+/*! メソッド ifconfig() 本体
+  引数なし
+
+*/
+static void
+mrbc_esp32_wifi_if_config(mrb_vm* vm, mrb_value* v, int argc)
+{
+}
+/*! メソッド active() 本体
+  引数なし
+
+*/
+static void
+mrbc_esp32_wifi_active(mrb_vm* vm, mrb_value* v, int argc)
+{
+}
 
 /*! クラス定義処理を記述した関数
   この関数を呼ぶことでクラス WiFi が定義される
@@ -232,4 +381,8 @@ WiFi.start()
   mrbc_define_method(vm, mrbc_class_esp32_wifi, "setup_psk",      mrbc_esp32_wifi_setup_psk);
   mrbc_define_method(vm, mrbc_class_esp32_wifi, "setup_ent_peap", mrbc_esp32_wifi_setup_ent_peap);
   mrbc_define_method(vm, mrbc_class_esp32_wifi, "is_connected?",  mrbc_esp32_wifi_is_connected);
+  mrbc_define_method(vm, mrbc_class_esp32_wifi, "scan",  mrbc_esp32_wifi_scan);
+  mrbc_define_method(vm, mrbc_class_esp32_wifi, "config",  mrbc_esp32_wifi_config);
+  mrbc_define_method(vm, mrbc_class_esp32_wifi, "ifconfig",  mrbc_esp32_wifi_if_config);
+  mrbc_define_method(vm, mrbc_class_esp32_wifi, "active",  mrbc_esp32_wifi_active);
 }

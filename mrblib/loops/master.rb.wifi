@@ -1,8 +1,11 @@
 # coding: utf-8
-
 WiFi.init()
+
+puts WiFi.scan()
+puts WiFi.config('mac')
+
 #WiFi.setup_ent_peap("id", "ssid", "username", "password")
-WiFi.setup_psk("ssid", "key")
+WiFi.setup_psk("ssid", "password")
 WiFi.start()
 
 sleep 3
