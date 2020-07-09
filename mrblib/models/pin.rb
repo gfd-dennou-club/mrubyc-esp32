@@ -20,16 +20,17 @@ class Pin
   HIGH_POWER = 10
 
   # for irq trigger
-  IRQ_FALLING = 11
-  IRQ_RISING = 12
-  IRQ_LOW_LEVEL = 13
-  IRQ_HIGH_LEVEL = 14
+  IRQ_RISING     = 0b001
+  IRQ_FALLING    = 0b010
+  IRQ_LOW_LEVEL  = 0b100
+  IRQ_HIGH_LEVEL = 0b101
 
   # 初期化
   def initialize(pin, mode = -1, pull_mode = -1, value = -1)
     @pin = pin
+    @mode = mode
     
-    init(mode, pull_mode, value)
+    init(@mode, pull_mode, value)
   end
 
   # コンストラクタ外からの再初期化
@@ -64,7 +65,8 @@ class Pin
 
   # mode を設定
   def set_mode(mode)
-    case mode
+    @mode = mode
+    case @mode
     when Pin::OUT then
       GPIO.set_mode_output(@pin)
       puts "GPIO output mode #{@pin}"
@@ -87,11 +89,21 @@ class Pin
       GPIO.set_pulldown(@pin)
       puts "GPIO pull_down #{@pin}"
     when Pin::PULL_HOLD then
-      GPIO.set_hold_enable(@pin)
-      puts "GPIO hold_enable #{@pin}"
+      if(mode == Pin::OUT || mode == Pin::OPEN_DRAIN)
+        GPIO.set_hold_enable(@pin)
+        puts "GPIO hold_enable #{@pin}"
+      end
     else
-      GPIO.set_hold_disable(@pin)
-      puts "GPIO hold_disable #{@pin}"
+      if(mode == Pin::OUT || mode == Pin::OPEN_DRAIN)
+        GPIO.set_hold_disable(@pin)
+        puts "GPIO hold_disable #{@pin}"
+      end
     end
+  end
+
+  def irq(handler = nil, trigger = (Pin::IRQ_FALLING | Pin::IRQ_RISING))
+    GPIO.set_intr_type(@pin, trigger)
+    handler.(self)
+    GPIO.isr_handler_add(@pin, handler, self)
   end
 end
