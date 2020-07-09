@@ -9,43 +9,39 @@ class PWM
   LEDC_DEFAULT_FREQUENCY = 5000
 
   # 初期化
-  def initialize(pin, ch)
+  def initialize(pin, ch=0)
     @pin  = pin
-    unless(ch)
-      @ch = 0
-    else
-      @ch = ch
-    end
+    @ch = ch
 
     # 定義済みのチャンネルを取ってこれれば引数にチャンネルを与えなくてよくなるのだが.
     # 後日検討.
     
     # タイマーの初期化
     LEDC.timer_config(
-      LEDC_TIMER_8_BIT,
-      LEDC_DEFAULT_FREQUENCY,
-      LEDC_HIGH_SPEED_MODE
+      PWM::LEDC_TIMER_8_BIT,
+      PWM::LEDC_DEFAULT_FREQUENCY,
+      PWM::LEDC_HIGH_SPEED_MODE
     )
 
     # PWM の初期化
     LEDC.channel_config(
       @ch,
       @pin, 
-      LEDC_HIGH_SPEED_MODE
+      PWM::LEDC_HIGH_SPEED_MODE
     )
   end
   
   # デューティー比の設定
   def duty( duty )    
-    LEDC.set_duty(LEDC_HIGH_SPEED_MODE, @ch, duty)
-    LEDC.update_duty(LEDC_HIGH_SPEED_MODE, @ch)
+    LEDC.set_duty(PWM::LEDC_HIGH_SPEED_MODE, @ch, duty)
+    LEDC.update_duty(PWM::LEDC_HIGH_SPEED_MODE, @ch)
 
     puts "Set Duty : #{duty}"
   end
 
   # 周波数の設定
   def freq( freq )
-    LEDC.set_duty(LEDC_HIGH_SPEED_MODE, @ch, duty)
+    LEDC.set_duty(PWM::LEDC_HIGH_SPEED_MODE, @ch, duty)
     puts "Set Frequency : #{freq}"
   end
 

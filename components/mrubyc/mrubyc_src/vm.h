@@ -3,8 +3,8 @@
   mruby bytecode executor.
 
   <pre>
-  Copyright (C) 2015-2019 Kyushu Institute of Technology.
-  Copyright (C) 2015-2019 Shimane IT Open-Innovation Center.
+  Copyright (C) 2015-2020 Kyushu Institute of Technology.
+  Copyright (C) 2015-2020 Shimane IT Open-Innovation Center.
 
   This file is distributed under BSD 3-Clause License.
 
@@ -30,7 +30,6 @@ extern "C" {
   IREP Internal REPresentation
 */
 typedef struct IREP {
-  uint16_t ref_count;		//!< reference counter
   uint16_t nlocals;		//!< # of local variables
   uint16_t nregs;		//!< # of register variables
   uint16_t rlen;		//!< # of child IREP blocks
@@ -51,13 +50,15 @@ typedef struct IREP mrb_irep;
   Call information
 */
 typedef struct CALLINFO {
-  struct CALLINFO *prev;
-  mrbc_sym mid;
-  mrbc_irep *pc_irep;
-  uint16_t  pc;
-  mrbc_value *current_regs;
-  mrbc_class *target_class;
-  uint8_t   n_args;     // num of args
+  struct CALLINFO *prev;	//!< previous linked list.
+  mrbc_irep *pc_irep;		//!< copy from mrbc_vm.
+  uint8_t *inst;		//!< copy from mrbc_vm.
+  mrbc_value *current_regs;	//!< copy from mrbc_vm.
+  mrbc_class *target_class;	//!< copy from mrbc_vm.
+  mrbc_class *own_class;	//!< class that owns method.
+  mrbc_sym method_id;		//!< called method ID.
+  uint8_t reg_offset;		//!< register offset after call.
+  uint8_t n_args;		//!< # of arguments.
 } mrbc_callinfo;
 typedef struct CALLINFO mrb_callinfo;
 
@@ -72,15 +73,23 @@ typedef struct VM {
   uint8_t        vm_id; // vm_id : 1..n
   const uint8_t *mrb;   // bytecode
 
-  mrbc_irep *pc_irep;    // PC
-  uint16_t  pc;         // PC
+  mrbc_irep *pc_irep;   // PC
+  uint8_t *inst;        // instruction
+  uint8_t ext_flag;     // 1:EXT1, 2:EXT2, 3:EXT3, 0:otherwize
 
-  //  uint16_t     reg_top;
   mrbc_value    regs[MAX_REGS_SIZE];
   mrbc_value   *current_regs;
   mrbc_callinfo *callinfo_tail;
 
   mrbc_class *target_class;
+
+#ifdef MRBC_DEBUG
+  uint8_t flag_debug_mode;
+#endif
+
+  mrbc_class *exc, *exc_pending;
+  mrbc_value exc_message;  // exception message
+  mrbc_callinfo *exception_tail;
 
   int32_t error_code;
 
@@ -92,11 +101,10 @@ typedef struct VM mrb_vm;
 
 
 void mrbc_cleanup_vm(void);
-const char *mrbc_get_irep_symbol(const uint8_t *p, int n);
 const char *mrbc_get_callee_name(struct VM *vm);
 mrbc_irep *mrbc_irep_alloc(struct VM *vm);
 void mrbc_irep_free(mrbc_irep *irep);
-void mrbc_push_callinfo(struct VM *vm, mrbc_sym mid, int n_args);
+mrbc_callinfo * mrbc_push_callinfo( struct VM *vm, mrbc_sym method_id, int reg_offset, int n_args );
 void mrbc_pop_callinfo(struct VM *vm);
 mrbc_vm *mrbc_vm_open(struct VM *vm_arg);
 void mrbc_vm_close(struct VM *vm);

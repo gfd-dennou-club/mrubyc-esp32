@@ -3,8 +3,8 @@
   mruby/c Range object
 
   <pre>
-  Copyright (C) 2015-2018 Kyushu Institute of Technology.
-  Copyright (C) 2015-2018 Shimane IT Open-Innovation Center.
+  Copyright (C) 2015-2020 Kyushu Institute of Technology.
+  Copyright (C) 2015-2020 Shimane IT Open-Innovation Center.
 
   This file is distributed under BSD 3-Clause License.
 
@@ -31,7 +31,7 @@
   @param  flag_exclude	true: exclude the end object, otherwise include.
   @return		range object.
 */
-mrbc_value mrbc_range_new( struct VM *vm, mrbc_value *first, mrbc_value *last, int flag_exclude)
+mrbc_value mrbc_range_new(struct VM *vm, mrbc_value *first, mrbc_value *last, int flag_exclude)
 {
   mrbc_value value = {.tt = MRBC_TT_RANGE};
 
@@ -39,7 +39,7 @@ mrbc_value mrbc_range_new( struct VM *vm, mrbc_value *first, mrbc_value *last, i
   if( !value.range ) return value;		// ENOMEM
 
   value.range->ref_count = 1;
-  value.range->tt = MRBC_TT_STRING;	// TODO: for DEBUG
+  value.range->tt = MRBC_TT_RANGE;	// TODO: for DEBUG
   value.range->flag_exclude = flag_exclude;
   value.range->first = *first;
   value.range->last = *last;
@@ -51,12 +51,12 @@ mrbc_value mrbc_range_new( struct VM *vm, mrbc_value *first, mrbc_value *last, i
 //================================================================
 /*! destructor
 
-  @param  target 	pointer to range object.
+  @param  v 	pointer to target.
 */
 void mrbc_range_delete(mrbc_value *v)
 {
-  mrbc_release( &v->range->first );
-  mrbc_release( &v->range->last );
+  mrbc_dec_ref_counter( &v->range->first );
+  mrbc_dec_ref_counter( &v->range->last );
 
   mrbc_raw_free( v->range );
 }
@@ -64,6 +64,8 @@ void mrbc_range_delete(mrbc_value *v)
 
 //================================================================
 /*! clear vm_id
+
+  @param  v 	pointer to target.
 */
 void mrbc_range_clear_vm_id(mrbc_value *v)
 {
@@ -75,6 +77,12 @@ void mrbc_range_clear_vm_id(mrbc_value *v)
 
 //================================================================
 /*! compare
+
+  @param  v1	Pointer to target.
+  @param  v2	Pointer to another target.
+  @retval 0	v1 == v2
+  @retval plus	v1 >  v2
+  @retval minus	v1 <  v2
 */
 int mrbc_range_compare(const mrbc_value *v1, const mrbc_value *v2)
 {
