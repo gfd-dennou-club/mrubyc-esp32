@@ -34,13 +34,10 @@ mrbc_nop(mrb_vm* vm, mrb_value* v, int argc)
   }
 }
 
-/*! メソッド ADC1 初期化
-
-  解像度は 12 bit (ADC_WIDTH_BIT_12) で決めうち
-  計測範囲は 0 ~ 3.6 V (ADC_ATTEN_DB_11) で決めうち
-
+/*! メソッド init_adc1(channel, atten, width)
   @param channel  ADC のチャンネル (ピンによって決まっている)
-
+  @param atten    ADC の入力電圧の減衰率
+  @param width    ADC のキャプチャ幅
 */
 static void mrbc_esp32_adc_init_adc1(mrb_vm *vm, mrb_value *v, int argc){
 
@@ -55,6 +52,9 @@ static void mrbc_esp32_adc_init_adc1(mrb_vm *vm, mrb_value *v, int argc){
   esp_adc_cal_characterize(unit1, atten, width, DEFAULT_VREF, adc_chars);
 }
 
+/*! メソッド read_adc1(channel)
+  @param channel  ADC のチャンネル (ピンによって決まっている)
+*/
 static void mrbc_esp32_adc_read_adc1(mrb_vm *vm, mrb_value *v, int argc){
 
   uint32_t adc_reading = 0;
@@ -74,8 +74,10 @@ static void mrbc_esp32_adc_read_adc1(mrb_vm *vm, mrb_value *v, int argc){
   SET_INT_RETURN(millivolts);
 }
 
-/*
-  ADC2 の初期化・計測は未実装
+/*! メソッド init_adc2(channel, atten, width)
+  @param channel  ADC のチャンネル (ピンによって決まっている)
+  @param atten    ADC の入力電圧の減衰率
+  @param width    ADC のキャプチャ幅
 */
 static void mrbc_esp32_adc_init_adc2(mrb_vm *vm, mrb_value *v, int argc){
   adc2_channel_t channel = GET_INT_ARG(1);
@@ -87,6 +89,10 @@ static void mrbc_esp32_adc_init_adc2(mrb_vm *vm, mrb_value *v, int argc){
   esp_adc_cal_characterize(unit2, atten, width, DEFAULT_VREF, adc_chars);
 }
 
+/*! メソッド read_adc2(channel, width)
+  @param channel  ADC のチャンネル (ピンによって決まっている)
+  @param width    ADC のキャプチャ幅
+*/
 static void mrbc_esp32_adc_read_adc2(mrb_vm *vm, mrb_value *v, int argc){
   uint32_t adc_reading = 0;
 
