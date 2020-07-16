@@ -176,6 +176,38 @@ mrbc_esp32_gpio_get_level(mrb_vm* vm, mrb_value* v, int argc)
   SET_INT_RETURN(gpio_get_level(pin));
 }
 
+/*! メソッド set_intr_type(pin, intr_type) 本体 : wrapper for gpio_set_intr_type
+
+  @param pin       GPIO ピン番号
+  @param intr_type 割り込みタイプ、gpio_int_type_tから選択
+*/
+static void
+mrbc_esp32_gpio_set_intr_type(mrb_vm* vm, mrb_value* v, int argc)
+{
+  int pin = GET_INT_ARG(1);
+  int intr_type = GET_INT_ARG(2);
+  gpio_set_intr_type(pin, intr_type);
+}
+
+/*! メソッド isr_handler_add(pin, intr_type) 本体 : wrapper for gpio_isr_handler_add
+  @param pin         GPIO ピン番号
+  @param isr_handler ISRハンドラー関数
+  @param args        ISRハンドラーのvoid* パラメーター
+*/
+static void
+mrbc_esp32_gpio_isr_handler_add(mrb_vm* vm, mrb_value* v, int argc)
+{
+  int pin = GET_INT_ARG(1);
+  /*
+   * mrbc_func_t ... void (*)(struct VM *vm, struct RObject *v, int argc)
+   * から
+   * gpio_isr_t  ... void (*)(void *)
+   * に変換する方法が不明.
+   */
+  gpio_isr_t isr_handler = GET_ARG(2).proc->func;
+  void* args = (void*)(GET_ARG(3).cls);
+  gpio_isr_handler_add(pin, isr_handler, args);
+}
 
 /*! クラス定義処理を記述した関数
   この関数を呼ぶことでクラス GPIO が定義される
@@ -196,7 +228,12 @@ GPIO.set_mode_output(pin)
 GPIO.set_mode_open_drain(pin)
 GPIO.set_level(pin, level)
 GPIO.get_level(pin)
+GPIO.set_intr_type(pin, intr_type)
+GPIO.isr_handler_add(pin, isr_handler, args)
 */
+  // ISRハンドラーサービスのインストール
+  gpio_install_isr_service(0);
+
   // クラス GPIO 定義
   mrbc_class_esp32_gpio = mrbc_define_class(vm, "GPIO", mrbc_class_object);
 
@@ -211,5 +248,7 @@ GPIO.get_level(pin)
   mrbc_define_method(vm, mrbc_class_esp32_gpio, "set_mode_open_drain", mrbc_esp32_gpio_set_mode_open_drain);
   mrbc_define_method(vm, mrbc_class_esp32_gpio, "set_level",           mrbc_esp32_gpio_set_level);
   mrbc_define_method(vm, mrbc_class_esp32_gpio, "get_level",           mrbc_esp32_gpio_get_level);
+  mrbc_define_method(vm, mrbc_class_esp32_gpio, "set_intr_type",       mrbc_esp32_gpio_set_intr_type);
+  mrbc_define_method(vm, mrbc_class_esp32_gpio, "isr_handler_add",     mrbc_esp32_gpio_isr_handler_add);
   mrbc_define_method(vm, mrbc_class_esp32_gpio, "nop",                 mrbc_nop);
 }

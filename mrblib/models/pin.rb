@@ -89,12 +89,12 @@ class Pin
       GPIO.set_pulldown(@pin)
       puts "GPIO pull_down #{@pin}"
     when Pin::PULL_HOLD then
-      if(mode == Pin::OUT || mode == Pin::OPEN_DRAIN)
+      if(@mode == Pin::OUT || @mode == Pin::OPEN_DRAIN)
         GPIO.set_hold_enable(@pin)
         puts "GPIO hold_enable #{@pin}"
       end
     else
-      if(mode == Pin::OUT || mode == Pin::OPEN_DRAIN)
+      if(@mode == Pin::OUT || @mode == Pin::OPEN_DRAIN)
         GPIO.set_hold_disable(@pin)
         puts "GPIO hold_disable #{@pin}"
       end
@@ -103,7 +103,7 @@ class Pin
 
   def irq(handler = nil, trigger = (Pin::IRQ_FALLING | Pin::IRQ_RISING))
     GPIO.set_intr_type(@pin, trigger)
-    handler.(self)
+    handler.(self) # for debug
     GPIO.isr_handler_add(@pin, handler, self)
   end
 end
