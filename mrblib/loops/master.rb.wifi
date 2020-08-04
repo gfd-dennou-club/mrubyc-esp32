@@ -1,9 +1,6 @@
 # coding: utf-8
 WiFi.init()
 
-puts WiFi.scan()
-puts WiFi.config('mac')
-
 #WiFi.setup_ent_peap("id", "ssid", "username", "password")
 WiFi.setup_psk("ssid", "password")
 WiFi.start()
@@ -39,7 +36,11 @@ rtc.write([year, mon, mday, SNTP.wday, hour, min, sec]) #年(下2桁), 月, 日,
 
 sht = SHT75.new(2, 4)  # SHT75-CON2
 sht.sht_init
-
+puts WiFi.scan()
+puts WiFi.mac('STA')
+puts WiFi.ip('STA')
+#puts WiFi.active(True)
+puts WiFi.ifconfig('STA')
 while true
   temp = sht.sht_get_temp
   humi = sht.sht_get_humi(temp)

@@ -27,7 +27,7 @@ typedef enum {
 static struct RClass* mrbc_class_esp32_wifi;
 static char* tag = "main";
 static WIFI_CONNECTION_STATUS connection_status = DISCONNECTED;
-
+static bool wifi_started = false;
 /*! WiFi イベントハンドラ
   各種 WiFi イベントが発生した際に呼び出される
 */
@@ -48,6 +48,7 @@ static void wifi_event_handler(void* ctx, esp_event_base_t event, int32_t event_
         ESP_LOGI(tag, "GW:"IPSTR, IP2STR(&ip.gw));
         ESP_LOGI(tag, "~~~~~~~~~~~");
       }
+      wifi_started = true;
       break;
 
     case SYSTEM_EVENT_STA_START:
@@ -307,60 +308,180 @@ mrbc_esp32_wifi_scan(mrb_vm* vm, mrb_value* v, int argc)
       mrbc_array_set(&result, i, &mrbc_ap_records);
     }
   }
+  free(ap_info);
   SET_RETURN(result);
 }
-/*! メソッド config() 本体
-  引数なし
 
+static char* get_mac_address(int argc){
+  char* buf = (char *)malloc(sizeof(char) * 20);
+  uint8_t mac[6];
+  ESP_ERROR_CHECK(esp_read_mac(mac, argc));
+  sprintf(buf,
+          "%02X:%02X:%02X:%02X:%02X:%02X",
+          mac[0],
+          mac[1],
+          mac[2],
+          mac[3],
+          mac[4],
+          mac[5]
+          );
+  return buf;
+}
+/*! メソッド mac() 本体
+  @param 'STA' or 'sta' STAモードのMAC ADDRESS取得
+        'AP' or 'ap' or 'SOFTAP' or 'softap' APモードのMAC ADDRESS取得
+        'BLE' or 'ble' or 'BT' or 'bt' BluetoothのMAC ADDRESS取得
+        'ETH' or 'eth' EthernetのMAC ADDRESS取得
 */
 static void
-mrbc_esp32_wifi_config(mrb_vm* vm, mrb_value* v, int argc)
+mrbc_esp32_wifi_config_mac(mrb_vm* vm, mrb_value* v, int argc)
 {
-  tcpip_adapter_ip_info_t ip;
-  mrb_value value;
-  const char *args = (const char *)GET_STRING_ARG(1);
-  memset(&ip, 0, sizeof(tcpip_adapter_ip_info_t));
-  if(tcpip_adapter_get_ip_info(ESP_IF_WIFI_STA, &ip) == 0){
-    if(strcmp(args,"mac") == 0 || strcmp(args,"MAC") == 0){
-      char buf[20];
-      uint8_t mac[6];
-      ESP_ERROR_CHECK(esp_read_mac(mac, 0));
-      sprintf(buf,
-              "%02X:%02X:%02X:%02X:%02X:%02X",
-              mac[0],
-              mac[1],
-              mac[2],
-              mac[3],
-              mac[4],
-              mac[5]
-              );
-      value = mrbc_string_new_cstr(vm, buf);
+  if(GET_TT_ARG(1) == MRBC_TT_STRING){
+    mrb_value value;
+    const char *args = (const char *)GET_STRING_ARG(1);
+    if(strcmp(args,"STA") == 0 || strcmp(args,"sta") == 0){
+      value = mrbc_string_new_cstr(vm, get_mac_address(ESP_MAC_WIFI_STA));
       SET_RETURN(value);
+    } else if(strcmp(args, "AP") || strcmp(args, "ap") || strcmp(args, "SOFTAP") || strcmp(args, "softap")) {
+      value = mrbc_string_new_cstr(vm, get_mac_address(ESP_MAC_WIFI_SOFTAP));
+      SET_RETURN(value);
+    } else if(strcmp(args, "BLE") || strcmp(args, "ble") || strcmp(args, "BT") || strcmp(args,"bt")) {
+      value = mrbc_string_new_cstr(vm, get_mac_address(ESP_MAC_BT));
+      SET_RETURN(value);
+    } else if(strcmp(args, "ETH") || strcmp(args, "eth")) {
+      value = mrbc_string_new_cstr(vm, get_mac_address(ESP_MAC_ETH));
+      SET_RETURN(value);
+    } else {
+      SET_FALSE_RETURN();
     }
   } else {
-    SET_FALSE_RETURN();
+    SET_NIL_RETURN();
   }
 }
-/*! メソッド ifconfig() 本体
-  引数なし
-
+/*! メソッド ip() 本体
+  @param 'STA' or 'sta' STAモードのIP ADDRESS取得
+         'AP' or 'ap' or 'SOFTAP' or 'softap' APモードのIP ADDRESS取得
 */
 static void
-mrbc_esp32_wifi_if_config(mrb_vm* vm, mrb_value* v, int argc)
+mrbc_esp32_wifi_config_ip(mrb_vm* vm, mrb_value* v, int argc)
 {
+  if(GET_TT_ARG(1) == MRBC_TT_STRING){
+    tcpip_adapter_ip_info_t ip;
+    mrb_value value;
+    const char *args = (const char *)GET_STRING_ARG(1);
+    memset(&ip, 0, sizeof(tcpip_adapter_ip_info_t));
+     if(strcmp(args, "STA") || strcmp(args, "sta")){
+      if(tcpip_adapter_get_ip_info(ESP_IF_WIFI_STA, &ip) == 0){
+        tcpip_adapter_ip_info_t ip;
+        tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA, &ip);
+        value = mrbc_string_new_cstr(vm,ip4addr_ntoa(&ip.ip));
+        SET_RETURN(value);
+      }
+    } else if(strcmp(args, "AP") || strcmp(args, "ap") || strcmp(args, "SOFTAP") || strcmp(args, "softap")) {
+      if(tcpip_adapter_get_ip_info(ESP_IF_WIFI_AP, &ip) == 0){
+        tcpip_adapter_ip_info_t ip;
+        tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_AP, &ip);
+        value = mrbc_string_new_cstr(vm,ip4addr_ntoa(&ip.ip));
+        SET_RETURN(value);
+      }    
+    } else {
+      SET_FALSE_RETURN();
+    }
+  } else {
+    SET_NIL_RETURN();
+  }
 }
-/*! メソッド active() 本体
-  引数なし
+// TODO: どこかに共通処理として設置した方が良いかもしれない  
+bool mrbc_trans_cppbool_value(mrbc_vtype tt)
+{
+  if(tt==MRBC_TT_TRUE){
+    return true;
+  }
+  return false;
+}
 
+/*! メソッド active() 本体
+  @param true or false 
 */
 static void
 mrbc_esp32_wifi_active(mrb_vm* vm, mrb_value* v, int argc)
 {
+  wifi_mode_t mode;
+  wifi_mode_t mode_get;
+  bool active;
+
+  if(!wifi_started) {
+    mode = WIFI_MODE_NULL;
+  } else {
+    ESP_ERROR_CHECK(esp_wifi_get_mode(&mode));
+  }
+  if(GET_TT_ARG(1) == MRBC_TT_TRUE || GET_TT_ARG(1) == MRBC_TT_FALSE) {
+    ESP_ERROR_CHECK(esp_wifi_get_mode(&mode_get));
+    active = mrbc_trans_cppbool_value(GET_TT_ARG(1));
+    mode = active ? (mode | mode_get) : (mode & ~mode_get);
+    if(mode == WIFI_MODE_NULL){
+      if(wifi_started){
+        ESP_ERROR_CHECK(esp_wifi_stop());
+        wifi_started = false;
+        SET_FALSE_RETURN();
+      }
+    } else {
+      ESP_ERROR_CHECK(esp_wifi_set_mode(mode));
+      if(!wifi_started) {
+        ESP_ERROR_CHECK(esp_wifi_start());
+        wifi_started = true;
+        SET_TRUE_RETURN();
+      }
+    }
+  }
+}
+
+/*! メソッド ifconfig() 本体
+  @param 
+*/
+static void
+mrbc_esp32_wifi_ifconfig(mrb_vm* vm, mrb_value* v, int argc)
+{
+  tcpip_adapter_ip_info_t info;
+  esp_netif_dns_info_t dns_info;
+  mrbc_value mrbc_ifconfig ;
+  mrbc_value key;
+  mrbc_value value;
+  
+  const char *args = (const char *)GET_STRING_ARG(1);
+
+  mrbc_ifconfig = mrbc_hash_new(vm, 0);
+  
+  if(strcmp(args, "STA") || strcmp(args, "sta")){
+    ESP_ERROR_CHECK(tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA, &info));
+    ESP_ERROR_CHECK(tcpip_adapter_get_dns_info(TCPIP_ADAPTER_IF_STA, 0, &dns_info));
+  } else if(strcmp(args, "AP") || strcmp(args, "ap") || strcmp(args, "SOFTAP") || strcmp(args, "softap")) {
+    ESP_ERROR_CHECK(tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_AP, &info));
+    ESP_ERROR_CHECK(tcpip_adapter_get_dns_info(TCPIP_ADAPTER_IF_AP, 0, &dns_info));
+  }
+  key = mrbc_string_new_cstr(vm, "ip");
+  value = mrbc_string_new_cstr(vm, ip4addr_ntoa(&info.ip));
+  mrbc_hash_set(&mrbc_ifconfig, &key, &value);
+
+  key = mrbc_string_new_cstr(vm, "netmask");
+  value = mrbc_string_new_cstr(vm, ip4addr_ntoa(&info.netmask));
+  mrbc_hash_set(&mrbc_ifconfig, &key, &value);
+
+  key = mrbc_string_new_cstr(vm, "gw");
+  value = mrbc_string_new_cstr(vm, ip4addr_ntoa(&info.gw));
+  mrbc_hash_set(&mrbc_ifconfig, &key, &value);
+  char dns[16];
+  uint8_t *dns_ip = (uint8_t *)&dns_info.ip;
+  sprintf(dns, "%u.%u.%u.%u", dns_ip[0],dns_ip[1],dns_ip[2],dns_ip[3]);
+  key = mrbc_string_new_cstr(vm, "dns");
+  value = mrbc_string_new_cstr(vm,dns);
+  mrbc_hash_set(&mrbc_ifconfig, &key, &value);
+
+  SET_RETURN(mrbc_ifconfig);
 }
 
 /*! クラス定義処理を記述した関数
   この関数を呼ぶことでクラス WiFi が定義される
-
   @param vm mruby/c VM
 */
 void
@@ -382,7 +503,9 @@ WiFi.start()
   mrbc_define_method(vm, mrbc_class_esp32_wifi, "setup_ent_peap", mrbc_esp32_wifi_setup_ent_peap);
   mrbc_define_method(vm, mrbc_class_esp32_wifi, "is_connected?",  mrbc_esp32_wifi_is_connected);
   mrbc_define_method(vm, mrbc_class_esp32_wifi, "scan",  mrbc_esp32_wifi_scan);
-  mrbc_define_method(vm, mrbc_class_esp32_wifi, "config",  mrbc_esp32_wifi_config);
-  mrbc_define_method(vm, mrbc_class_esp32_wifi, "ifconfig",  mrbc_esp32_wifi_if_config);
+  mrbc_define_method(vm, mrbc_class_esp32_wifi, "mac",  mrbc_esp32_wifi_config_mac);
+  mrbc_define_method(vm, mrbc_class_esp32_wifi, "ip",  mrbc_esp32_wifi_config_ip);
+  mrbc_define_method(vm, mrbc_class_esp32_wifi, "ifconfig",  mrbc_esp32_wifi_ifconfig);
   mrbc_define_method(vm, mrbc_class_esp32_wifi, "active",  mrbc_esp32_wifi_active);
+
 }
