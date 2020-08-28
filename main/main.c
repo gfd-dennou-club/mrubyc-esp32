@@ -36,6 +36,7 @@
 #endif
 
 #include "loops/master.h"
+#include "loops/irq_handler.h"
 
 #define MEMORY_SIZE (1024*40)
 
@@ -129,6 +130,7 @@ void app_main(void) {
   // TODO:
 
   mrbc_create_task( master, 0 );
+  mrbc_create_task( irq_handler, 0 );
   
   mrbc_run();
 }

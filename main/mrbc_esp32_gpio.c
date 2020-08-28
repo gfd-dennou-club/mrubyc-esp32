@@ -6,13 +6,18 @@
 
 #include "mrbc_esp32_gpio.h"
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/queue.h"
 #include "driver/gpio.h"
+#define PIN_NUM 39
 
 
 static struct RClass* mrbc_class_esp32_gpio;
 
 static int unreferenced;
 
+static int pins_state[PIN_NUM + 1];
 
 /*! メソッド nop(count) 本体 : nop (no operation)
 
@@ -176,37 +181,22 @@ mrbc_esp32_gpio_get_level(mrb_vm* vm, mrb_value* v, int argc)
   SET_INT_RETURN(gpio_get_level(pin));
 }
 
-/*! メソッド set_intr_type(pin, intr_type) 本体 : wrapper for gpio_set_intr_type
+/*! メソッド get_pin_state(pin) IRQ制御用の状態管理関数
 
-  @param pin       GPIO ピン番号
-  @param intr_type 割り込みタイプ、gpio_int_type_tから選択
+  @param pin GPIO ピン番号
+  @return    ピンレベル、0 : low / 1 : high
 */
 static void
-mrbc_esp32_gpio_set_intr_type(mrb_vm* vm, mrb_value* v, int argc)
+mrbc_esp32_gpio_get_pin_state(mrb_vm* vm, mrb_value* v, int argc)
 {
   int pin = GET_INT_ARG(1);
-  int intr_type = GET_INT_ARG(2);
-  gpio_set_intr_type(pin, intr_type);
-}
-
-/*! メソッド isr_handler_add(pin, intr_type) 本体 : wrapper for gpio_isr_handler_add
-  @param pin         GPIO ピン番号
-  @param isr_handler ISRハンドラー関数
-  @param args        ISRハンドラーのvoid* パラメーター
-*/
-static void
-mrbc_esp32_gpio_isr_handler_add(mrb_vm* vm, mrb_value* v, int argc)
-{
-  int pin = GET_INT_ARG(1);
-  /*
-   * mrbc_func_t ... void (*)(struct VM *vm, struct RObject *v, int argc)
-   * から
-   * gpio_isr_t  ... void (*)(void *)
-   * に変換する方法が不明.
-   */
-  gpio_isr_t isr_handler = GET_ARG(2).proc->func;
-  void* args = (void*)(GET_ARG(3).cls);
-  gpio_isr_handler_add(pin, isr_handler, args);
+  int value = gpio_get_level(pin);
+  int result = 4 << value;
+  if(value != pins_state[pin])
+    result |= 1 << pins_state[pin];
+  pins_state[pin] = value;
+  // Fixnum インスタンスを本メソッドの返り値としてセット、値は gpio_get_level(pin) と同値
+  SET_INT_RETURN(result);
 }
 
 /*! クラス定義処理を記述した関数
@@ -248,7 +238,6 @@ GPIO.isr_handler_add(pin, isr_handler, args)
   mrbc_define_method(vm, mrbc_class_esp32_gpio, "set_mode_open_drain", mrbc_esp32_gpio_set_mode_open_drain);
   mrbc_define_method(vm, mrbc_class_esp32_gpio, "set_level",           mrbc_esp32_gpio_set_level);
   mrbc_define_method(vm, mrbc_class_esp32_gpio, "get_level",           mrbc_esp32_gpio_get_level);
-  mrbc_define_method(vm, mrbc_class_esp32_gpio, "set_intr_type",       mrbc_esp32_gpio_set_intr_type);
-  mrbc_define_method(vm, mrbc_class_esp32_gpio, "isr_handler_add",     mrbc_esp32_gpio_isr_handler_add);
+  mrbc_define_method(vm, mrbc_class_esp32_gpio, "get_pin_state",           mrbc_esp32_gpio_get_pin_state);
   mrbc_define_method(vm, mrbc_class_esp32_gpio, "nop",                 mrbc_nop);
 }

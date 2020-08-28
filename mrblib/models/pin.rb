@@ -1,7 +1,10 @@
 # coding: utf-8-hfs
-class Pin
 
+# `クラス変数`が働かないためグローバル変数で実装する
+$irq_instances = nil
+class Pin
   # 定数
+  PIN_COUNT = 39
   # for mode
   OUT = 0
   IN  = 1
@@ -20,10 +23,10 @@ class Pin
   HIGH_POWER = 10
 
   # for irq trigger
-  IRQ_RISING     = 0b001
-  IRQ_FALLING    = 0b010
-  IRQ_LOW_LEVEL  = 0b100
-  IRQ_HIGH_LEVEL = 0b101
+  IRQ_RISING     = 0b0001
+  IRQ_FALLING    = 0b0010
+  IRQ_LOW_LEVEL  = 0b0100
+  IRQ_HIGH_LEVEL = 0b1000
 
   # 初期化
   def initialize(pin, mode = -1, pull_mode = -1, value = -1)
@@ -102,8 +105,15 @@ class Pin
   end
 
   def irq(handler = nil, trigger = (Pin::IRQ_FALLING | Pin::IRQ_RISING))
-    GPIO.set_intr_type(@pin, trigger)
-    handler.(self) # for debug
-    GPIO.isr_handler_add(@pin, handler, self)
+    $irq_instances = Array.new(Pin::PIN_COUNT + 1) unless $irq_instances
+    @handler = handler
+    @trigger = trigger
+    $irq_instances[@pin] = self
+  end
+
+  def check_handler()
+    if(GPIO.get_pin_state(@pin) & @trigger != 0)
+      @handler.(self)
+    end
   end
 end
