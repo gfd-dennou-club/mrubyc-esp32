@@ -5,10 +5,6 @@
 */
 
 #include "mrbc_esp32_gpio.h"
-
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/queue.h"
 #include "driver/gpio.h"
 #define PIN_NUM 39
 
@@ -184,7 +180,7 @@ mrbc_esp32_gpio_get_level(mrb_vm* vm, mrb_value* v, int argc)
 /*! メソッド get_pin_state(pin) IRQ制御用の状態管理関数
 
   @param pin GPIO ピン番号
-  @return    ピンレベル、0 : low / 1 : high
+  @return    `トリガーの状態
 */
 static void
 mrbc_esp32_gpio_get_pin_state(mrb_vm* vm, mrb_value* v, int argc)
@@ -195,7 +191,6 @@ mrbc_esp32_gpio_get_pin_state(mrb_vm* vm, mrb_value* v, int argc)
   if(value != pins_state[pin])
     result |= 1 << pins_state[pin];
   pins_state[pin] = value;
-  // Fixnum インスタンスを本メソッドの返り値としてセット、値は gpio_get_level(pin) と同値
   SET_INT_RETURN(result);
 }
 
