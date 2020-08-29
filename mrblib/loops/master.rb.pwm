@@ -5,6 +5,6 @@ pwm0.duty(128)
 sleep 10
 
 pwm0.freq(400)
+sleep 10
 
-exit 0
-
+pwm0.deinit()
