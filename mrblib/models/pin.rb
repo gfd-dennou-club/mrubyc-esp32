@@ -6,6 +6,9 @@ class Pin
   IN  = 1
   PULL_UP = 2
 
+  # `PWM クラスの初期化用に公開
+  attr_reader :pin
+
   # 初期化
   def initialize(pin, inout, pullup)
     @pin = pin

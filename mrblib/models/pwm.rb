@@ -10,7 +10,12 @@ class PWM
 
   # 初期化
   def initialize(pin, ch=0)
-    @pin  = pin
+    if pin.kind_of?(Fixnum)
+      @pin = pin
+    elsif pin.kind_of?(Pin)
+      @pin = pin.pin
+    end
+
     @ch = ch
 
     # 定義済みのチャンネルを取ってこれれば引数にチャンネルを与えなくてよくなるのだが.
