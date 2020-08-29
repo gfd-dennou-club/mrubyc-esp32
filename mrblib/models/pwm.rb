@@ -54,4 +54,9 @@ class PWM
     puts "Set Frequency : #{freq}"
   end
 
+  # PWMを無効化
+  def deinit()
+    LEDC.stop(PWM::LEDC_HIGH_SPEED_MODE, @ch, 0)
+    puts "Stop PWM"
+  end
 end
