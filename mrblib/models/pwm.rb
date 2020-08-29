@@ -46,7 +46,7 @@ class PWM
 
   # 周波数の設定
   def freq( freq )
-    LEDC.set_duty(PWM::LEDC_HIGH_SPEED_MODE, @ch, duty)
+    LEDC.set_freq(PWM::LEDC_HIGH_SPEED_MODE, @ch, freq)
     puts "Set Frequency : #{freq}"
   end
 
