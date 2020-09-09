@@ -17,11 +17,6 @@ class Pin
   PULL_DOWN = 6
   PULL_HOLD = 7
 
-  # for drive
-  LOW_POWER = 8
-  MED_POWER = 9
-  HIGH_POWER = 10
-
   # for irq trigger
   IRQ_RISING     = 0b0001
   IRQ_FALLING    = 0b0010
