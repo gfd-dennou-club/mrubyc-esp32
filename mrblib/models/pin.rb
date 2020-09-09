@@ -104,6 +104,7 @@ class Pin
     end
   end
 
+  # irq ハンドラーの設定
   def irq(handler = nil, trigger = (Pin::IRQ_FALLING | Pin::IRQ_RISING))
     $irq_instances = Array.new(Pin::PIN_COUNT + 1) unless $irq_instances
     @handler = handler
@@ -111,7 +112,8 @@ class Pin
     $irq_instances[@pin] = self
   end
 
-  def check_handler()
+  # `ハンドラーの発火 0.01秒に一度自動で実行される
+  def __check_handler()
     if(GPIO.get_pin_state(@pin) & @trigger != 0)
       @handler.(self)
     end

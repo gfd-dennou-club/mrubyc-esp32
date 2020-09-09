@@ -4,9 +4,9 @@ callback = Proc.new { |p|
 }
 
 led1 = Pin.new(13, Pin::OUT)
-led1.irq(callback)
 
 switch1 = Pin.new(34, Pin::IN)
+switch1.irq(callback, Pin::IRQ_FALLING)
 switch2 = Pin.new(35, Pin::IN)
 
 while true
