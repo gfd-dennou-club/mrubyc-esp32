@@ -18,6 +18,7 @@
 #include "esp_system.h"
 #include "esp_event.h"
 #include "esp_netif.h"
+#include "esp_smartconfig.h"
 
 typedef enum {
   DISCONNECTED = 0,
@@ -27,50 +28,49 @@ typedef enum {
 static struct RClass* mrbc_class_esp32_wifi;
 static char* tag = "main";
 static WIFI_CONNECTION_STATUS connection_status = DISCONNECTED;
+static EventGroupHandle_t s_wifi_event_group;
+
+
+static const char *TAG = "WiFi";
+
 static bool wifi_started = false;
+
 /*! WiFi イベントハンドラ
   各種 WiFi イベントが発生した際に呼び出される
 */
-static void wifi_event_handler(void* ctx, esp_event_base_t event, int32_t event_id, void*event_data)
+static void wifi_event_handler(void* ctx, esp_event_base_t event, int32_t event_id, void* event_data)
 {
-  switch (event_id) {
-    // IP Address が取得できた
-    case SYSTEM_EVENT_STA_GOT_IP:
-      ESP_LOGI(tag, "Got an IP ... ready to go!");
-      // この状態のみを CONNECTED とする
-      connection_status = CONNECTED;
-      tcpip_adapter_ip_info_t ip;
-      memset(&ip, 0, sizeof(tcpip_adapter_ip_info_t));
-      if (tcpip_adapter_get_ip_info(ESP_IF_WIFI_STA, &ip) == 0) {
-        ESP_LOGI(tag, "~~~~~~~~~~~");
-        ESP_LOGI(tag, "IP:"IPSTR, IP2STR(&ip.ip));
-        ESP_LOGI(tag, "MASK:"IPSTR, IP2STR(&ip.netmask));
-        ESP_LOGI(tag, "GW:"IPSTR, IP2STR(&ip.gw));
-        ESP_LOGI(tag, "~~~~~~~~~~~");
-      }
-      wifi_started = true;
-      break;
-
-    case SYSTEM_EVENT_STA_START:
-      ESP_LOGI(tag, "Waiting for IP ..");
-      connection_status = DISCONNECTED;
+  static int s_retry_num = 0;
+  if (event == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
+    ESP_LOGI(TAG,"STA_START");
+    esp_wifi_connect();
+  } else if (event == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
+    if (s_retry_num < 20) {
       esp_wifi_connect();
-      break;
-
-    case SYSTEM_EVENT_STA_DISCONNECTED:
-      ESP_LOGI(tag, "Retrying for IP ..");
-      connection_status = DISCONNECTED;
-      esp_wifi_connect();
-      break;
-
-    default:
-      ESP_LOGI(tag, "Trying to get IP ..");
-      connection_status = DISCONNECTED;
-      esp_wifi_connect();
-      break;
+      s_retry_num++;
+      ESP_LOGI(TAG, "retry to connect to the AP");
+    } else {
+      xEventGroupSetBits(s_wifi_event_group, BIT1);
+    }
+    ESP_LOGI(TAG,"connect to the AP fail");
+  } else if (event == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
+    ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
+    ESP_LOGI(TAG, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
+    s_retry_num = 0;
+    /* xEventGroupSetBits(s_wifi_event_group, BIT0); */
+  } else if (event == SC_EVENT && event_id == SC_EVENT_SCAN_DONE) {
+    ESP_LOGI(TAG, "Scan done");
+  } else if (event == SC_EVENT && event_id == SC_EVENT_FOUND_CHANNEL) {
+    ESP_LOGI(TAG, "Found channel");
+  } else if (event == SC_EVENT && event_id == SC_EVENT_GOT_SSID_PSWD) {
+    ESP_LOGI(TAG, "Got SSID and password");
+    ESP_ERROR_CHECK( esp_wifi_disconnect() );
+    ESP_ERROR_CHECK( esp_wifi_connect() );
+  } else if (event == SC_EVENT && event_id == SC_EVENT_SEND_ACK_DONE) {
+    xEventGroupSetBits(s_wifi_event_group, BIT1);
   }
-}
 
+}
 
 /*! メソッド init() 本体 : wrapper for esp_wifi_init
   引数なし
@@ -78,31 +78,37 @@ static void wifi_event_handler(void* ctx, esp_event_base_t event, int32_t event_
 static void
 mrbc_esp32_wifi_init(mrb_vm* vm, mrb_value* v, int argc)
 {
-
+  s_wifi_event_group = xEventGroupCreate();
   ESP_ERROR_CHECK(esp_netif_init());
-
   ESP_ERROR_CHECK(esp_event_loop_create_default());
-  esp_netif_create_default_wifi_sta();
+
+  esp_netif_t *sta_netif = esp_netif_create_default_wifi_sta();
+  assert(sta_netif);
   
   ESP_LOGI(tag, "WiFi initialization invoked.");
+  
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
   ESP_ERROR_CHECK( esp_wifi_init(&cfg) );
-
-  ESP_ERROR_CHECK( esp_wifi_set_storage(WIFI_STORAGE_RAM) );
-  ESP_ERROR_CHECK( esp_wifi_set_mode(WIFI_MODE_STA) );
 }
 
 
 /*! メソッド start() 本体 : wrapper for esp_wifi_start
-  引数なし
+  引数なし`
 */
 static void
 mrbc_esp32_wifi_start(mrb_vm* vm, mrb_value* v, int argc)
 {
   ESP_LOGI(tag, "WiFi started.");
   //  tcpip_adapter_init();
-  ESP_ERROR_CHECK( esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, wifi_event_handler, NULL) );
+  ESP_ERROR_CHECK( esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL) );
+  ESP_ERROR_CHECK( esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, NULL) );
+  ESP_ERROR_CHECK( esp_event_handler_register(SC_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL) );
+  ESP_ERROR_CHECK( esp_wifi_set_storage(WIFI_STORAGE_RAM) );
+  
+  ESP_ERROR_CHECK( esp_wifi_set_mode(WIFI_MODE_STA) );
+
   ESP_ERROR_CHECK( esp_wifi_start() );
+
 }
 
 /*! メソッド setup_psk(ssid, password) 本体 : wrapper for esp_wifi_set_config
@@ -218,98 +224,105 @@ mrbc_esp32_wifi_is_connected(mrb_vm* vm, mrb_value* v, int argc)
 static void
 mrbc_esp32_wifi_scan(mrb_vm* vm, mrb_value* v, int argc)
 {
+  s_wifi_event_group = xEventGroupCreate();
+  ESP_ERROR_CHECK(esp_netif_init());
+  ESP_ERROR_CHECK(esp_event_loop_create_default());
+  esp_netif_t *sta_netif = esp_netif_create_default_wifi_sta();
+  assert(sta_netif);
   wifi_mode_t mode;
-  ESP_ERROR_CHECK(esp_wifi_get_mode(&mode));
-  if((mode & WIFI_MODE_STA) == 0){
-    ESP_LOGD(tag, "STA is connecting. scan are not allowd");
-  }
   wifi_init_config_t config = WIFI_INIT_CONFIG_DEFAULT();
   ESP_ERROR_CHECK(esp_wifi_init(&config));
   
   uint16_t scan_size = 10;
   uint16_t number = scan_size;
+
   wifi_ap_record_t ap_info[scan_size];
   uint16_t ap_count = 0;
 
   mrb_value result = mrbc_array_new(vm, 0);
-  
-  memset(ap_info, 0, sizeof(ap_info));
-
   ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
   ESP_ERROR_CHECK(esp_wifi_start());
-
-  if(esp_wifi_scan_start(NULL, true) == ESP_OK){
-    ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records(&number, ap_info));
-    ESP_ERROR_CHECK(esp_wifi_scan_get_ap_num(&ap_count));
-  
-    for(uint16_t i = 0; i < ap_count; i++){
-      mrbc_value mrbc_ap_records;
-      mrbc_value key;
-      mrbc_value value;
-      char buf[20];
-      mrbc_ap_records = mrbc_hash_new(vm, 0);
-
-      key = mrbc_string_new_cstr(vm, "ssid");
-      value = mrbc_string_new_cstr(vm, (char *)ap_info[i].ssid);
-      mrbc_hash_set(&mrbc_ap_records, &key, &value);
-
-      key = mrbc_string_new_cstr(vm, "bssid");
-      // TODO: macアドレスの生成に使えるので後で関数化するかもしれない
-      sprintf(buf,
-              "%02X:%02X:%02X:%02X:%02X:%02X",
-              ap_info[i].bssid[0],
-              ap_info[i].bssid[1],
-              ap_info[i].bssid[2],
-              ap_info[i].bssid[3],
-              ap_info[i].bssid[4],
-              ap_info[i].bssid[5]);
-      value = mrbc_string_new_cstr(vm, buf);
-      mrbc_hash_set(&mrbc_ap_records, &key, &value);
-
-      key = mrbc_string_new_cstr(vm, "channel");
-      value = mrbc_fixnum_value(ap_info[i].primary);
-      mrbc_hash_set(&mrbc_ap_records, &key, &value);
-
-      key = mrbc_string_new_cstr(vm, "rssi");
-      value = mrbc_fixnum_value(ap_info[i].rssi);
-      mrbc_hash_set(&mrbc_ap_records, &key, &value);
-
-      // 別関数にした方がいいかもしれない
-      char *authmode;
-      switch(ap_info[i].authmode){
-      case WIFI_AUTH_OPEN:
-        authmode = "OPEN";
-        break;
-      case WIFI_AUTH_WEP:
-        authmode = "WEP";
-        break;
-      case WIFI_AUTH_WPA_PSK:
-        authmode = "WPA PSK";
-        break;
-      case WIFI_AUTH_WPA2_PSK:
-        authmode = "WPA2 PSK";
-        break;
-      case WIFI_AUTH_WPA_WPA2_PSK:
-        authmode = "WPA/WPA2 PSK";
-        break;
-      default:
-        authmode = "Unknown";
-        break;
-      }
-      key = mrbc_string_new_cstr(vm, "authmode");
-      value = mrbc_string_new_cstr(vm, authmode);
-      mrbc_hash_set(&mrbc_ap_records, &key, &value);
-
-      // TODO: micropythonの仕様に合わせているが必ずfalseになるので要らない気がする
-      key = mrbc_string_new_cstr(vm, "hidden");
-      value = mrbc_false_value();
-      mrbc_hash_set(&mrbc_ap_records, &key, &value);
-    
-      mrbc_array_set(&result, i, &mrbc_ap_records);
-    }
+  ESP_ERROR_CHECK(esp_wifi_get_mode(&mode));
+  if((mode & WIFI_MODE_STA) == 0){
+    ESP_LOGD(tag, "STA is connecting. scan are not allowd");
   }
-  free(ap_info);
+
+  ESP_ERROR_CHECK(esp_wifi_scan_start(NULL, true));
+  memset(ap_info, 0, sizeof(ap_info));
+    
+  ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records(&number, ap_info));
+  ESP_ERROR_CHECK(esp_wifi_scan_get_ap_num(&ap_count));
+  
+  for(uint16_t i = 0; i < ap_count; i++){
+    mrbc_value mrbc_ap_records;
+    mrbc_value key;
+    mrbc_value value;
+    char buf[20];
+    mrbc_ap_records = mrbc_hash_new(vm, 0);
+
+    key = mrbc_string_new_cstr(vm, "ssid");
+    value = mrbc_string_new_cstr(vm, (char *)ap_info[i].ssid);
+    mrbc_hash_set(&mrbc_ap_records, &key, &value);
+
+    key = mrbc_string_new_cstr(vm, "bssid");
+    // TODO: macアドレスの生成に使えるので後で関数化するかもしれない
+    sprintf(buf,
+            "%02X:%02X:%02X:%02X:%02X:%02X",
+            ap_info[i].bssid[0],
+            ap_info[i].bssid[1],
+            ap_info[i].bssid[2],
+            ap_info[i].bssid[3],
+            ap_info[i].bssid[4],
+            ap_info[i].bssid[5]);
+    value = mrbc_string_new_cstr(vm, buf);
+    mrbc_hash_set(&mrbc_ap_records, &key, &value);
+
+    key = mrbc_string_new_cstr(vm, "channel");
+    value = mrbc_fixnum_value(ap_info[i].primary);
+    mrbc_hash_set(&mrbc_ap_records, &key, &value);
+
+    key = mrbc_string_new_cstr(vm, "rssi");
+    value = mrbc_fixnum_value(ap_info[i].rssi);
+    mrbc_hash_set(&mrbc_ap_records, &key, &value);
+
+    // 別関数にした方がいいかもしれない
+    char *authmode;
+    switch(ap_info[i].authmode){
+    case WIFI_AUTH_OPEN:
+      authmode = "OPEN";
+      break;
+    case WIFI_AUTH_WEP:
+      authmode = "WEP";
+      break;
+    case WIFI_AUTH_WPA_PSK:
+      authmode = "WPA PSK";
+      break;
+    case WIFI_AUTH_WPA2_PSK:
+      authmode = "WPA2 PSK";
+      break;
+    case WIFI_AUTH_WPA_WPA2_PSK:
+      authmode = "WPA/WPA2 PSK";
+      break;
+    default:
+      authmode = "Unknown";
+      break;
+    }
+    key = mrbc_string_new_cstr(vm, "authmode");
+    value = mrbc_string_new_cstr(vm, authmode);
+    mrbc_hash_set(&mrbc_ap_records, &key, &value);
+
+    // TODO: micropythonの仕様に合わせているが必ずfalseになるので要らない気がする
+    key = mrbc_string_new_cstr(vm, "hidden");
+    value = mrbc_false_value();
+    mrbc_hash_set(&mrbc_ap_records, &key, &value);
+    
+    mrbc_array_set(&result, i, &mrbc_ap_records);
+  }
+  ESP_ERROR_CHECK(esp_wifi_stop());
+  ESP_ERROR_CHECK(esp_event_loop_delete_default());
+  esp_netif_destroy(sta_netif);
   SET_RETURN(result);
+  vEventGroupDelete(s_wifi_event_group);
 }
 
 static char* get_mac_address(int argc){
@@ -365,23 +378,26 @@ mrbc_esp32_wifi_config_mac(mrb_vm* vm, mrb_value* v, int argc)
 static void
 mrbc_esp32_wifi_config_ip(mrb_vm* vm, mrb_value* v, int argc)
 {
+  const char buf;
   if(GET_TT_ARG(1) == MRBC_TT_STRING){
-    tcpip_adapter_ip_info_t ip;
+    esp_netif_ip_info_t ip;
     mrb_value value;
     const char *args = (const char *)GET_STRING_ARG(1);
-    memset(&ip, 0, sizeof(tcpip_adapter_ip_info_t));
+    memset(&ip, 0, sizeof(esp_netif_ip_info_t));
      if(strcmp(args, "STA") || strcmp(args, "sta")){
-      if(tcpip_adapter_get_ip_info(ESP_IF_WIFI_STA, &ip) == 0){
-        tcpip_adapter_ip_info_t ip;
-        tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA, &ip);
-        value = mrbc_string_new_cstr(vm,ip4addr_ntoa(&ip.ip));
+      if(esp_netif_get_ip_info(ESP_IF_WIFI_STA, &ip) == 0){
+        esp_netif_ip_info_t ip;
+        esp_netif_get_ip_info(ESP_IF_WIFI_STA, &ip);
+        sprintf(buf, "%d",(uint8_t)&ip.ip);
+        value = mrbc_string_new_cstr(vm,&buf);
         SET_RETURN(value);
       }
     } else if(strcmp(args, "AP") || strcmp(args, "ap") || strcmp(args, "SOFTAP") || strcmp(args, "softap")) {
-      if(tcpip_adapter_get_ip_info(ESP_IF_WIFI_AP, &ip) == 0){
-        tcpip_adapter_ip_info_t ip;
-        tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_AP, &ip);
-        value = mrbc_string_new_cstr(vm,ip4addr_ntoa(&ip.ip));
+      if(esp_netif_get_ip_info(ESP_IF_WIFI_AP, &ip) == 0){
+        esp_netif_ip_info_t ip;
+        esp_netif_get_ip_info(ESP_IF_WIFI_AP, &ip);
+        sprintf(buf, "%d",(uint8_t)&ip.ip);
+        value = mrbc_string_new_cstr(vm,&buf);
         SET_RETURN(value);
       }    
     } else {
@@ -507,5 +523,4 @@ WiFi.start()
   mrbc_define_method(vm, mrbc_class_esp32_wifi, "ip",  mrbc_esp32_wifi_config_ip);
   mrbc_define_method(vm, mrbc_class_esp32_wifi, "ifconfig",  mrbc_esp32_wifi_ifconfig);
   mrbc_define_method(vm, mrbc_class_esp32_wifi, "active",  mrbc_esp32_wifi_active);
-
 }
