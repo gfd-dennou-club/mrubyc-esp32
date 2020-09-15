@@ -106,7 +106,7 @@ mrbc_esp32_wifi_start(mrb_vm* vm, mrb_value* v, int argc)
   ESP_ERROR_CHECK( esp_wifi_set_storage(WIFI_STORAGE_RAM) );
   
   ESP_ERROR_CHECK( esp_wifi_set_mode(WIFI_MODE_STA) );
-
+  ESP_ERROR_CHECK( esp_wifi_stop() );
   ESP_ERROR_CHECK( esp_wifi_start() );
 
 }
@@ -225,14 +225,15 @@ static void
 mrbc_esp32_wifi_scan(mrb_vm* vm, mrb_value* v, int argc)
 {
   s_wifi_event_group = xEventGroupCreate();
-  ESP_ERROR_CHECK(esp_netif_init());
-  ESP_ERROR_CHECK(esp_event_loop_create_default());
-  esp_netif_t *sta_netif = esp_netif_create_default_wifi_sta();
-  assert(sta_netif);
-  wifi_mode_t mode;
-  wifi_init_config_t config = WIFI_INIT_CONFIG_DEFAULT();
-  ESP_ERROR_CHECK(esp_wifi_init(&config));
-  
+  /* ESP_ERROR_CHECK(esp_netif_init()); */
+  /* ESP_ERROR_CHECK(esp_event_loop_create_default()); */
+  /* esp_netif_t *sta_netif = esp_netif_create_default_wifi_sta(); */
+  /* assert(sta_netif); */
+
+  /* wifi_init_config_t config = WIFI_INIT_CONFIG_DEFAULT(); */
+  /* ESP_ERROR_CHECK(esp_wifi_init(&config)); */
+
+  wifi_mode_t mode;  
   uint16_t scan_size = 10;
   uint16_t number = scan_size;
 
@@ -240,7 +241,7 @@ mrbc_esp32_wifi_scan(mrb_vm* vm, mrb_value* v, int argc)
   uint16_t ap_count = 0;
 
   mrb_value result = mrbc_array_new(vm, 0);
-  ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+  ESP_ERROR_CHECK(esp_wifi_stop());
   ESP_ERROR_CHECK(esp_wifi_start());
   ESP_ERROR_CHECK(esp_wifi_get_mode(&mode));
   if((mode & WIFI_MODE_STA) == 0){
@@ -318,9 +319,10 @@ mrbc_esp32_wifi_scan(mrb_vm* vm, mrb_value* v, int argc)
     
     mrbc_array_set(&result, i, &mrbc_ap_records);
   }
+    
   ESP_ERROR_CHECK(esp_wifi_stop());
-  ESP_ERROR_CHECK(esp_event_loop_delete_default());
-  esp_netif_destroy(sta_netif);
+
+  //  esp_netif_destroy(sta_netif);
   SET_RETURN(result);
   vEventGroupDelete(s_wifi_event_group);
 }
@@ -378,7 +380,7 @@ mrbc_esp32_wifi_config_mac(mrb_vm* vm, mrb_value* v, int argc)
 static void
 mrbc_esp32_wifi_config_ip(mrb_vm* vm, mrb_value* v, int argc)
 {
-  const char buf;
+  char buf[20];
   if(GET_TT_ARG(1) == MRBC_TT_STRING){
     esp_netif_ip_info_t ip;
     mrb_value value;
@@ -386,20 +388,18 @@ mrbc_esp32_wifi_config_ip(mrb_vm* vm, mrb_value* v, int argc)
     memset(&ip, 0, sizeof(esp_netif_ip_info_t));
      if(strcmp(args, "STA") || strcmp(args, "sta")){
       if(esp_netif_get_ip_info(ESP_IF_WIFI_STA, &ip) == 0){
-        esp_netif_ip_info_t ip;
         esp_netif_get_ip_info(ESP_IF_WIFI_STA, &ip);
-        sprintf(buf, "%d",(uint8_t)&ip.ip);
-        value = mrbc_string_new_cstr(vm,&buf);
+        sprintf(buf, IPSTR, IP2STR(&ip.ip));
+        value = mrbc_string_new_cstr(vm, buf);
         SET_RETURN(value);
       }
     } else if(strcmp(args, "AP") || strcmp(args, "ap") || strcmp(args, "SOFTAP") || strcmp(args, "softap")) {
-      if(esp_netif_get_ip_info(ESP_IF_WIFI_AP, &ip) == 0){
-        esp_netif_ip_info_t ip;
-        esp_netif_get_ip_info(ESP_IF_WIFI_AP, &ip);
-        sprintf(buf, "%d",(uint8_t)&ip.ip);
-        value = mrbc_string_new_cstr(vm,&buf);
-        SET_RETURN(value);
-      }    
+      /* if(esp_netif_get_ip_info(ESP_IF_WIFI_AP, &ip) == 0){ */
+      /*   /\* esp_netif_get_ip_info(ESP_IF_WIFI_AP, &ip); *\/ */
+      /*   /\* sprintf(buf, "%d",(uint8_t)&ip.ip); *\/ */
+      /*   value = mrbc_string_new_cstr(vm,&buf); */
+      /*   SET_RETURN(value); */
+      /* }     */
     } else {
       SET_FALSE_RETURN();
     }
