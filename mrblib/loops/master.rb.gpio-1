@@ -1,9 +1,0 @@
-led1 = Pin.new( 13, Pin::OUT )
-
-while true
-  led1.on
-  sleep 1
-
-  led1.off
-  sleep 1
-end
