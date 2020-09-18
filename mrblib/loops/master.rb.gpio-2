@@ -3,24 +3,24 @@ callback = Proc.new { |p|
   puts("called")
 }
 
-led1 = Pin.new( 13, Pin::OUT )
-sw1  = Pin.new( 34, Pin::IN, Pin::PULL_UP )
-sw2  = Pin.new( 35, Pin::IN, Pin::PULL_UP )
+led1 = GPIO.new( 13, GPIO::OUT )
+sw1  = GPIO.new( 34, GPIO::IN, GPIO::PULL_UP )
+sw2  = GPIO.new( 35, GPIO::IN, GPIO::PULL_UP )
 
 sw1.irq(callback)
 
 while true
 
-  if (sw1.value == 1)
-    led1.on
+  if (sw1.read == 1)
+    led1.write(1)
   else
-    led1.off
+    led1.write(0)
   end
 
-  if(sw2.value == 1)
-    led1.set_pull_mode(Pin::PULL_HOLD)
+  if(sw2.read == 1)
+    led1.setpullmode(GPIO::PULL_HOLD)
   else
-    led1.set_pull_mode(nil)
+    led1.setpullmode(nil)
   end
   sleep 1
 end

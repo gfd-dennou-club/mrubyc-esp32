@@ -2,7 +2,7 @@
 
 # `クラス変数`が働かないためグローバル変数で実装する
 $irq_instances = nil
-class Pin
+class GPIO
   # 定数
   PIN_COUNT = 39
   # for mode
@@ -26,73 +26,66 @@ class Pin
   # 初期化
   def initialize(pin, mode = -1, pull_mode = -1, value = -1)
     @pin = pin
-    @mode = mode
     
-    init(@mode, pull_mode, value)
+    init(mode, pull_mode, value)
   end
 
   # コンストラクタ外からの再初期化
   def init(mode = -1, pull_mode = -1, value = -1)
-    if(mode == Pin::OUT || mode == Pin::OPEN_DRAIN)
-      if(value == 0)
-        off()
-      elsif(value == 1)
-        on()
-      end
+    if(value != -1 && (mode == GPIO::OUT || mode == GPIO::OPEN_DRAIN))
+      write(value)
     end
-    set_mode(mode)
-    set_pull_mode(pull_mode)
+    setmode(mode)
+    setpullmode(pull_mode)
   end
 
-  # ピンを "on" (high) レベルに設定
-  def on
-    GPIO.set_level(@pin, 1)
-    puts "turn on"
+  # 出力 `ピンを0か1に設定`
+  def write(value)
+    unless(value == 0 || value == 1)
+      puts "invalid value detected"
+      return
+    end
+    GPIO.set_level(@pin, value)
+    puts "write #{value}"
   end
 
-  # ピンを "off" (low) レベルに設定
-  def off
-    GPIO.set_level(@pin, 0)
-    puts "turn off"
-  end
-
-  # 値 0 または 1 を取得
-  def value
+  # 入力 値 0 または 1 を取得
+  def read
     GPIO.get_level(@pin)
   end
 
-  # mode を設定
-  def set_mode(mode)
+  # 入出力方向設定
+  def setmode(mode)
     @mode = mode
     case @mode
-    when Pin::OUT then
+    when GPIO::OUT then
       GPIO.set_mode_output(@pin)
       puts "GPIO output mode #{@pin}"
-    when Pin::IN then
+    when GPIO::IN then
       GPIO.set_mode_input(@pin)
       puts "GPIO input mode #{@pin}"
-    when Pin::OPEN_DRAIN then
+    when GPIO::OPEN_DRAIN then
       GPIO.set_mode_open_drain(@pin)
       puts "GPIO open_drain mode #{@pin}"
     end
   end
 
   # pullmode を設定 hold を解除したければ "nil" を渡す
-  def set_pull_mode(pull_mode)
+  def setpullmode(pull_mode)
     case pull_mode
-    when Pin::PULL_UP then
+    when GPIO::PULL_UP then
       GPIO.set_pullup(@pin)
       puts "GPIO pull_up #{@pin}"
-    when Pin::PULL_DOWN then
+    when GPIO::PULL_DOWN then
       GPIO.set_pulldown(@pin)
       puts "GPIO pull_down #{@pin}"
-    when Pin::PULL_HOLD then
-      if(@mode == Pin::OUT || @mode == Pin::OPEN_DRAIN)
+    when GPIO::PULL_HOLD then
+      if(@mode == GPIO::OUT || @mode == GPIO::OPEN_DRAIN)
         GPIO.set_hold_enable(@pin)
         puts "GPIO hold_enable #{@pin}"
       end
     else
-      if(@mode == Pin::OUT || @mode == Pin::OPEN_DRAIN)
+      if(@mode == GPIO::OUT || @mode == GPIO::OPEN_DRAIN)
         GPIO.set_hold_disable(@pin)
         puts "GPIO hold_disable #{@pin}"
       end
@@ -100,8 +93,8 @@ class Pin
   end
 
   # irq ハンドラーの設定
-  def irq(handler = nil, trigger = (Pin::IRQ_FALLING | Pin::IRQ_RISING))
-    $irq_instances = Array.new(Pin::PIN_COUNT + 1) unless $irq_instances
+  def irq(handler = nil, trigger = (GPIO::IRQ_FALLING | GPIO::IRQ_RISING))
+    $irq_instances = Array.new(GPIO::PIN_COUNT + 1) unless $irq_instances
     @handler = handler
     @trigger = trigger
     $irq_instances[@pin] = self
