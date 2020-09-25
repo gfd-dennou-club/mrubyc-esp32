@@ -7,22 +7,22 @@ PROJECT_NAME := iotex-esp32-mrubyc
 
 include $(IDF_PATH)/make/project.mk
 
-adc:
+adc-ja:
 	ln -sf master.rb.adc ./example/ja/master.rb
 
-gpio-1:
+gpio-1-ja:
 	ln -sf master.rb.gpio-1 ./example/ja/master.rb
 
-gpio-2:
+gpio-2-ja:
 	ln -sf master.rb.gpio-2 ./example/ja/master.rb
 
-i2c:
+i2c-ja:
 	ln -sf master.rb.i2c ./example/ja/master.rb
 
-pwm:
+pwm-ja:
 	ln -sf master.rb.pwm ./example/ja/master.rb
 
-wifi:
+wifi-ja:
 	ln -sf master.rb.wifi ./example/ja/master.rb
 
 adc:
