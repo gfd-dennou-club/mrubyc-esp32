@@ -30,27 +30,6 @@ mrbc_nop(mrb_vm* vm, mrb_value* v, int argc)
 }
 
 
-/*! メソッド config_output(pin) 本体 : wrapper for gpio_config
-
-  @param pin GPIO ピン番号
-*/
-static void
-mrbc_esp32_gpio_config_output(mrb_vm* vm, mrb_value* v, int argc)
-{
-  int pin = GET_INT_ARG(1);
-
-  gpio_config_t config = {
-    .intr_type = GPIO_PIN_INTR_DISABLE,
-    .mode = GPIO_MODE_OUTPUT,
-    .pin_bit_mask = (1ULL << pin),
-    .pull_down_en = 0,
-    .pull_up_en = 0,
-  };
-
-  gpio_config(&config);
-}
-
-
 /*! メソッド set_pullup(pin) 本体 : wrapper for gpio_set_pull_mode
   GPIO_PULLUP_ONLY 専用
 
