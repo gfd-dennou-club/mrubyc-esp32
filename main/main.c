@@ -20,7 +20,7 @@
 // #include "models/[replace with your file].h"
 // #include "loops/[replace with your file].h"
 #ifdef USE_ESP32_GPIO
-#include "models/pin.h"
+#include "models/gpio.h"
 #include "models/sht75.h"
 #endif
 #ifdef USE_ESP32_LEDC
@@ -90,7 +90,7 @@ void app_main(void) {
 #ifdef USE_ESP32_GPIO
   mrbc_mruby_esp32_gpio_gem_init(0);
   printf("start GPIO\n");
-  mrbc_create_task( pin, 0 );
+  mrbc_create_task( gpio, 0 );
 #endif
 #ifdef USE_ESP32_LEDC
   mrbc_mruby_esp32_ledc_gem_init(0);
