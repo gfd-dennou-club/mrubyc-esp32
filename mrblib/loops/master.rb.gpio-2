@@ -1,15 +1,30 @@
+callback = Proc.new { |p|
+  print(p)
+  puts("called")
+}
+
 led1 = Pin.new( 13, Pin::OUT )
 sw1  = Pin.new( 34, Pin::IN, Pin::PULL_UP )
+sw2  = Pin.new( 35, Pin::IN, Pin::PULL_UP )
+
+# スイッチ１にIRQを登録し、スイッチ１に変更があるたびにcallback関数が呼ばれるようにする
+sw1.irq(callback)
 
 while true
 
+  # スイッチ１の値に応じてLED1の出力を切り替える
   if (sw1.value == 1)
     led1.on
   else
     led1.off
   end
 
+  # スイッチ２がONであれば、LED1をホールドモード(解除されるまで対象の値が動かない)にする
+  # OFFであれば、ホールドモードを解除する
+  if(sw2.value == 1)
+    led1.set_pull_mode(Pin::PULL_HOLD)
+  else
+    led1.set_pull_mode(nil)
+  end
   sleep 1
 end
-
-
