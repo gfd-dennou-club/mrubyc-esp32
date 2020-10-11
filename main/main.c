@@ -35,8 +35,9 @@
 #include "models/rc8035sa.h"
 #endif
 
+#include "models/irq_handler.h"
 #include "loops/master.h"
-#include "loops/irq_handler.h"
+
 
 #define MEMORY_SIZE (1024*40)
 
@@ -89,32 +90,49 @@ void app_main(void) {
   */
 #ifdef USE_ESP32_GPIO
   mrbc_mruby_esp32_gpio_gem_init(0);
+#endif
+#ifdef USE_ESP32_LEDC
+  mrbc_mruby_esp32_ledc_gem_init(0);
+#endif
+#ifdef USE_ESP32_ADC
+  mrbc_mruby_esp32_adc_gem_init(0);
+#endif
+#ifdef USE_ESP32_I2C
+  mrbc_mruby_esp32_i2c_gem_init(0);
+#endif
+#ifdef USE_ESP32_WIFI
+  mrbc_mruby_esp32_wifi_gem_init(0);
+#endif
+#ifdef USE_ESP32_SNTP
+  mrbc_mruby_esp32_sntp_gem_init(0);
+#endif
+
+  /*
+     !!!! Add names of your ruby files                              !!!!
+     !!!! example: mrbc_create_task( [replace with your task], 0 ); !!!!
+  */
+#ifdef USE_ESP32_GPIO
   printf("start GPIO\n");
   mrbc_create_task( gpio, 0 );
 #endif
 #ifdef USE_ESP32_LEDC
-  mrbc_mruby_esp32_ledc_gem_init(0);
   printf("start PWM\n");
   mrbc_create_task( pwm, 0 );
 #endif
 #ifdef USE_ESP32_ADC
-  mrbc_mruby_esp32_adc_gem_init(0);
   printf("start ADC\n");
   mrbc_create_task( adc, 0 );
 #endif
 #ifdef USE_ESP32_I2C
-  mrbc_mruby_esp32_i2c_gem_init(0);
   printf("start I2C\n");
   mrbc_create_task( i2c, 0 );
   mrbc_create_task( sht75, 0 );
 #endif
 #ifdef USE_ESP32_WIFI
-  mrbc_mruby_esp32_wifi_gem_init(0);
   printf("start WiFi\n");
   mrbc_create_task( aqm0802a, 0 );
 #endif
 #ifdef USE_ESP32_SNTP
-  mrbc_mruby_esp32_sntp_gem_init(0);
   printf("start SNTP\n");
   mrbc_create_task( rc8035sa, 0 );
 #endif
@@ -122,15 +140,9 @@ void app_main(void) {
   printf("start HTTPClient\n");
   mrbc_mruby_esp32_httpclient_gem_init(0);
 #endif
-  /*
-     !!!! Add names of your ruby files                              !!!!
-     !!!! example: mrbc_create_task( [replace with your task], 0 ); !!!!
-  */
 
-  // TODO:
-
-  mrbc_create_task( master, 0 );
   mrbc_create_task( irq_handler, 0 );
-  
+  mrbc_create_task( master, 0 );
+
   mrbc_run();
 }
