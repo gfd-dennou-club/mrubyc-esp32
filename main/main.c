@@ -8,28 +8,41 @@
 #include "mrubyc.h"
 
 // ENABLE LIBRARY
-#define USE_ESP32_GPIO
-#define USE_ESP32_LEDC
-#define USE_ESP32_ADC
-#define USE_ESP32_I2C
-#define USE_ESP32_WIFI
-#define USE_ESP32_SNTP
-#define USE_ESP32_HTTP_CLIENT
-#include "mrbc_esp32.h"
+#ifdef CONFIG_USE_ESP32_GPIO
+#include "mrbc_esp32_gpio.h"
+#endif
+#ifdef CONFIG_USE_ESP32_LEDC
+#include "mrbc_esp32_ledc.h"
+#endif
+#ifdef CONFIG_USE_ESP32_ADC
+#include "mrbc_esp32_adc.h"
+#endif
+#ifdef CONFIG_USE_ESP32_I2C
+#include "mrbc_esp32_i2c.h"
+#endif
+#ifdef CONFIG_USE_ESP32_WIFI
+#include "mrbc_esp32_wifi.h"
+#endif
+#ifdef CONFIG_USE_ESP32_SNTP
+#include "mrbc_esp32_sntp.h"
+#endif
+#ifdef CONFIG_USE_ESP32_HTTP_CLIENT
+#include "mrbc_esp32_http_client.h"
+#endif
 
 // #include "models/[replace with your file].h"
 // #include "loops/[replace with your file].h"
-#ifdef USE_ESP32_GPIO
+#ifdef CONFIG_USE_ESP32_GPIO
 #include "models/gpio.h"
 #include "models/sht75.h"
 #endif
-#ifdef USE_ESP32_LEDC
+#ifdef CONFIG_USE_ESP32_LEDC
 #include "models/pwm.h"
 #endif
-#ifdef USE_ESP32_ADC
+#ifdef CONFIG_USE_ESP32_ADC
 #include "models/adc.h"
 #endif
-#ifdef USE_ESP32_I2C
+#ifdef CONFIG_USE_ESP32_I2C
 #include "models/i2c.h"
 #include "models/aqm0802a.h"
 #include "models/rc8035sa.h"
@@ -88,22 +101,22 @@ void app_main(void) {
      !!!! Add your function                            !!!!
      !!!! example: mrbc_mruby_esp32_XXXX_gem_init(0);  !!!!
   */
-#ifdef USE_ESP32_GPIO
+#ifdef CONFIG_USE_ESP32_GPIO
   mrbc_mruby_esp32_gpio_gem_init(0);
 #endif
-#ifdef USE_ESP32_LEDC
+#ifdef CONFIG_USE_ESP32_LEDC
   mrbc_mruby_esp32_ledc_gem_init(0);
 #endif
-#ifdef USE_ESP32_ADC
+#ifdef CONFIG_USE_ESP32_ADC
   mrbc_mruby_esp32_adc_gem_init(0);
 #endif
-#ifdef USE_ESP32_I2C
+#ifdef CONFIG_USE_ESP32_I2C
   mrbc_mruby_esp32_i2c_gem_init(0);
 #endif
-#ifdef USE_ESP32_WIFI
+#ifdef CONFIG_USE_ESP32_WIFI
   mrbc_mruby_esp32_wifi_gem_init(0);
 #endif
-#ifdef USE_ESP32_SNTP
+#ifdef CONFIG_USE_ESP32_SNTP
   mrbc_mruby_esp32_sntp_gem_init(0);
 #endif
 
@@ -111,32 +124,32 @@ void app_main(void) {
      !!!! Add names of your ruby files                              !!!!
      !!!! example: mrbc_create_task( [replace with your task], 0 ); !!!!
   */
-#ifdef USE_ESP32_GPIO
+#ifdef CONFIG_USE_ESP32_GPIO
   printf("start GPIO\n");
   mrbc_create_task( gpio, 0 );
 #endif
-#ifdef USE_ESP32_LEDC
+#ifdef CONFIG_USE_ESP32_LEDC
   printf("start PWM\n");
   mrbc_create_task( pwm, 0 );
 #endif
-#ifdef USE_ESP32_ADC
+#ifdef CONFIG_USE_ESP32_ADC
   printf("start ADC\n");
   mrbc_create_task( adc, 0 );
 #endif
-#ifdef USE_ESP32_I2C
+#ifdef CONFIG_USE_ESP32_I2C
   printf("start I2C\n");
   mrbc_create_task( i2c, 0 );
   mrbc_create_task( sht75, 0 );
 #endif
-#ifdef USE_ESP32_WIFI
+#ifdef CONFIG_USE_ESP32_WIFI
   printf("start WiFi\n");
   mrbc_create_task( aqm0802a, 0 );
 #endif
-#ifdef USE_ESP32_SNTP
+#ifdef CONFIG_USE_ESP32_SNTP
   printf("start SNTP\n");
   mrbc_create_task( rc8035sa, 0 );
 #endif
-#ifdef USE_ESP32_HTTP_CLIENT
+#ifdef CONFIG_USE_ESP32_HTTP_CLIENT
   printf("start HTTPClient\n");
   mrbc_mruby_esp32_httpclient_gem_init(0);
 #endif

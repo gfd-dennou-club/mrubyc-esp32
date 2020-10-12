@@ -1,0 +1,42 @@
+menu "IoTeX ESP32 mrubyc Configuration"
+
+    config USE_ESP32_GPIO
+        bool "USR ESP32 GPIO"
+        default y
+        help
+            use GPIO function?
+
+    config USE_ESP32_LEDC
+        bool "USR ESP32 LEDC"
+        default y
+        help
+            use LEDC function?
+
+    config USE_ESP32_ADC
+        bool "USR ESP32 ADC"
+        default y
+        help
+            use ADC function?
+
+    config USE_ESP32_WIFI
+        bool "USR ESP32 WIFI"
+        default y
+        help
+            use WIFI function?
+
+    config USE_ESP32_SNTP
+        bool "USR ESP32 SNTP"
+	depends on USE_ESP32_WIFI
+        default y
+        help
+            use SNTP function?
+
+    config USE_ESP32_HTTP_CLIENT
+        bool "USR ESP32 HTTP_CLIENT"
+	depends on USE_ESP32_WIFI	
+        default y
+        help
+            use HTTP_CLIENT function?
+
+endmenu
+
