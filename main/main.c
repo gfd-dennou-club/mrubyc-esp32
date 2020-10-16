@@ -29,6 +29,11 @@
 #ifdef CONFIG_USE_ESP32_HTTP_CLIENT
 #include "mrbc_esp32_http_client.h"
 #endif
+#ifdef CONFIG_USE_ESP32_SPI_SD
+#include "mrbc_esp32_sdspi.h"
+#include "mrbc_esp32_stdio.h"
+#include "mrbc_esp32_dirent.h"
+#endif
 
 // #include "models/[replace with your file].h"
 // #include "loops/[replace with your file].h"
@@ -152,6 +157,12 @@ void app_main(void) {
 #ifdef CONFIG_USE_ESP32_HTTP_CLIENT
   printf("start HTTPClient\n");
   mrbc_mruby_esp32_httpclient_gem_init(0);
+#endif
+#ifdef CONFIG_USE_ESP32_SPI_SD
+  printf("start SDSPI and ESP32 stdio\n");
+  mrbc_mruby_esp32_sdspi_gem_init(0);
+  mrbc_mruby_esp32_stdio_gem_init(0);
+  mrbc_mruby_esp32_dirent_gem_init(0);
 #endif
 
   mrbc_create_task( irq_handler, 0 );
