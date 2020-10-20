@@ -1,8 +1,9 @@
 # coding: utf-8
-
 WiFi.init()
-#WiFi.setup_ent_peap("id", "ssid", "username", "password")
-WiFi.setup_psk("ssid", "key")
+# WiFi.setup_ent_peap("id", "ssid", "username", "password")
+WiFi.setup_psk("ssid", "password")
+puts WiFi.scan() # TODO: WiFi.start()以降に実行するとFAILする
+
 WiFi.start()
 
 sleep 3
@@ -29,13 +30,19 @@ hour = (SNTP.hour / 10).to_i(2) << 4 | (SNTP.hour % 10).to_i(2)
 min  = (SNTP.min  / 10).to_i(2) << 4 | (SNTP.min  % 10).to_i(2)
 sec  = (SNTP.sec  / 10).to_i(2) << 4 | (SNTP.sec  % 10).to_i(2)
 
-#RTCに時刻を与える.
-#rtc.write([0x20, 0x03, 0x31, 1, 0x23, 0x59, 0x50]) #年(下2桁), 月, 日, 曜日, 時, 分, 秒
+# RTCに時刻を与える.
+rtc.write([0x20, 0x03, 0x31, 1, 0x23, 0x59, 0x50]) #年(下2桁), 月, 日, 曜日, 時, 分, 秒
 rtc.write([year, mon, mday, SNTP.wday, hour, min, sec]) #年(下2桁), 月, 日, 曜日, 時, 分, 秒
 
 
 sht = SHT75.new(2, 4)  # SHT75-CON2
 sht.sht_init
+
+if WiFi.is_connected?
+  puts WiFi.ifconfig('STA')
+  puts WiFi.ip('STA')
+  puts WiFi.mac('STA')
+end
 
 while true
   temp = sht.sht_get_temp
