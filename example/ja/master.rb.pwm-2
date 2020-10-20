@@ -1,0 +1,21 @@
+pwm0 = PWM.new( 15 )
+
+pwm0.duty(128)
+
+pwm0.freq(200)
+sleep 2
+
+pwm0.freq(400)
+sleep 2
+
+pwm0.freq(600)
+sleep 2
+
+pwm0.freq(800)
+sleep 2
+
+pwm0.freq(1000)
+sleep 2
+
+pwm0.duty(0)
+
