@@ -1,3 +1,7 @@
 # added by mrubyc-utils
 build/
 
+# emacs backup file
+*.c~
+*.h~
+

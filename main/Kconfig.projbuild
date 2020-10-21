@@ -38,5 +38,11 @@ menu "IoTeX ESP32 mrubyc Configuration"
         help
             use HTTP_CLIENT function?
 
+    config USE_ESP32_SPI_SD
+        bool "USR ESP32 SPI_SD"
+        default n
+        help
+            use use SPI SD function?
+
 endmenu
 
