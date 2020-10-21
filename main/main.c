@@ -145,10 +145,10 @@ void app_main(void) {
   printf("start I2C\n");
   mrbc_create_task( i2c, 0 );
   mrbc_create_task( sht75, 0 );
+  mrbc_create_task( aqm0802a, 0 );
 #endif
 #ifdef CONFIG_USE_ESP32_WIFI
   printf("start WiFi\n");
-  mrbc_create_task( aqm0802a, 0 );
 #endif
 #ifdef CONFIG_USE_ESP32_SNTP
   printf("start SNTP\n");
