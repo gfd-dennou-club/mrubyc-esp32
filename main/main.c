@@ -7,7 +7,9 @@
 
 #include "mrubyc.h"
 
-// ENABLE LIBRARY
+//*********************************************
+// ENABLE LIBRARY written by C 
+//*********************************************
 #ifdef CONFIG_USE_ESP32_GPIO
 #include "mrbc_esp32_gpio.h"
 #endif
@@ -35,10 +37,17 @@
 #include "mrbc_esp32_dirent.h"
 #endif
 
+//*********************************************
+// ENABLE CLASSES and MASTER files written by mruby/c
+//
 // #include "models/[replace with your file].h"
 // #include "loops/[replace with your file].h"
+//*********************************************
 #ifdef CONFIG_USE_ESP32_GPIO
 #include "models/gpio.h"
+#include "models/irq_handler.h"
+#endif
+#ifdef CONFIG_USE_ESP32_GPIO_PERIPHERALS_SHT75
 #include "models/sht75.h"
 #endif
 #ifdef CONFIG_USE_ESP32_LEDC
@@ -52,8 +61,7 @@
 #include "models/aqm0802a.h"
 #include "models/rc8035sa.h"
 #endif
-
-#include "models/irq_handler.h"
+//master
 #include "loops/master.h"
 
 
@@ -107,22 +115,38 @@ void app_main(void) {
      !!!! example: mrbc_mruby_esp32_XXXX_gem_init(0);  !!!!
   */
 #ifdef CONFIG_USE_ESP32_GPIO
+  printf("start GPIO (C)\n");
   mrbc_mruby_esp32_gpio_gem_init(0);
 #endif
 #ifdef CONFIG_USE_ESP32_LEDC
+  printf("start PWM (C)\n");
   mrbc_mruby_esp32_ledc_gem_init(0);
 #endif
 #ifdef CONFIG_USE_ESP32_ADC
+  printf("start ADC (C)\n");
   mrbc_mruby_esp32_adc_gem_init(0);
 #endif
 #ifdef CONFIG_USE_ESP32_I2C
+  printf("start I2C (C)\n");
   mrbc_mruby_esp32_i2c_gem_init(0);
 #endif
 #ifdef CONFIG_USE_ESP32_WIFI
+  printf("start WiFi (C) \n");
   mrbc_mruby_esp32_wifi_gem_init(0);
 #endif
 #ifdef CONFIG_USE_ESP32_SNTP
+  printf("start SNTP (C) \n");
   mrbc_mruby_esp32_sntp_gem_init(0);
+#endif
+#ifdef CONFIG_USE_ESP32_HTTP_CLIENT
+  printf("start HTTPClient (C) \n");
+  mrbc_mruby_esp32_httpclient_gem_init(0);
+#endif
+#ifdef CONFIG_USE_ESP32_SPI_SD
+  printf("start SDSPI and ESP32 stdio (C)\n");
+  mrbc_mruby_esp32_sdspi_gem_init(0);
+  mrbc_mruby_esp32_stdio_gem_init(0);
+  mrbc_mruby_esp32_dirent_gem_init(0);
 #endif
 
   /*
@@ -130,42 +154,34 @@ void app_main(void) {
      !!!! example: mrbc_create_task( [replace with your task], 0 ); !!!!
   */
 #ifdef CONFIG_USE_ESP32_GPIO
-  printf("start GPIO\n");
+  printf("start GPIO (mruby/c class)\n");
   mrbc_create_task( gpio, 0 );
+  mrbc_create_task( irq_handler, 0 );
 #endif
 #ifdef CONFIG_USE_ESP32_LEDC
-  printf("start PWM\n");
+  printf("start PWM (mruby/c class)\n");
   mrbc_create_task( pwm, 0 );
 #endif
 #ifdef CONFIG_USE_ESP32_ADC
-  printf("start ADC\n");
+  printf("start ADC (mruby/c class)\n");
   mrbc_create_task( adc, 0 );
 #endif
 #ifdef CONFIG_USE_ESP32_I2C
-  printf("start I2C\n");
+  printf("start I2C (mruby/c class)\n");
   mrbc_create_task( i2c, 0 );
+#endif
+#ifdef CONFIG_USE_ESP32_GPIO_PERIPHERALS_SHT75
+  printf("start SHT75 (mruby/c class)\n");
   mrbc_create_task( sht75, 0 );
+#endif
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_AQM0802A
+  printf("start AQM0802A (mruby/c class)\n");
   mrbc_create_task( aqm0802a, 0 );
 #endif
-#ifdef CONFIG_USE_ESP32_WIFI
-  printf("start WiFi\n");
-#endif
-#ifdef CONFIG_USE_ESP32_SNTP
-  printf("start SNTP\n");
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_RC8035SA
+  printf("start RC8035SA (mruby/c class)\n");
   mrbc_create_task( rc8035sa, 0 );
 #endif
-#ifdef CONFIG_USE_ESP32_HTTP_CLIENT
-  printf("start HTTPClient\n");
-  mrbc_mruby_esp32_httpclient_gem_init(0);
-#endif
-#ifdef CONFIG_USE_ESP32_SPI_SD
-  printf("start SDSPI and ESP32 stdio\n");
-  mrbc_mruby_esp32_sdspi_gem_init(0);
-  mrbc_mruby_esp32_stdio_gem_init(0);
-  mrbc_mruby_esp32_dirent_gem_init(0);
-#endif
-
-  mrbc_create_task( irq_handler, 0 );
   mrbc_create_task( master, 0 );
 
   mrbc_run();
