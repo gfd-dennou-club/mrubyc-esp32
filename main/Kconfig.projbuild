@@ -6,6 +6,20 @@ menu "IoTeX ESP32 mrubyc Configuration"
         help
             use GPIO function?
 
+    config USE_ESP32_GPIO_PERIPHERALS
+        bool "USR ESP32 GPIO_PERIPHERALS"
+	depends on USE_ESP32_GPIO
+        default y
+        help
+            use GPIO peripherals?
+
+    config USE_ESP32_GPIO_PERIPHERALS_SHT75
+        bool "Temperature/Humidity Sensor SENSIRION SHT75"
+	depends on USE_ESP32_GPIO_PERIPHERALS
+        default n
+        help
+            use Temperature/Humidity sensor CENSIRION SHT75?
+
     config USE_ESP32_LEDC
         bool "USR ESP32 LEDC"
         default y
@@ -17,6 +31,33 @@ menu "IoTeX ESP32 mrubyc Configuration"
         default y
         help
             use ADC function?
+
+    config USE_ESP32_I2C
+        bool "USR ESP32 I2C"
+        default y
+        help
+            use I2C function?
+
+    config USE_ESP32_I2C_PERIPHERALS
+        bool "USR ESP32 I2C_PERIPHERALS"
+	depends on USE_ESP32_I2C
+        default n
+        help
+            use I2C function?
+
+    config USE_ESP32_I2C_PERIPHERALS_AQM0802A
+        bool "LCD Display AQM0802A"
+	depends on USE_ESP32_I2C_PERIPHERALS
+        default n
+        help
+            use LCD Display AQM0802A?
+
+    config USE_ESP32_I2C_PERIPHERALS_RC8035SA
+        bool "Real Time Clock RC8035SA"
+	depends on USE_ESP32_I2C_PERIPHERALS
+        default n
+        help
+            use Real Time Clock RC8035SA?
 
     config USE_ESP32_WIFI
         bool "USR ESP32 WIFI"
