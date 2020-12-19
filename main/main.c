@@ -58,8 +58,15 @@
 #endif
 #ifdef CONFIG_USE_ESP32_I2C
 #include "models/i2c.h"
+#endif
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_AQM0802A
 #include "models/aqm0802a.h"
+#endif
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_RC8035SA
 #include "models/rc8035sa.h"
+#endif
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_SGP30
+#include "models/sgp30.h"
 #endif
 //master
 #include "loops/master.h"
@@ -182,6 +189,10 @@ void app_main(void) {
   printf("start RC8035SA (mruby/c class)\n");
   mrbc_create_task( rc8035sa, 0 );
 #endif
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_SGP30
+  printf("start SGP30 (mruby/c class)\n");
+  mrbc_create_task( sgp30, 0 );
+#endif  
   mrbc_create_task( master, 0 );
 
   mrbc_run();

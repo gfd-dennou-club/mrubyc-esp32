@@ -59,6 +59,13 @@ menu "IoTeX ESP32 mrubyc Configuration"
         help
             use Real Time Clock RC8035SA?
 
+    config USE_ESP32_I2C_PERIPHERALS_SGP30
+        bool "eCO2 sensor SENSIRION SGP30"
+	depends on USE_ESP32_I2C_PERIPHERALS
+        default n
+        help
+            use eCO2 sensor SENSIRION SGP30?
+
     config USE_ESP32_WIFI
         bool "USR ESP32 WIFI"
         default y
