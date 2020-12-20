@@ -177,9 +177,8 @@ while true
     p sum_temp / count
     p sum_eco2 / count
     p "*****"
-
-    p "http://pluto.epi.it.matsue-ct.jp/iotex2/monitoring2.php?temp=#{sum_temp / count}&eco2=#{sum_eco2 / count}&hostname=itoc01&time=#{time0}"
-    HTTPClient.init("http://pluto.epi.it.matsue-ct.jp/iotex2/monitoring2.php?temp=#{sum_temp / count}&eco2=#{sum_eco2 / count}&hostname=itoc01&time=#{time0}")
+    
+    HTTPClient.init("http://XXXXXXXXXXX/iotex2/monitoring2.php?temp=#{sum_temp / count}&eco2=#{sum_eco2 / count}&hostname=itoc01&time=#{time0}")
     HTTPClient.invoke()
 
     sum_temp = 0.0
