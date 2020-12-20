@@ -1,8 +1,7 @@
 # coding: utf-8
 WiFi.init()
 # WiFi.setup_ent_peap("id", "ssid", "username", "password")
-# WiFi.setup_psk("ssid", "password")
-WiFi.setup_psk("itoclab_g", "VkwKRc9o4z")
+WiFi.setup_psk("ssid", "password")
 puts WiFi.scan() # TODO: WiFi.start()以降に実行するとFAILする
 
 WiFi.start()
