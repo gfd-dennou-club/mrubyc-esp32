@@ -1,0 +1,216 @@
+# coding: utf-8
+WiFi.init()
+# WiFi.setup_ent_peap("id", "ssid", "username", "password")
+# WiFi.setup_psk("ssid", "password")
+WiFi.setup_psk("BCW710J-F96F0-G", "488cd473ada75")
+puts WiFi.scan() # TODO: WiFi.start()以降に実行するとFAILする
+
+WiFi.start()
+
+sleep 3
+
+# 時刻取得
+SNTP.init()
+
+sleep 3
+
+# LED
+led = [
+nil,
+GPIO.new( 13, GPIO::OUT ),
+GPIO.new( 12, GPIO::OUT ),
+GPIO.new( 14, GPIO::OUT ),
+GPIO.new( 27, GPIO::OUT ),
+GPIO.new( 26, GPIO::OUT ),
+GPIO.new( 25, GPIO::OUT ),
+GPIO.new( 33, GPIO::OUT ),
+GPIO.new( 32, GPIO::OUT )
+]
+sw = [
+  GPIO.new(34, GPIO::IN, GPIO::PULL_UP),
+  GPIO.new(35, GPIO::IN, GPIO::PULL_UP),
+  GPIO.new(18, GPIO::IN, GPIO::PULL_UP),
+  GPIO.new(19, GPIO::IN, GPIO::PULL_UP)
+]
+
+#PWm
+pwm = PWM.new(15)
+freq = [
+  262, 277, 293, 311, 330, 349, 369, 392, 415, 440, 466,
+  494, 523, 554, 587, 622, 659, 698, 740, 784, 831, 880,
+]
+pitch = 6
+
+sound = [
+  [14, 0.8], [9, 0.4], [10, 0.4], [12, 0.8], [10, 0.4], [9, 0.4], [7, 1.2],
+  [10, 0.4], [14, 0.8], [12, 0.4], [10, 0.4], [9, 1.2], [10, 0.4], [12, 0.8],
+  [14, 0.8], [10, 0.8], [7, 0.8], [7, 1.6]
+]
+
+
+# SHT75 初期化
+sht = SHT75.new(2, 4)  # SHT75-CON2
+sht.sht_init
+
+sleep 3
+
+# A/D 変換 初期化
+adc = ADC.new( 39, ADC::ATTEN_11DB, ADC::WIDTH_12BIT ) 
+ 
+#温度計測用変数初期化
+B = 3435.0
+To = 25.0
+V = 3300.0
+Rref = 10.0
+
+sleep 3
+
+#I2C 初期化
+i2c = I2C.new(0, 22, 21)
+i2c.driver_install
+
+# LCD 初期化
+lcd = AQM0802A.new(i2c)
+lcd.setup
+
+# RTC 初期化. 時刻設定
+rtc = RC8035SA.new(i2c)
+
+#BCDコードへ変換. 
+year = ((SNTP.year - 2000) / 10).to_i(2) << 4 | ((SNTP.year - 2000) % 10).to_i(2)
+mon  = (SNTP.mon  / 10).to_i(2) << 4 | (SNTP.mon  % 10).to_i(2)
+mday = (SNTP.mday / 10).to_i(2) << 4 | (SNTP.mday % 10).to_i(2)
+hour = (SNTP.hour / 10).to_i(2) << 4 | (SNTP.hour % 10).to_i(2)
+min  = (SNTP.min  / 10).to_i(2) << 4 | (SNTP.min  % 10).to_i(2)
+sec  = (SNTP.sec  / 10).to_i(2) << 4 | (SNTP.sec  % 10).to_i(2)
+
+# RTCに時刻を与える.
+rtc.write([0x20, 0x03, 0x31, 1, 0x23, 0x59, 0x50]) #年(下2桁), 月, 日, 曜日, 時, 分, 秒
+rtc.write([year, mon, mday, SNTP.wday, hour, min, sec]) #年(下2桁), 月, 日, 曜日, 時, 分, 秒
+
+sleep(3)
+
+#SGP30 初期化
+sgp = SGP30.new(i2c)
+serialnumber = sgp.begin()
+if !serialnumber then
+  p "Sensor not found :("
+  while true
+  end
+end
+
+print "Found SGP30 serial #"
+print serialnumber[0].to_s(16)
+print serialnumber[1].to_s(16)
+puts  serialnumber[2].to_s(16)
+
+#配列初期化
+count = 0
+sum_temp = 0.0
+sum_eco2 = 0.0
+
+while true
+  
+  tt = rtc.read
+  time0 = sprintf("20%02x-%02x-%02xT%02x:%02x:%02x", tt[0], tt[1], tt[2], tt[4], tt[5], tt[6])
+  p time0
+
+  voltage = adc.read()
+  temp = 1.0 / ( 1.0 / B * Math.log( (V - voltage) / (voltage/ Rref) / Rref) + 1.0 / (To + 273.0) ) - 273.0
+  puts "#{voltage} mV, #{temp} K"
+  
+  reply = sgp.IAQmeasure()
+  if !reply then
+    p "Measurement failed"
+    return
+  end
+  tvoc = reply[1]
+  eCO2 = reply[0]
+  puts #改行
+  print "TVOC #{tvoc} ppb\t"
+  puts "eCO2 #{eCO2} ppm"
+  
+  reply = sgp.IAQmeasureRaw()
+  if !reply then
+    p "Measurement failed"
+    return
+  end
+  rawEthanol = reply[1]
+  rawH2 = reply[0]
+  print "Raw H2 #{rawH2} \t"
+  puts "Raw Ethanol #{rawEthanol}"
+
+  if eCO2 > 1000
+    for num in 1..8
+      led[num].write(1)
+    end
+  else
+    for num in 1..8
+      led[num].write(0)
+    end
+  end
+  
+  #音を鳴らす部分で1秒間隔に合わせる
+  if sw[0].read == 0 && eCO2 > 1000
+    pwm.duty(128)
+    for i in 0..6 do
+      pwm.freq(freq[sound[i][0]])
+      sleep(sound[i][1]/pitch)
+    end
+  else
+    pwm.duty(0)
+    sleep 0.85
+  end
+  
+  # 時刻とCO2 表示
+  lcd.cursor(0, 0)
+  lcd.write_string(sprintf("%02x:%02x:%02x", tt[4], tt[5], tt[6]))
+  lcd.cursor(0, 1)
+  lcd.write_string(sprintf("CO2:%04d", eCO2))
+
+  sum_temp += temp
+  sum_eco2 += eCO2
+  count += 1
+  
+  #送信
+  if tt[6] == 0
+    p "*****"
+    p sum_temp / count
+    p sum_eco2 / count
+    p "*****"
+
+    p "http://pluto.epi.it.matsue-ct.jp/iotex2/monitoring2.php?temp=#{sum_temp / count}&eco2=#{sum_eco2 / count}&hostname=itoc01&time=#{time0}"
+    HTTPClient.init("http://pluto.epi.it.matsue-ct.jp/iotex2/monitoring2.php?temp=#{sum_temp / count}&eco2=#{sum_eco2 / count}&hostname=itoc01&time=#{time0}")
+    HTTPClient.invoke()
+
+    sum_temp = 0.0
+    sum_eco2 = 0.0
+    count = 0
+  end
+
+
+end
+
+
+  
+=begin  
+  counter += 1
+
+  if (counter == 30) then
+    counter = 0
+
+    reply = sgp.getIAQBaseline()
+    if !reply then
+      puts "Faile to get baseline readings"
+      return
+    end
+    eco2_base = reply[0]
+    tvoc_base = reply[1]
+    print "****Baseline values: eCO2: 0x"
+    print eco2_base.to_s(16)
+    print " & TVOC: 0x"
+    puts  tvoc_base.to_s(16)
+  end
+=end
+
+
