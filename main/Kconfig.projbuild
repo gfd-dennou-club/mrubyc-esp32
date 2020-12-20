@@ -6,16 +6,9 @@ menu "IoTeX ESP32 mrubyc Configuration"
         help
             use GPIO function?
 
-    config USE_ESP32_GPIO_PERIPHERALS
-        bool "USR ESP32 GPIO_PERIPHERALS"
-	depends on USE_ESP32_GPIO
-        default y
-        help
-            use GPIO peripherals?
-
     config USE_ESP32_GPIO_PERIPHERALS_SHT75
-        bool "Temperature/Humidity Sensor SENSIRION SHT75"
-	depends on USE_ESP32_GPIO_PERIPHERALS
+        bool "PERIPHERAL: Temperature/Humidity Sensor SENSIRION SHT75"
+	depends on USE_ESP32_GPIO
         default n
         help
             use Temperature/Humidity sensor CENSIRION SHT75?
@@ -38,30 +31,23 @@ menu "IoTeX ESP32 mrubyc Configuration"
         help
             use I2C function?
 
-    config USE_ESP32_I2C_PERIPHERALS
-        bool "USR ESP32 I2C_PERIPHERALS"
-	depends on USE_ESP32_I2C
-        default n
-        help
-            use I2C function?
-
     config USE_ESP32_I2C_PERIPHERALS_AQM0802A
-        bool "LCD Display AQM0802A"
-	depends on USE_ESP32_I2C_PERIPHERALS
+        bool "PERIPHERAL: LCD Display AQM0802A"
+	depends on USE_ESP32_I2C
         default n
         help
             use LCD Display AQM0802A?
 
     config USE_ESP32_I2C_PERIPHERALS_RC8035SA
-        bool "Real Time Clock RC8035SA"
-	depends on USE_ESP32_I2C_PERIPHERALS
+        bool "PERIPHERAL: Real Time Clock RC8035SA"
+	depends on USE_ESP32_I2C
         default n
         help
             use Real Time Clock RC8035SA?
 
     config USE_ESP32_I2C_PERIPHERALS_SGP30
-        bool "eCO2 sensor SENSIRION SGP30"
-	depends on USE_ESP32_I2C_PERIPHERALS
+        bool "PERIPHERAL: eCO2 sensor SENSIRION SGP30"
+	depends on USE_ESP32_I2C
         default n
         help
             use eCO2 sensor SENSIRION SGP30?
@@ -73,14 +59,14 @@ menu "IoTeX ESP32 mrubyc Configuration"
             use WIFI function?
 
     config USE_ESP32_SNTP
-        bool "USR ESP32 SNTP"
+        bool "SERVICE: SNTP"
 	depends on USE_ESP32_WIFI
         default y
         help
             use SNTP function?
 
     config USE_ESP32_HTTP_CLIENT
-        bool "USR ESP32 HTTP_CLIENT"
+        bool "SERVICE: HTTP_CLIENT"
 	depends on USE_ESP32_WIFI	
         default y
         help
