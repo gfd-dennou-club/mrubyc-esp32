@@ -1,3 +1,4 @@
+# coding: utf-8
 ####### master.rb ######
 
 # coding: utf-8
@@ -30,12 +31,11 @@ while true
     p "Measurement failed"
     return
   end
-  TVOC = reply[1]
+  tvoc = reply[1]
   eCO2 = reply[0]
   puts #改行
-  print "TVOC #{TVOC} ppb\t"
+  print "TVOC #{tvoc} ppb\t"
   puts "eCO2 #{eCO2} ppm"
-
 
   reply = sgp.IAQmeasureRaw()
   if !reply then
