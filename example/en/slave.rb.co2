@@ -7,7 +7,7 @@ level = 1000
 
 #ホスト名
 hostname = "itoc02"
-url = "http://pluto.epi.it.matsue-ct.jp/iotex2/monitoring2.php"
+url = "http://xxx.epi.it.matsue-ct.jp/iotex2/monitoring2.php"
 
 #監視時刻
 mon_hour_begin = 9   
@@ -16,7 +16,7 @@ mon_hour_end   = 17
 #WIFI 設定
 WiFi.init()
 # WiFi.setup_ent_peap("id", "ssid", "username", "password")
-WiFi.setup_psk("BCW710J-F96F0-G", "488cd473ada75")
+WiFi.setup_psk("ssid", "passwd")
 WiFi.start()
 
 sleep 3
