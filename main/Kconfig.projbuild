@@ -76,7 +76,13 @@ menu "IoTeX ESP32 mrubyc Configuration"
         bool "USR ESP32 SPI_SD"
         default n
         help
-            use use SPI SD function?
+            use SPI SD function?
+
+    config ENABLE_MULTITASK
+        bool "ENABLE MULTI-TASK"
+        default n
+        help
+            enable multi-task mode?
 
 endmenu
 

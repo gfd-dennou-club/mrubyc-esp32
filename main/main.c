@@ -70,6 +70,10 @@
 #endif
 //master
 #include "loops/master.h"
+//slave
+#ifdef CONFIG_ENABLE_MULTITASK
+#include "loops/slave.h"
+#endif
 
 
 #define MEMORY_SIZE (1024*40)
@@ -193,7 +197,14 @@ void app_main(void) {
   printf("start SGP30 (mruby/c class)\n");
   mrbc_create_task( sgp30, 0 );
 #endif  
+
+  //master
   mrbc_create_task( master, 0 );
 
+  //slave
+#ifdef CONFIG_ENABLE_MULTITASK
+  mrbc_create_task( slave, 0 );
+#endif
+  
   mrbc_run();
 }
