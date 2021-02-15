@@ -1,0 +1,30 @@
+callback = Proc.new { |p|
+  print(p)
+  puts("called")
+}
+
+led1 = GPIO.new( 13, GPIO::OUT )
+sw1  = GPIO.new( 34, GPIO::IN, GPIO::PULL_UP )
+sw2  = GPIO.new( 35, GPIO::IN, GPIO::PULL_UP )
+
+# スイッチ１にIRQを登録し、スイッチ１に変更があるたびにcallback関数が呼ばれるようにする
+sw1.irq(callback)
+
+while true
+
+  # スイッチ１の値に応じてLED1の出力を切り替える
+  if (sw1.read == 1)
+    led1.write(1)
+  else
+    led1.write(0)
+  end
+
+  # スイッチ２がONであれば、LED1をホールドモード(解除されるまで対象の値が動かない)にする
+  # OFFであれば、ホールドモードを解除する
+  if(sw2.read == 1)
+    led1.setpullmode(GPIO::PULL_HOLD)
+  else
+    led1.setpullmode(nil)
+  end
+  sleep 1
+end
