@@ -10,6 +10,6 @@ Rref = 10.0
 while true
   voltage = adc.read()
   temp = 1.0 / ( 1.0 / B * Math.log( (V - voltage) / (voltage/ Rref) / Rref) + 1.0 / (To + 273.0) ) - 273.0
-  puts "#{voltage} mV, #{temp} K"
+  puts "#{voltage} mV, #{temp} °C"
   sleep(10)
 end
