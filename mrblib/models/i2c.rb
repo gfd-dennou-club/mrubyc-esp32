@@ -9,8 +9,13 @@ class I2C
   end
 
   def write(i2c_adrs_7, *data)
-    p data
-    if(data[0].kind_of?(Array))
+    if(data[0].kind_of?(String))
+      s = data[0]
+      data = Array.new
+      s.length.times do |n|
+        data.push(s[n].ord)
+      end
+    elsif(data[0].kind_of?(Array))
       data = data[0]
     end
     self.__write(i2c_adrs_7, data)
