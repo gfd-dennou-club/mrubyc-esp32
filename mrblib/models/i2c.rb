@@ -23,6 +23,16 @@ class I2C
   
   def read(i2c_adrs_7, len, *params)
     write(i2c_adrs_7, params) unless params.empty?
+    a = self.__read(i2c_adrs_7, len)
+    s = ""
+    a.length.times do |n|
+      s << a[n].chr
+    end
+    s
+  end
+  
+  def read_integer(i2c_adrs_7, len, *params)
+    write(i2c_adrs_7, params) unless params.empty?
     self.__read(i2c_adrs_7, len)
   end
 end
