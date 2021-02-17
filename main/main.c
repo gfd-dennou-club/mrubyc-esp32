@@ -35,6 +35,8 @@
 #include "mrbc_esp32_sdspi.h"
 #include "mrbc_esp32_stdio.h"
 #include "mrbc_esp32_dirent.h"
+#ifdef CONFIG_USE_ESP32_UART
+#include "mrbc_esp32_uart.h"
 #endif
 
 //*********************************************
@@ -158,6 +160,10 @@ void app_main(void) {
   mrbc_mruby_esp32_sdspi_gem_init(0);
   mrbc_mruby_esp32_stdio_gem_init(0);
   mrbc_mruby_esp32_dirent_gem_init(0);
+#endif
+#ifdef CONFIG_USE_ESP32_UART
+  printf("start UART (C)\n");
+  mrbc_mruby_esp32_uart_gem_init(0);
 #endif
 
   /*

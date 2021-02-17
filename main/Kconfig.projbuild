@@ -52,6 +52,18 @@ menu "IoTeX ESP32 mrubyc Configuration"
         help
             use eCO2 sensor SENSIRION SGP30?
 
+    config USE_ESP32_SPI_SD
+        bool "USR ESP32 SPI_SD"
+        default n
+        help
+            use SPI SD function?
+
+    config USE_ESP32_UART
+        bool "USR ESP32 UART"
+        default n
+        help
+            use UART function?
+
     config USE_ESP32_WIFI
         bool "USR ESP32 WIFI"
         default y
@@ -71,12 +83,6 @@ menu "IoTeX ESP32 mrubyc Configuration"
         default y
         help
             use HTTP_CLIENT function?
-
-    config USE_ESP32_SPI_SD
-        bool "USR ESP32 SPI_SD"
-        default n
-        help
-            use SPI SD function?
 
     config ENABLE_MULTITASK
         bool "ENABLE MULTI-TASK"
