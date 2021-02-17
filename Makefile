@@ -81,3 +81,7 @@ sample4:
 sample5:
 	cd mrblib/loops; \
 	ln -sf ../../example/master.rb.sample5 master.rb
+
+sample6:
+	cd mrblib/loops; \
+	ln -sf ../../example/master.rb.sample6 master.rb
