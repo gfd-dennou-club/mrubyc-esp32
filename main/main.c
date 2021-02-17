@@ -35,6 +35,7 @@
 #include "mrbc_esp32_sdspi.h"
 #include "mrbc_esp32_stdio.h"
 #include "mrbc_esp32_dirent.h"
+#endif
 #ifdef CONFIG_USE_ESP32_UART
 #include "mrbc_esp32_uart.h"
 #endif
