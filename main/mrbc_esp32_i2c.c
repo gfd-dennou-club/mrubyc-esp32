@@ -213,8 +213,8 @@ I2C#read(addr, len)
   mrbc_define_method(vm, mrbc_class_esp32_i2c, "msleep",         mrbc_msleep);
   mrbc_define_method(vm, mrbc_class_esp32_i2c, "driver_install", mrbc_esp32_i2c_driver_install);
   mrbc_define_method(vm, mrbc_class_esp32_i2c, "driver_delete",  mrbc_esp32_i2c_driver_delete);
-  mrbc_define_method(vm, mrbc_class_esp32_i2c, "write",          mrbc_esp32_i2c_write);
-  mrbc_define_method(vm, mrbc_class_esp32_i2c, "read",           mrbc_esp32_i2c_read);
+  mrbc_define_method(vm, mrbc_class_esp32_i2c, "__write",        mrbc_esp32_i2c_write);
+  mrbc_define_method(vm, mrbc_class_esp32_i2c, "__read",         mrbc_esp32_i2c_read);
 
   // インスタンス変数を参照する際に必要になる Symbol インスタンスを予め生成しておく
   symid_port = str_to_symid("port");
