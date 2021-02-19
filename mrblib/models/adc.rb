@@ -35,6 +35,8 @@ class ADC
 
     if (@unit == 1)
       ADC.init_adc1( @channel, @atten, @width )
+    elsif(@unit == 2)
+      ADC.init_adc2( @channel, @atten, @width )
     end
 
     puts "*** adc.rb ***"
@@ -48,7 +50,9 @@ class ADC
   # 値の取得
   def read
     if (@unit == 1)
-      ADC.read_adc1(@channel)
+      ADC.read_adc1( @channel )
+    elsif(@unit == 2)
+      ADC.read_adc2( @channel, @width )
     end
   end  
 end

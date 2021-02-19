@@ -1,5 +1,6 @@
 # A/D 変換 初期化
-adc = ADC.new( 39, ADC::ATTEN_11DB, ADC::WIDTH_12BIT ) 
+adc1 = ADC.new( 39, ADC::ATTEN_11DB, ADC::WIDTH_12BIT ) 
+adc2 = ADC.new( 4, ADC::ATTEN_11DB, ADC::WIDTH_12BIT ) 
  
 #温度計測用変数初期化
 B = 3435.0
@@ -8,8 +9,10 @@ V = 3300.0
 Rref = 10.0
 
 while true
-  voltage = adc.read()
-  temp = 1.0 / ( 1.0 / B * Math.log( (V - voltage) / (voltage/ Rref) / Rref) + 1.0 / (To + 273.0) ) - 273.0
-  puts "#{voltage} mV, #{temp} K"
+  voltage1 = adc1.read()
+  voltage2 = adc2.read()
+  temp = 1.0 / ( 1.0 / B * Math.log( (V - voltage1) / (voltage1/ Rref) / Rref) + 1.0 / (To + 273.0) ) - 273.0
+  puts "adc1 : #{voltage1} mV, #{temp} °C"
+  puts "adc2 : #{voltage2} mV"
   sleep(10)
 end
