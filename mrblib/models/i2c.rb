@@ -21,14 +21,6 @@ class I2C
     self.driver_install
   end
 
-  # コンストラクタ外からの再初期化
-  def init(scl, sda, freq = 400000)
-    @scl  = scl
-    @sda  = sda
-    @freq = freq
-    self.driver_install
-  end
-
   # IC2ドライバーの削除
   def deinit
     self.driver_delete
