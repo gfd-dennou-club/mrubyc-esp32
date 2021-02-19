@@ -1,3 +1,15 @@
+#概要 summary
+
+=begin JA
+SW1が入力されている時LED1が光る
+SW2を入力するとLED１の状態を保存する。
+=end JA
+
+=begin EN
+When SW1 is input, LED1 glows.
+When SW2 is input, the state of LED1 is saved.
+=end EN
+
 callback = Proc.new { |p|
   print(p)
   puts("called")

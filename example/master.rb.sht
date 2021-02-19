@@ -1,24 +1,5 @@
 # coding: utf-8-hfs
 
-#I2C 初期化
-i2c = I2C.new(0, 22, 21)
-i2c.driver_install
-
-# LCD 初期化
-lcd = AQM0802A.new(i2c)
-lcd.setup
-
-# LCD に "Hello World" 表示
-lcd.cursor(1, 0)
-lcd.write_string("Hello!")
-lcd.cursor(0, 1)
-lcd.write_string("from ESP")
-sleep(10)
-
-# RTC 初期化. 時刻設定
-rtc = RC8035SA.new(i2c)
-rtc.write([0x20, 0x03, 0x31, 1, 0x23, 0x59, 0x50]) #年(下2桁), 月, 日, 曜日, 時, 分, 秒
-
 sht = SHT75.new(2, 4)  # SHT75-CON2
 sht.sht_init
 
@@ -27,16 +8,5 @@ while true
   humi = sht.sht_get_humi(temp)
   puts "temperature: #{temp / 100.0}, humidity: #{humi}"
   
-  tt = rtc.read
-  lcd.cursor(0, 0)
-  lcd.write_string(sprintf("%02x-%02x-%02x", tt[0], tt[1], tt[2]))
-  lcd.cursor(0, 1)
-  lcd.write_string(sprintf("%02x:%02x:%02x", tt[4], tt[5], tt[6]))
-  sleep(2)
-
-  lcd.cursor(0, 0)
-  lcd.write_string(sprintf("t: %4.2f", temp/100.0))
-  lcd.cursor(0, 1)
-  lcd.write_string(sprintf("h: %4.2f", humi)) 
-  sleep(3)
+  sleep 10
 end

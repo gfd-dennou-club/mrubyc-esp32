@@ -11,17 +11,26 @@ adc:
 	cd mrblib/loops; \
 	ln -sf ../../example/master.rb.adc master.rb
 
-gpio-2:
+gpio:
+	cd mrblib/loops; \
+	ln -sf ../../example/master.rb.gpio-1 master.rb
+
+gpio2:
 	cd mrblib/loops; \
 	ln -sf ../../example/master.rb.gpio-2 master.rb
 
-gpio-3:
+gpio3:
 	cd mrblib/loops; \
 	ln -sf ../../example/master.rb.gpio-3 master.rb
+
+gpio4:
+	cd mrblib/loops; \
+	ln -sf ../../example/master.rb.gpio-4 master.rb
 
 i2c:
 	cd mrblib/loops; \
 	ln -sf ../../example/master.rb.i2c master.rb
+
 pwm:
 	cd mrblib/loops; \
 	ln -sf ../../example/master.rb.pwm master.rb
@@ -33,6 +42,14 @@ pwm2:
 pwm3:
 	cd mrblib/loops; \
 	ln -sf ../../example/master.rb.pwm-3 master.rb
+
+pwm4:
+	cd mrblib/loops; \
+	ln -sf ../../example/master.rb.pwm-4 master.rb
+
+pwm5:
+	cd mrblib/loops; \
+	ln -sf ../../example/master.rb.pwm-5 master.rb
 
 wifi:
 	cd mrblib/loops; \
@@ -65,23 +82,3 @@ sht:
 uart:
 	cd mrblib/loops; \
 	ln -sf ../../example/master.rb.uart master.rb
-
-sample1:
-	cd mrblib/loops; \
-	ln -sf ../../example/master.rb.sample1 master.rb
-
-sample2:
-	cd mrblib/loops; \
-	ln -sf ../../example/master.rb.sample2 master.rb
-
-sample3:
-	cd mrblib/loops; \
-	ln -sf ../../example/master.rb.sample3 master.rb
-
-sample4:
-	cd mrblib/loops; \
-	ln -sf ../../example/master.rb.sample4 master.rb
-
-sample5:
-	cd mrblib/loops; \
-	ln -sf ../../example/master.rb.sample5 master.rb

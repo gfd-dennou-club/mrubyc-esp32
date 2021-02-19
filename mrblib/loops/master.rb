@@ -1,1 +1,1 @@
-../../example/master.rb.adc
+../../example/master.rb.pwm-7
