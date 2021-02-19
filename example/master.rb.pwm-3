@@ -1,3 +1,17 @@
+# 概要 summary
+
+=begin JA
+SW1を入力すると「テトリス」の音楽が流れます。
+更にSW2,3,4を入力するとテンポが早くなります。
+=end JA
+
+=begin EN
+When you enter SW1, the music of "Tetris" will be played.
+Inputting SW2, SW3, and SW4 will speed up the tempo.
+=end EN
+
+
+
 # coding: utf-8
 led = [
   GPIO.new(13, GPIO::OUT),

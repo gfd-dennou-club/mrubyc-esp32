@@ -1,3 +1,13 @@
+# 概要 summary
+
+=begin JA
+SW1を入力すると音楽がなります。
+=end JA
+
+=begin EN
+Input SW1 to turn on the music.
+=end EN
+
 sw = GPIO.new(34,GPIO::IN, GPIO::PULL_UP)
 pwm0 = PWM.new(15)
 
