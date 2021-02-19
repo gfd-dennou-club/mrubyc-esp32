@@ -123,6 +123,22 @@ mrbc_esp32_ledc_update_duty(mrb_vm* vm, mrb_value* v, int argc)
   ledc_update_duty(sp, ch);
 }
 
+/*! メソッド stop() 本体 : wrapper for ledc_stop
+
+  @param sp     スピードモード
+  @param ch     チャンネル
+  @param id     アイドルレベル
+*/
+static void
+mrbc_esp32_ledc_stop(mrb_vm* vm, mrb_value* v, int argc)
+{
+  int sp   = GET_INT_ARG(1);
+  int ch   = GET_INT_ARG(2);
+  int id   = GET_INT_ARG(3);
+  
+  ledc_stop(sp, ch, id);
+}
+
 
 /*! クラス定義処理を記述した関数
   この関数を呼ぶことでクラス LEDC が定義される
@@ -138,6 +154,7 @@ LEDC.channel_config()
 LEDC.set_freq()
 LEDC.set_duty()
 LEDC.update_duty()
+LEDC.stop()
 */
   // クラス LEDC 定義
   mrbc_class_esp32_ledc = mrbc_define_class(vm, "LEDC", mrbc_class_object);
@@ -148,5 +165,6 @@ LEDC.update_duty()
   mrbc_define_method(vm, mrbc_class_esp32_ledc, "set_freq",        mrbc_esp32_ledc_set_freq);
   mrbc_define_method(vm, mrbc_class_esp32_ledc, "set_duty",        mrbc_esp32_ledc_set_duty);
   mrbc_define_method(vm, mrbc_class_esp32_ledc, "update_duty",     mrbc_esp32_ledc_update_duty);
+  mrbc_define_method(vm, mrbc_class_esp32_ledc, "stop",            mrbc_esp32_ledc_stop);
   mrbc_define_method(vm, mrbc_class_esp32_ledc, "nop",             mrbc_nop);
 }

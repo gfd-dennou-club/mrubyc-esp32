@@ -7,10 +7,15 @@ class PWM
   LEDC_TIMER_8_BIT = 8
   LEDC_HIGH_SPEED_MODE = 0
   LEDC_DEFAULT_FREQUENCY = 440
-  
+  LEDC_DEFAULT_DUTY = 1 << (PWM::LEDC_TIMER_8_BIT - 1)
   # 初期化
-  def initialize(pin, ch=0)
-    @pin  = pin
+  def initialize(pin, ch=0, freq = PWM::LEDC_DEFAULT_FREQUENCY, duty = PWM::LEDC_DEFAULT_DUTY)
+    if pin.kind_of?(Fixnum)
+      @pin = pin
+    elsif pin.kind_of?(Pin)
+      @pin = pin.pin
+    end
+
     @ch = ch
 
     # 定義済みのチャンネルを取ってこれれば引数にチャンネルを与えなくてよくなるのだが.
@@ -29,6 +34,9 @@ class PWM
       @pin, 
       PWM::LEDC_HIGH_SPEED_MODE
     )
+
+    freq(freq)
+    duty(duty)
   end
 
   # デューティー比の設定
@@ -53,4 +61,9 @@ class PWM
     puts "Duty is already set: #{@duty}"
   end
 
+  # PWMを無効化
+  def deinit()
+    LEDC.stop(PWM::LEDC_HIGH_SPEED_MODE, @ch, 0)
+    puts "Stop PWM"
+  end
 end
