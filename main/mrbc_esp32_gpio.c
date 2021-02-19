@@ -54,6 +54,32 @@ mrbc_esp32_gpio_set_pulldown(mrb_vm* vm, mrb_value* v, int argc)
   gpio_set_pull_mode(pin, GPIO_PULLDOWN_ONLY);
 }
 
+/*! メソッド wakeup_enable(pin) 本体 : wrapper for gpio_wakeup_enable
+  GPIO_PULLUP_ONLY 専用
+
+  @param pin   GPIO ピン番号
+  @param level Sleepモードから帰ってくるレベル
+*/
+static void
+mrbc_esp32_gpio_wakeup_enable(mrb_vm* vm, mrb_value* v, int argc)
+{
+  int pin = GET_INT_ARG(1);
+  gpio_int_type_t level = GET_INT_ARG(2);
+  gpio_wakeup_enable(pin, level);
+}
+
+/*! メソッド wakeup_disable(pin) 本体 : wrapper for gpio_wakeup_disable
+  GPIO_PULLUP_ONLY 専用
+
+  @param pin   GPIO ピン番号
+*/
+static void
+mrbc_esp32_gpio_wakeup_disable(mrb_vm* vm, mrb_value* v, int argc)
+{
+  int pin = GET_INT_ARG(1);
+  gpio_wakeup_disable(pin);
+}
+
 /*! メソッド set_floating(pin) 本体 : wrapper for gpio_set_pull_mode
   GPIO_FLOATING 専用
 
@@ -184,6 +210,8 @@ mrbc_mruby_esp32_gpio_gem_init(struct VM* vm)
 /*
 GPIO.set_pullup(pin)
 GPIO.set_pulldown(pin)
+GPIO.wakeup_enable(pin, level)
+GPIO.wakeup_disable(pin, level)
 GPIO.set_floating(pin)
 GPIO.set_hold_enable(pin)
 GPIO.set_hold_disable(pin)
@@ -204,6 +232,8 @@ GPIO.isr_handler_add(pin, isr_handler, args)
   // 各メソッド定義（mruby/c ではインスタンスメソッドをクラスメソッドとしても呼び出し可能）
   mrbc_define_method(vm, mrbc_class_esp32_gpio, "set_pullup",          mrbc_esp32_gpio_set_pullup);
   mrbc_define_method(vm, mrbc_class_esp32_gpio, "set_pulldown",        mrbc_esp32_gpio_set_pulldown);
+  mrbc_define_method(vm, mrbc_class_esp32_gpio, "wakeup_enable",       mrbc_esp32_gpio_wakeup_enable);
+  mrbc_define_method(vm, mrbc_class_esp32_gpio, "wakeup_disable",      mrbc_esp32_gpio_wakeup_disable);
   mrbc_define_method(vm, mrbc_class_esp32_gpio, "set_floating",        mrbc_esp32_gpio_set_floating);
   mrbc_define_method(vm, mrbc_class_esp32_gpio, "set_hold_enable",     mrbc_esp32_gpio_set_hold_enable);
   mrbc_define_method(vm, mrbc_class_esp32_gpio, "set_hold_disable",    mrbc_esp32_gpio_set_hold_disable);

@@ -79,6 +79,10 @@ sht:
 	cd mrblib/loops; \
 	ln -sf ../../example/master.rb.sht master.rb
 
+sleep:
+	cd mrblib/loops; \
+	ln -sf ../../example/master.rb.sleep master.rb
+
 uart:
 	cd mrblib/loops; \
 	ln -sf ../../example/master.rb.uart master.rb

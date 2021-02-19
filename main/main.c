@@ -25,6 +25,9 @@
 #ifdef CONFIG_USE_ESP32_WIFI
 #include "mrbc_esp32_wifi.h"
 #endif
+#ifdef CONFIG_USE_ESP32_SLEEP
+#include "mrbc_esp32_sleep.h"
+#endif
 #ifdef CONFIG_USE_ESP32_SNTP
 #include "mrbc_esp32_sntp.h"
 #endif
@@ -150,6 +153,10 @@ void app_main(void) {
 #ifdef CONFIG_USE_ESP32_WIFI
   printf("start WiFi (C) \n");
   mrbc_mruby_esp32_wifi_gem_init(0);
+#endif
+#ifdef CONFIG_USE_ESP32_SLEEP
+  printf("start SLEEP (C) \n");
+  mrbc_mruby_esp32_sleep_gem_init(0);
 #endif
 #ifdef CONFIG_USE_ESP32_SNTP
   printf("start SNTP (C) \n");
