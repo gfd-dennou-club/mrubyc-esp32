@@ -78,3 +78,7 @@ rtc:
 sht:
 	cd mrblib/loops; \
 	ln -sf ../../example/master.rb.sht master.rb
+
+uart:
+	cd mrblib/loops; \
+	ln -sf ../../example/master.rb.uart master.rb

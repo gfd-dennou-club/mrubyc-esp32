@@ -2,10 +2,28 @@ class I2C
   # 定数
   MASTER = 0
   SLAVE = 1
-  def initialize(port, scl, sda)
+
+  # 初期化
+  def initialize(port, scl, sda, freq = 400000)
     @port = port
     @scl  = scl
     @sda  = sda
+    @freq = freq
+    self.driver_install
+  end
+
+  # コンストラクタ外からの再初期化
+  def init(port, scl, sda, freq = 400000)
+    @port = port
+    @scl  = scl
+    @sda  = sda
+    @freq = freq
+    self.driver_install
+  end
+
+  # IC2ドライバーの削除
+  def deinit
+    self.driver_delete
   end
 
   def write(i2c_adrs_7, *data)
