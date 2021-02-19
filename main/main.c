@@ -65,6 +65,9 @@
 #ifdef CONFIG_USE_ESP32_I2C
 #include "models/i2c.h"
 #endif
+#ifdef CONFIG_USE_ESP32_UART
+#include "models/uart.h"
+#endif
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_AQM0802A
 #include "models/aqm0802a.h"
 #endif
@@ -194,6 +197,10 @@ void app_main(void) {
 #ifdef CONFIG_USE_ESP32_I2C
   printf("start I2C (mruby/c class)\n");
   mrbc_create_task( i2c, 0 );
+#endif
+#ifdef CONFIG_USE_ESP32_UART
+  printf("start UART (mruby/c class)\n");
+  mrbc_create_task( uart, 0 );
 #endif
 #ifdef CONFIG_USE_ESP32_GPIO_PERIPHERALS_SHT75
   printf("start SHT75 (mruby/c class)\n");
