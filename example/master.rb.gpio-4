@@ -1,11 +1,17 @@
 #概要 summary
 
 =begin JA
-SWを入力するとそれに対応したLEDが２つ光ります。
+SW1を入力するとそれに対応したLED１と２が２つ光ります。
+SW2を入力するとそれに対応したLED３と４が２つ光ります。
+SW3を入力するとそれに対応したLED５と６が２つ光ります。
+SW4を入力するとそれに対応したLED７と８が２つ光ります。
 =end JA
 
 =begin EN
-When a SW is input, two corresponding LEDs light up.
+When a SW1 is input, LED1 and LED2 light up.
+When a SW2 is input, LED3 and LED4 light up.
+When a SW3 is input, LED5 and LED6 light up.
+When a SW4 is input, LED7 and LED8 light up.
 =end EN
 
 
