@@ -1,4 +1,4 @@
-# coding: utf-8-hfs
+# coding: utf-8
 class PWM
 
   # 定数
@@ -6,9 +6,8 @@ class PWM
   # esp-idf/components/driver/include/driver/ledc.h 参照
   LEDC_TIMER_8_BIT = 8
   LEDC_HIGH_SPEED_MODE = 0
-  LEDC_DEFAULT_FREQUENCY = 5000
+  LEDC_DEFAULT_FREQUENCY = 440
   LEDC_DEFAULT_DUTY = 1 << (PWM::LEDC_TIMER_8_BIT - 1)
-
   # 初期化
   def initialize(pin, ch=0, freq = PWM::LEDC_DEFAULT_FREQUENCY, duty = PWM::LEDC_DEFAULT_DUTY)
     if pin.kind_of?(Fixnum)
@@ -28,7 +27,7 @@ class PWM
       PWM::LEDC_DEFAULT_FREQUENCY,
       PWM::LEDC_HIGH_SPEED_MODE
     )
-
+    
     # PWM の初期化
     LEDC.channel_config(
       @ch,
@@ -39,19 +38,27 @@ class PWM
     freq(freq)
     duty(duty)
   end
-  
+
   # デューティー比の設定
-  def duty( duty )    
-    LEDC.set_duty(PWM::LEDC_HIGH_SPEED_MODE, @ch, duty)
+  def duty( duty )
+    @duty = duty
+    LEDC.set_duty(PWM::LEDC_HIGH_SPEED_MODE, @ch, @duty)
     LEDC.update_duty(PWM::LEDC_HIGH_SPEED_MODE, @ch)
 
-    puts "Set Duty : #{duty}"
+    puts "Set Duty : #{@duty}"
   end
 
   # 周波数の設定
   def freq( freq )
-    LEDC.set_freq(PWM::LEDC_HIGH_SPEED_MODE, @ch, freq)
+    LEDC.timer_config(
+      PWM::LEDC_TIMER_8_BIT,
+      freq,
+      PWM::LEDC_HIGH_SPEED_MODE
+    )
+    LEDC.set_duty(PWM::LEDC_HIGH_SPEED_MODE, @ch, @duty)
+    LEDC.update_duty(PWM::LEDC_HIGH_SPEED_MODE, @ch)
     puts "Set Frequency : #{freq}"
+    puts "Duty is already set: #{@duty}"
   end
 
   # PWMを無効化

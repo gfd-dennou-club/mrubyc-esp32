@@ -11,7 +11,7 @@ class RC8035SA
   end
 
   def read
-    a = @i2c.read(0x32, 8)   # 8 バイト分読み込み
+    a = @i2c.read_integer(0x32, 8)   # 8 バイト分読み込み
     ctrl2 = a.shift
     return [a[6], a[5], a[4], a[3], 0x3f & a[2], a[1], a[0], ctrl2]
   end

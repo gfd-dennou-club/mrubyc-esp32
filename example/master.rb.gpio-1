@@ -1,0 +1,19 @@
+#概要 summary
+
+=begin JA
+実行すると一秒毎にLED１が点滅します。
+=end JA
+
+=begin EN
+LED1 will blink every second.
+=end EN
+
+led1 = GPIO.new( 13, GPIO::OUT )
+
+while true
+  led1.write(1)
+  sleep 1
+
+  led1.write(0)
+  sleep 1
+end

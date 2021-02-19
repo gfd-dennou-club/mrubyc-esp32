@@ -1,0 +1,22 @@
+#概要 summary
+
+=begin JA
+実行すると高い音が流れます。
+１０秒後に低い音に変わり流れ続けます。
+=end JA
+
+=begin EN
+When you run it, a high tone will play.
+After 10 seconds, it will change to a lower tone and continue playing.
+=end END 
+
+pwm0 = PWM.new( 15 )
+
+pwm0.freq(5000)
+pwm0.duty(128)
+sleep 10
+
+pwm0.freq(400)
+
+exit 0
+

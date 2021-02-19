@@ -19,6 +19,7 @@ static struct RClass* mrbc_class_esp32_i2c;
 static mrbc_sym symid_port;
 static mrbc_sym symid_scl;
 static mrbc_sym symid_sda;
+static mrbc_sym symid_freq;
 
 
 /*! メソッド msleep(milisec) 本体 : sleep by milisec
@@ -45,7 +46,7 @@ mrbc_esp32_i2c_driver_install(mrb_vm* vm, mrb_value* v, int argc)
   i2c_port_t port;
   int scl;
   int sda;
-  uint32_t speed = 400 * 1000;
+  int freq;
 
   // インスタンス変数 port を参照
   tmp = mrbc_instance_getiv(&v[0], symid_port);
@@ -62,13 +63,18 @@ mrbc_esp32_i2c_driver_install(mrb_vm* vm, mrb_value* v, int argc)
   assert( tmp.tt == MRBC_TT_FIXNUM );
   sda = tmp.i;
 
+  // インスタンス変数 freq を参照
+  tmp = mrbc_instance_getiv(&v[0], symid_freq);
+  assert( tmp.tt == MRBC_TT_FIXNUM );
+  freq = tmp.i;
+
   i2c_config_t config = {
     .mode = mode,
     .scl_io_num = scl,
     .sda_io_num = sda,
     .scl_pullup_en = true,
     .sda_pullup_en = true,
-    .master.clk_speed = speed,
+    .master.clk_speed = freq,
   };
 
   ESP_ERROR_CHECK( i2c_param_config(port, &config) );
@@ -213,11 +219,12 @@ I2C#read(addr, len)
   mrbc_define_method(vm, mrbc_class_esp32_i2c, "msleep",         mrbc_msleep);
   mrbc_define_method(vm, mrbc_class_esp32_i2c, "driver_install", mrbc_esp32_i2c_driver_install);
   mrbc_define_method(vm, mrbc_class_esp32_i2c, "driver_delete",  mrbc_esp32_i2c_driver_delete);
-  mrbc_define_method(vm, mrbc_class_esp32_i2c, "write",          mrbc_esp32_i2c_write);
-  mrbc_define_method(vm, mrbc_class_esp32_i2c, "read",           mrbc_esp32_i2c_read);
+  mrbc_define_method(vm, mrbc_class_esp32_i2c, "__write",        mrbc_esp32_i2c_write);
+  mrbc_define_method(vm, mrbc_class_esp32_i2c, "__read",         mrbc_esp32_i2c_read);
 
   // インスタンス変数を参照する際に必要になる Symbol インスタンスを予め生成しておく
   symid_port = str_to_symid("port");
   symid_scl  = str_to_symid("scl");
   symid_sda  = str_to_symid("sda");
+  symid_freq = str_to_symid("freq");
 }

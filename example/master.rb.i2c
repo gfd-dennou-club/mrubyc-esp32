@@ -2,7 +2,6 @@
 
 #I2C 初期化
 i2c = I2C.new(0, 22, 21)
-i2c.driver_install
 
 # LCD 初期化
 lcd = AQM0802A.new(i2c)
@@ -12,7 +11,10 @@ lcd.setup
 lcd.cursor(1, 0)
 lcd.write_string("Hello!")
 lcd.cursor(0, 1)
-lcd.write_string("from ESP")
+# i2c で直接送信
+opcode = 0x40.chr
+i2c.write(0x3e, opcode + "from ESP")
+# <=> lcd.write_string("from ESP")
 sleep(10)
 
 # RTC 初期化. 時刻設定
