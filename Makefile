@@ -51,6 +51,10 @@ pwm5:
 	cd mrblib/loops; \
 	ln -sf ../../example/master.rb.pwm-5 master.rb
 
+pwm6:
+	cd mrblib/loops; \
+	ln -sf ../../example/master.rb.pwm-6 master.rb
+
 wifi:
 	cd mrblib/loops; \
 	ln -sf ../../example/master.rb.wifi master.rb
