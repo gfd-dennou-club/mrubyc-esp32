@@ -36,6 +36,18 @@ static void mrbc_esp32_sleep_deep_sleep(mrb_vm *vm, mrb_value *v, int argc){
   esp_deep_sleep(time_in_us);
 }
 
+/*! メソッド light_sleep() 本体 : wrapper for esp_light_sleep
+
+  @param time_in_us  ライトスリープを行う秒数(μs)
+
+*/
+static void mrbc_esp32_sleep_light_sleep(mrb_vm *vm, mrb_value *v, int argc){
+
+  int time_in_us = GET_INT_ARG(1);
+  esp_sleep_enable_timer_wakeup(time_in_us);
+  esp_light_sleep_start();
+}
+
 /*! クラス定義処理を記述した関数
   この関数を呼ぶことでクラス SLEEP が定義される
 
@@ -46,11 +58,13 @@ mrbc_mruby_esp32_sleep_gem_init(struct VM* vm)
 {
 /*
 SLEEP.deep_sleep(time_in_us)
+SLEEP.light_sleep(time_in_us)
 */
   // クラス SLEEP 定義
   mrbc_class_esp32_sleep = mrbc_define_class(vm, "SLEEP", mrbc_class_object);
 
   // 各メソッド定義（mruby/c ではインスタンスメソッドをクラスメソッドとしても呼び出し可能）
   mrbc_define_method(vm, mrbc_class_esp32_sleep, "deep_sleep",      mrbc_esp32_sleep_deep_sleep);
+  mrbc_define_method(vm, mrbc_class_esp32_sleep, "light_sleep",     mrbc_esp32_sleep_light_sleep);
   mrbc_define_method(vm, mrbc_class_esp32_sleep, "nop",             mrbc_nop);
 }
