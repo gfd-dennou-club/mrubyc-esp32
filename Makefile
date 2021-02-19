@@ -33,7 +33,7 @@ i2c:
 
 pwm:
 	cd mrblib/loops; \
-	ln -sf ../../example/master.rb.pwm master.rb
+	ln -sf ../../example/master.rb.pwm-1 master.rb
 
 pwm2:
 	cd mrblib/loops; \
