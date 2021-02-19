@@ -86,3 +86,27 @@ rtc:
 sht:
 	cd mrblib/loops; \
 	ln -sf ../../example/master.rb.sht master.rb
+
+sample1:
+	cd mrblib/loops; \
+	ln -sf ../../example/master.rb.sample1 master.rb
+
+sample2:
+	cd mrblib/loops; \
+	ln -sf ../../example/master.rb.sample2 master.rb
+
+sample3:
+	cd mrblib/loops; \
+	ln -sf ../../example/master.rb.sample3 master.rb
+
+sample4:
+	cd mrblib/loops; \
+	ln -sf ../../example/master.rb.sample4 master.rb
+
+sample5:
+	cd mrblib/loops; \
+	ln -sf ../../example/master.rb.sample5 master.rb
+
+sample6:
+	cd mrblib/loops; \
+	ln -sf ../../example/master.rb.sample6 master.rb
