@@ -77,6 +77,12 @@ menu "IoTeX ESP32 mrubyc Configuration"
         help
             use SNTP function?
 
+    config USE_ESP32_SLEEP
+        bool "SERVICE: SLEEP"
+        default y
+        help
+            use SLEEP function?
+
     config USE_ESP32_HTTP_CLIENT
         bool "SERVICE: HTTP_CLIENT"
 	depends on USE_ESP32_WIFI	
