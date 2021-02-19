@@ -9,24 +9,25 @@ gps_pw.write(0)
 sleep 2 
 
 # 4096バイトもデータがないため、nilが表示される
-puts "gps.read(4096)"
+puts "> gps.read(4096)"
 p gps.read(4096)
 
 # 4096バイトのデータはないが、
 # nonblockのため到着している分のデータが表示される
-puts "gps.read_nonblock(4096)"
+puts "> gps.read_nonblock(4096)"
 puts gps.read_nonblock(4096)
 
 # データの到着まで少し待つ
 sleep 2 
 
 # 入力データをclear_tx_bufferで消去する
-puts "gps.clear_tx_buffer"
+puts "> gps.clear_tx_buffer"
 gps.clear_tx_buffer
 # こちらは消去されているため何も表示されない
-puts "gps.read_nonblock(4096)"
+puts "> gps.read_nonblock(4096)"
 puts gps.read_nonblock(4096)
 
+puts "*---------------------------*"
 # データの到着まで少し待つ
 sleep 2 
 

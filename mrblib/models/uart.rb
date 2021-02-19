@@ -1,10 +1,28 @@
 class UART
-    def initialize(uart_num, baudrate)
+    # 定数
+    PARITY_DISABLE = 0
+    PARITY_EVEN = 2
+    PARITY_ODD = 3
+
+    # 初期化
+    def initialize(uart_num, baudrate = 9600, bits = 8, parity = nil, stop = 1)
         @uart_num = uart_num
         @gets_mode = 0
-        UART.config(uart_num, baudrate)
+        UART.config(uart_num, baudrate, bits - 5, __get_paritycode(parity), stop)
         UART.set_pin(uart_num)
         UART.driver_install(uart_num)
+    end
+
+    # コンストラクタ外からの初期化
+    def init(baudrate = 9600, bits = 8, parity = nil, stop = 1)
+        UART.config(@uart_num, baudrate, bits - 5, __get_paritycode(parity), stop)
+        UART.set_pin(@uart_num)
+        UART.driver_install(@uart_num)
+    end
+
+    # UARTドライバーの削除
+    def deinit
+        UART.driver_delete(@uart_num)
     end
 
     # 指定された文字列を出力する
@@ -44,5 +62,15 @@ class UART
     # 書き込みバッファをクリアする
     def clear_rx_buffer
         UART.flush(@uart_num)
+    end
+
+    def __get_paritycode(parity)
+        if parity == nil
+            UART::PARITY_DISABLE
+        elsif parity == 0
+            UART::PARITY_EVEN
+        elsif parity == 1
+            UART::PARITY_ODD
+        end
     end
 end

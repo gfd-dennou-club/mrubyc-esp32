@@ -27,20 +27,26 @@ mrbc_nop(mrb_vm* vm, mrb_value* v, int argc)
     unreferenced += 1;
   }
 }
-/*! メソッド set_config(uart_num,bps)  本体:wrapper for uart_param_config,
-  @param uart_num UARTポート番号 
-  @param bps ボーレート(通信速度) 
+/*! メソッド set_config(uart_num,bps,bits,parity,stop)  本体:wrapper for uart_param_config,
+  @param uart_num   UARTポート番号 
+  @param bps        ボーレート(通信速度) 
+  @param bits       １文字あたりのビット数
+  @param parity     パリティビット
+  @param stop       ストップビット
 */
 static void mrbc_esp32_uart_config(mrb_vm* vm, mrb_value* v, int argc)
 {
   uart_port_t uart_num = GET_INT_ARG(1);
   int bps = GET_INT_ARG(2);
-  
+  uart_word_length_t bits = GET_INT_ARG(3);
+  uart_parity_t parity = GET_INT_ARG(4);
+  uart_stop_bits_t stop = GET_INT_ARG(5);
+
   uart_config_t uart_config = {
 	.baud_rate  = bps,
-	.data_bits  = UART_DATA_8_BITS,
-	.parity     = UART_PARITY_DISABLE,
-	.stop_bits  = UART_STOP_BITS_1,
+	.data_bits  = bits,
+	.parity     = parity,
+	.stop_bits  = stop,
 	.flow_ctrl  = UART_HW_FLOWCTRL_DISABLE,
 	.source_clk = UART_SCLK_APB,
   };
@@ -49,7 +55,6 @@ static void mrbc_esp32_uart_config(mrb_vm* vm, mrb_value* v, int argc)
 
 /*! メソッド driver_install(uart_num)  本体:wrapper for uart_driver_install
   @param uart_num UARTポート番号
-
 */
 static void mrbc_esp32_uart_driver_install(mrb_vm* vm,mrb_value* v, int argc)
 {
@@ -57,6 +62,17 @@ static void mrbc_esp32_uart_driver_install(mrb_vm* vm,mrb_value* v, int argc)
   uart_port_t uart_num = GET_INT_ARG(1); 
   uart_driver_install(uart_num,BUF_SIZE * 2, 0, 0, NULL, 0);
   if(uart_is_driver_installed(uart_num) == 1) printf("UART: driver was successfully installed\n");
+
+}
+
+/*! メソッド driver_delete(uart_num)  本体:wrapper for uart_driver_delete
+  @param uart_num UARTポート番号
+*/
+static void mrbc_esp32_uart_driver_delete(mrb_vm* vm,mrb_value* v, int argc)
+{
+
+  uart_port_t uart_num = GET_INT_ARG(1); 
+  uart_driver_delete(uart_num);
 
 }
 
@@ -207,8 +223,9 @@ static void mrbc_esp32_uart_flush_input(mrb_vm* vm, mrb_value* v, int argc)
 void mrbc_mruby_esp32_uart_gem_init(struct VM* vm)
 {
 /*
-UART.config(uart_num,bps)
+UART.config(uart_num,bps,bits,parity,stop)
 UART.driver_install(uart_num)
+UART.driver_delete(uart_num)
 UART.set_pin(uart_num)
 UART.read(uart_num, bytes, is_nonblock)
 UART.read_gets(uart_num, identify_r_with_break)
@@ -222,6 +239,7 @@ UART.flush_input()
   // 各メソッド定義（mruby/c ではインスタンスメソッドをクラスメソッドとしても呼び出し可能）
   mrbc_define_method(vm,mrbc_class_esp32_uart,"config",mrbc_esp32_uart_config);
   mrbc_define_method(vm,mrbc_class_esp32_uart,"driver_install",mrbc_esp32_uart_driver_install);
+  mrbc_define_method(vm,mrbc_class_esp32_uart,"driver_delete",mrbc_esp32_uart_driver_delete);
   mrbc_define_method(vm,mrbc_class_esp32_uart,"set_pin",mrbc_esp32_uart_set_pin);
   mrbc_define_method(vm,mrbc_class_esp32_uart,"read_bytes",mrbc_esp32_uart_read_bytes);
   mrbc_define_method(vm,mrbc_class_esp32_uart,"read_gets",mrbc_esp32_uart_read_gets);
