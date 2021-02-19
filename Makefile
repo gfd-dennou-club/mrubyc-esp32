@@ -27,10 +27,6 @@ gpio4:
 	cd mrblib/loops; \
 	ln -sf ../../example/master.rb.gpio-4 master.rb
 
-gpio5:
-	cd mrblib/loops; \
-	ln -sf ../../example/master.rb.gpio-5 master.rb
-
 i2c:
 	cd mrblib/loops; \
 	ln -sf ../../example/master.rb.i2c master.rb
