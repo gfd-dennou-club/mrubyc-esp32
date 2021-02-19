@@ -25,7 +25,7 @@ mrbc_nop(mrb_vm* vm, mrb_value* v, int argc)
   }
 }
 
-/*! メソッド deep_sleep() 本体 : wrapper for esp_deep_sleep
+/*! メソッド deep_sleep(time_in_us) 本体 : wrapper for esp_deep_sleep
 
   @param time_in_us  ディープスリープを行う秒数(μs)
 
@@ -36,7 +36,7 @@ static void mrbc_esp32_sleep_deep_sleep(mrb_vm *vm, mrb_value *v, int argc){
   esp_deep_sleep(time_in_us);
 }
 
-/*! メソッド light_sleep() 本体 : wrapper for esp_light_sleep
+/*! メソッド light_sleep(time_in_us) 本体 : wrapper for esp_light_sleep
 
   @param time_in_us  ライトスリープを行う秒数(μs)
 
@@ -51,7 +51,6 @@ static void mrbc_esp32_sleep_light_sleep(mrb_vm *vm, mrb_value *v, int argc){
 /*! メソッド enable_gpio_wakeup() 本体 : wrapper for esp_sleep_enable_gpio_wakeup */
 static void mrbc_esp32_sleep_enable_gpio_wakeup(mrb_vm *vm, mrb_value *v, int argc){
 
-  int time_in_us = GET_INT_ARG(1);
   esp_sleep_enable_gpio_wakeup();
 
 }
