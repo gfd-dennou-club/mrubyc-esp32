@@ -39,6 +39,18 @@ class GPIO
     setpullmode(pull_mode)
   end
 
+  # wakeupモードの設定
+  # 第二引数は、起床するパワーモード(0 or 1)
+  def set_wakeup(is_enable, level = 0)
+    if(is_enable)
+      puts "GPIO wakeup enable in #{@pin}"
+      GPIO.wakeup_enable(@pin, level + 4)
+    else
+      puts "GPIO wakeup disable in #{@pin}"
+      GPIO.wakeup_disable(@pin)
+    end
+  end
+
   # 出力 `ピンを0か1に設定`
   def write(value)
     unless(value == 0 || value == 1)

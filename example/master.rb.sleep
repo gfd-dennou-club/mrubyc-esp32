@@ -16,6 +16,13 @@ led1 = GPIO.new( 13, GPIO::OUT )
 led2 = GPIO.new( 12, GPIO::OUT )
 led3 = GPIO.new( 14, GPIO::OUT )
 
+# スイッチ1をonにすることでもsleepから抜け出せる
+puts "Wakeup by Switch 1 is available."
+sw1 = GPIO.new( 34, GPIO::IN, GPIO::PULL_UP )
+sw1.set_wakeup(true, 1)
+# GPIO での wakeupの有効化
+SLEEP.enable_gpio_wakeup
+
 # LED1を6秒間点滅させる
 3.times do
   led1.write(1)

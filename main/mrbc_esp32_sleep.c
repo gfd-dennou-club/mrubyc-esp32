@@ -48,6 +48,14 @@ static void mrbc_esp32_sleep_light_sleep(mrb_vm *vm, mrb_value *v, int argc){
   esp_light_sleep_start();
 }
 
+/*! メソッド enable_gpio_wakeup() 本体 : wrapper for esp_sleep_enable_gpio_wakeup */
+static void mrbc_esp32_sleep_enable_gpio_wakeup(mrb_vm *vm, mrb_value *v, int argc){
+
+  int time_in_us = GET_INT_ARG(1);
+  esp_sleep_enable_gpio_wakeup();
+
+}
+
 /*! クラス定義処理を記述した関数
   この関数を呼ぶことでクラス SLEEP が定義される
 
@@ -59,12 +67,14 @@ mrbc_mruby_esp32_sleep_gem_init(struct VM* vm)
 /*
 SLEEP.deep_sleep(time_in_us)
 SLEEP.light_sleep(time_in_us)
+SLEEP.enable_gpio_wakeup()
 */
   // クラス SLEEP 定義
   mrbc_class_esp32_sleep = mrbc_define_class(vm, "SLEEP", mrbc_class_object);
 
   // 各メソッド定義（mruby/c ではインスタンスメソッドをクラスメソッドとしても呼び出し可能）
-  mrbc_define_method(vm, mrbc_class_esp32_sleep, "deep_sleep",      mrbc_esp32_sleep_deep_sleep);
-  mrbc_define_method(vm, mrbc_class_esp32_sleep, "light_sleep",     mrbc_esp32_sleep_light_sleep);
-  mrbc_define_method(vm, mrbc_class_esp32_sleep, "nop",             mrbc_nop);
+  mrbc_define_method(vm, mrbc_class_esp32_sleep, "deep_sleep",         mrbc_esp32_sleep_deep_sleep);
+  mrbc_define_method(vm, mrbc_class_esp32_sleep, "light_sleep",        mrbc_esp32_sleep_light_sleep);
+  mrbc_define_method(vm, mrbc_class_esp32_sleep, "enable_gpio_wakeup", mrbc_esp32_sleep_enable_gpio_wakeup);
+  mrbc_define_method(vm, mrbc_class_esp32_sleep, "nop",                mrbc_nop);
 }
