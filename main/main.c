@@ -77,6 +77,9 @@
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_SGP30
 #include "models/sgp30.h"
 #endif
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_SCD30
+#include "models/scd30.h"
+#endif
 //master
 #include "loops/master.h"
 //slave
@@ -88,6 +91,35 @@
 #define MEMORY_SIZE (1024*40)
 
 static uint8_t memory_pool[MEMORY_SIZE];
+
+//================================================================
+/*! cast
+  ["01000101001101001110000100111100"].pack('B*').unpack('g') ができないために用意
+*/
+static void c_floatCast(struct VM *vm, mrbc_value *v, int argc){
+
+  float Value;
+  uint32_t val  = 0;
+  uint32_t arg1 = GET_INT_ARG(1);
+  uint32_t arg2 = GET_INT_ARG(2);
+  uint32_t arg3 = GET_INT_ARG(3);
+  uint32_t arg4 = GET_INT_ARG(4);
+  mrbc_value result;
+  result = mrbc_array_new(vm, 0);
+    
+  val |= arg1;
+  val <<= 8;
+  val |= arg2;
+  val <<= 8;
+  val |= arg3;
+  val <<= 8;
+  val |= arg4;
+  memcpy(&Value, &val, sizeof(Value));
+
+  mrbc_array_set(&result, 0, &mrbc_fixnum_value( Value * 100.0 ));
+  SET_RETURN(result);
+  //   result = *(float*) &tempU32;
+}
 
 //================================================================
 /*! DEBUG PRINT
@@ -129,7 +161,7 @@ void app_main(void) {
   mrbc_init(memory_pool, MEMORY_SIZE);
 
   mrbc_define_method(0, mrbc_class_object, "debugprint", c_debugprint);
-
+  mrbc_define_method(0, mrbc_class_object, "floatCast",  c_floatCast);
   /* 
      !!!! Add your function                            !!!!
      !!!! example: mrbc_mruby_esp32_XXXX_gem_init(0);  !!!!
@@ -217,7 +249,11 @@ void app_main(void) {
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_SGP30
   printf("start SGP30 (mruby/c class)\n");
   mrbc_create_task( sgp30, 0 );
-#endif  
+#endif
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_SCD30
+  printf("start SCD30 (mruby/c class)\n");
+  mrbc_create_task( scd30, 0 );
+#endif
 
   //master
   mrbc_create_task( master, 0 );

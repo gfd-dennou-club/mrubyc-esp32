@@ -2,7 +2,7 @@
 sleep 30
 
 #閾値
-level = 1000
+level = 1500
 #level = 400
 
 #ホスト名
@@ -38,7 +38,6 @@ sleep 3
 
 #I2C 初期化
 i2c = I2C.new(0, 22, 21)
-i2c.driver_install
 
 # LCD 初期化
 lcd = AQM0802A.new(i2c)

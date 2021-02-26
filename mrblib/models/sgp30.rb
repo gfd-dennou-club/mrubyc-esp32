@@ -1,3 +1,4 @@
+# coding: utf-8
 ###### sgp30.rb ######
 
 # coding: utf-8
@@ -150,7 +151,7 @@ class SGP30
     commandLength.times do |n|
       cmd.push(command[n])
     end
-    @i2c.write(SGP30::I2CADDR_DEFAULT, cmd)
+    @i2c.__write(SGP30::I2CADDR_DEFAULT, cmd)
 
     sleep delayms / 1000.0
 
@@ -162,7 +163,7 @@ class SGP30
     replybuffer = Array.new(replylen)
 
     #  @i2c.readを使って読み込み
-    replybuffer = @i2c.read(SGP30::I2CADDR_DEFAULT,replylen)
+    replybuffer = @i2c.__read(SGP30::I2CADDR_DEFAULT,replylen)
 
     readdata = Array.new
 

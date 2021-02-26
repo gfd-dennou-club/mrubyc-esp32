@@ -5,7 +5,6 @@
 
 #I2C 初期化
 i2c = I2C.new(0, 22, 21)
-i2c.driver_install
 
 sleep(3)
 
