@@ -52,6 +52,13 @@ menu "IoTeX ESP32 mrubyc Configuration"
         help
             use eCO2 sensor SENSIRION SGP30?
 
+    config USE_ESP32_I2C_PERIPHERALS_SCD30
+        bool "PERIPHERAL: CO2 sensor SENSIRION SCD30"
+	depends on USE_ESP32_I2C
+        default n
+        help
+            use CO2 sensor SENSIRION SCD30?
+
     config USE_ESP32_SPI_SD
         bool "USR ESP32 SPI_SD"
         default n
@@ -77,18 +84,18 @@ menu "IoTeX ESP32 mrubyc Configuration"
         help
             use SNTP function?
 
-    config USE_ESP32_SLEEP
-        bool "SERVICE: SLEEP"
-        default y
-        help
-            use SLEEP function?
-
     config USE_ESP32_HTTP_CLIENT
         bool "SERVICE: HTTP_CLIENT"
 	depends on USE_ESP32_WIFI	
         default y
         help
             use HTTP_CLIENT function?
+
+    config USE_ESP32_SLEEP
+        bool "USE DEEP SLEEP"
+        default n
+        help
+            use DEEP SLEEP function?
 
     config ENABLE_MULTITASK
         bool "ENABLE MULTI-TASK"
