@@ -1,4 +1,13 @@
 # coding: utf-8
+
+def getCO2ppm(i2c)
+  i2c.write(0x31, 0x52)
+  sleep(0.1)
+  buf = i2c.read_integer(0x31, 7)
+  sleep(0.1)
+  return (buf[1] << 8) | buf[2]
+end
+
 sleep 30
 
 #閾値
@@ -6,8 +15,8 @@ level = 1500
 #level = 400
 
 #ホスト名
-hostname = "itoc02"
-url = "http://xxx.epi.it.matsue-ct.jp/iotex2/monitoring2.php"
+hostname = "s300l"
+url = "http://xxxx.epi.it.matsue-ct.jp/iotex2/monitoring2.php"
 
 #監視時刻
 mon_hour_begin = 9   
@@ -16,7 +25,7 @@ mon_hour_end   = 17
 #WIFI 設定
 WiFi.init()
 # WiFi.setup_ent_peap("id", "ssid", "username", "password")
-WiFi.setup_psk("ssid", "passwd")
+WiFi.setup_psk("SSID", "PASSWD")
 WiFi.start()
 
 sleep 3
@@ -25,19 +34,8 @@ sleep 3
 SNTP.init()
 sleep 3
 
-# A/D 変換 初期化
-adc = ADC.new( 39, ADC::ATTEN_11DB, ADC::WIDTH_12BIT ) 
- 
-#温度計測用変数初期化
-B = 3435.0
-To = 25.0
-V = 3300.0
-Rref = 10.0
-
-sleep 3
-
 #I2C 初期化
-i2c = I2C.new(0, 22, 21)
+i2c = I2C.new(0, 22, 21, 100000)
 
 # LCD 初期化
 lcd = AQM0802A.new(i2c)
@@ -59,76 +57,41 @@ rtc.write([0x20, 0x03, 0x31, 1, 0x23, 0x59, 0x50]) #年(下2桁), 月, 日, 曜�
 rtc.write([year, mon, mday, SNTP.wday, hour, min, sec]) #年(下2桁), 月, 日, 曜日, 時, 分, 秒
 sleep(3)
 
-#SGP30 初期化
-sgp = SGP30.new(i2c)
-serialnumber = sgp.begin()
-if !serialnumber then
-  p "Sensor not found :("
-  while true
-  end
-end
-
-print "Found SGP30 serial #"
-print serialnumber[0].to_s(16)
-print serialnumber[1].to_s(16)
-puts  serialnumber[2].to_s(16)
-
 #配列初期化
 count = 0
-sum_temp = 0.0
 sum_eco2 = 0.0
+eCO2 = 0.0
+sec0 = 0
 
 while true
 
-  # 温度計測
-  voltage = adc.read()
-  temp = 1.0 / ( 1.0 / B * Math.log( (V - voltage) / (voltage/ Rref) / Rref) + 1.0 / (To + 273.0) ) - 273.0
-#  puts "#{voltage} mV, #{temp} K"
-  
-  reply = sgp.IAQmeasure()
-  if !reply then
-    p "Measurement failed"
-    return
-  end
-  tvoc = reply[1]
-  eCO2 = reply[0]
-#  puts #改行
-#  print "TVOC #{tvoc} ppb\t"
-#  puts "eCO2 #{eCO2} ppm"
-  
-  reply = sgp.IAQmeasureRaw()
-  if !reply then
-    p "Measurement failed"
-    return
-  end
-  rawEthanol = reply[1]
-  rawH2 = reply[0]
-#  print "Raw H2 #{rawH2} \t"
-#  puts "Raw Ethanol #{rawEthanol}"
+  #初期化
+  sec0 = sec
+ 
+  # 1 秒間隔でサンプリングするために待ち時間を置く
+  sleep 0.85
+
+  # CO2 計測
+  eCO2 = getCO2ppm(i2c)
+
+  # カウントアップ
+  sum_eco2 += eCO2
+  count += 1
 
   #時刻
   tt = rtc.read
   time0 = sprintf("20%02x-%02x-%02xT%02x:%02x:%02x", tt[0], tt[1], tt[2], tt[4], tt[5], tt[6])
   hour = sprintf("%02x",tt[4]).to_i
   sec  = sprintf("%02x",tt[6]).to_i
-#  p time0, hour, sec
   
   # 時刻とCO2 表示. 瞬間値を LCD に表示. 
   lcd.cursor(0, 0)
   lcd.write_string(sprintf("%02x:%02x:%02x", tt[4], tt[5], tt[6]))
   lcd.cursor(0, 1)
   lcd.write_string(sprintf("CO2:%04d", eCO2))
-
-  # カウントアップ
-  sum_temp += temp
-  sum_eco2 += eCO2
-  count += 1
-
-  #SGP30 は 1 秒間隔でサンプリングするために待ち時間を置く
-  sleep 0.85
   
   #毎ゼロ秒にデータ送信
-  if sec == 0
+  if sec < sec0
     
     # 指定の時間帯に閾値を超えた場合にグローバル変数をセットする
     if sum_eco2 / count > level && mon_hour_begin <= hour && hour <= mon_hour_end
@@ -142,38 +105,16 @@ while true
     # 確認表示
     p "*****"
     p time0
-    p sum_temp / count
     p sum_eco2 / count
     p "*****"
 
     # データ送信
-    HTTPClient.init("#{url}?temp=#{sum_temp / count}&eco2=#{sum_eco2 / count}&hostname=#{hostname}&time=#{time0}&lux=#{$ope}")
+    HTTPClient.init("#{url}?eco2=#{sum_eco2 / count}&hostname=#{hostname}&time=#{time0}&lux=#{$ope}")
     HTTPClient.invoke()
     HTTPClient.cleanup()
 
     #初期化
-    sum_temp = 0.0
     sum_eco2 = 0.0
     count = 0
   end
 end
-  
-=begin  
-  counter += 1
-
-  if (counter == 30) then
-    counter = 0
-
-    reply = sgp.getIAQBaseline()
-    if !reply then
-      puts "Faile to get baseline readings"
-      return
-    end
-    eco2_base = reply[0]
-    tvoc_base = reply[1]
-    print "****Baseline values: eCO2: 0x"
-    print eco2_base.to_s(16)
-    print " & TVOC: 0x"
-    puts  tvoc_base.to_s(16)
-  end
-=end
