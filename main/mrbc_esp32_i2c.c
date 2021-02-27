@@ -139,7 +139,8 @@ mrbc_esp32_i2c_write(mrb_vm* vm, mrb_value* v, int argc)
   }
   ESP_ERROR_CHECK( i2c_master_stop(cmd) );
 
-  ESP_ERROR_CHECK( i2c_master_cmd_begin(port, cmd, 1 / portTICK_RATE_MS));
+  //ESP_ERROR_CHECK( i2c_master_cmd_begin(port, cmd, 1 / portTICK_RATE_MS));
+  i2c_master_cmd_begin(port, cmd, 1 / portTICK_RATE_MS);
 
   i2c_cmd_link_delete(cmd);
 }
@@ -183,7 +184,8 @@ mrbc_esp32_i2c_read(mrb_vm* vm, mrb_value* v, int argc)
   }
   ESP_ERROR_CHECK( i2c_master_stop(cmd) );
 
-  ESP_ERROR_CHECK( i2c_master_cmd_begin(port, cmd, 1 / portTICK_RATE_MS));
+  //ESP_ERROR_CHECK( i2c_master_cmd_begin(port, cmd, 1 / portTICK_RATE_MS));
+  i2c_master_cmd_begin(port, cmd, 1 / portTICK_RATE_MS);
 
   i2c_cmd_link_delete(cmd);
 
