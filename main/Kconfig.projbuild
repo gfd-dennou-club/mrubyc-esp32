@@ -14,7 +14,7 @@ menu "IoTeX ESP32 mrubyc Configuration"
             use Temperature/Humidity sensor CENSIRION SHT75?
 
     config USE_ESP32_LEDC
-        bool "USR ESP32 LEDC"
+        bool "USR ESP32 PWM (LEDC)"
         default y
         help
             use LEDC function?
