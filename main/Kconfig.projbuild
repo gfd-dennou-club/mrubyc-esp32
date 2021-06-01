@@ -17,7 +17,7 @@ menu "IoTeX ESP32 mrubyc Configuration"
         bool "USR ESP32 PWM (LEDC)"
         default y
         help
-            use LEDC function?
+            use PWM (LEDC) function?
 
     config USE_ESP32_ADC
         bool "USR ESP32 ADC"
