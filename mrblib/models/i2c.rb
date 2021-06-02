@@ -4,7 +4,7 @@ class I2C
   SLAVE = 1
 
   # 初期化
-  def initialize(port, scl, sda, freq = 400000)
+  def initialize(scl, sda, freq = 400000, port = 0)
     @port = port
     @scl  = scl
     @sda  = sda
@@ -13,7 +13,7 @@ class I2C
   end
 
   # コンストラクタ外からの再初期化
-  def init(port, scl, sda, freq = 400000)
+  def init(scl, sda, freq = 400000, port = 0)
     @port = port
     @scl  = scl
     @sda  = sda
