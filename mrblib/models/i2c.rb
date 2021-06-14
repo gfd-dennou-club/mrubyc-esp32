@@ -1,10 +1,11 @@
+# coding: utf-8
 class I2C
   # 定数
   MASTER = 0
   SLAVE = 1
 
   # 初期化
-  def initialize(port, scl, sda, freq = 400000)
+  def initialize(scl, sda, port = 0, freq = 400000)
     @port = port
     @scl  = scl
     @sda  = sda
@@ -13,7 +14,7 @@ class I2C
   end
 
   # コンストラクタ外からの再初期化
-  def init(port, scl, sda, freq = 400000)
+  def init(scl, sda, port = 0, freq = 400000)
     @port = port
     @scl  = scl
     @sda  = sda

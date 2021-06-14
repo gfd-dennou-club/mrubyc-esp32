@@ -25,7 +25,7 @@ SNTP.init()
 sleep 3
 
 #I2C 初期化
-i2c = I2C.new(0, 22, 21)
+i2c = I2C.new(22, 21)
 sleep 3
 
 # LCD 初期化
