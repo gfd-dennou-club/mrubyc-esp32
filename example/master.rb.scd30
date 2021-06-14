@@ -12,8 +12,7 @@ Arduino/libraries/Adafruit_SCD30/Adafruit_SCD30.cpp
 
 
 #I2C 初期化
-i2c = I2C.new(0, 22, 21)
-#i2c.driver_install
+i2c = I2C.new(22, 21)
 
 sleep(1)
 

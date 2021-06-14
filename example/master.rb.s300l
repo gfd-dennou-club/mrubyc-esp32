@@ -28,7 +28,7 @@ def getCO2ppm(i2c)
 end
 
 #I2C 初期化
-i2c = I2C.new(0, 22, 21, 100000)
+i2c = I2C.new(22, 21, port = 0, freq = 100000)
 
 #計測
 loop do

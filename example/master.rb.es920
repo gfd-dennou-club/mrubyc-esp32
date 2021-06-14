@@ -37,7 +37,7 @@ NODENUM = "A" #node:2001
 uart2 = UART.new(2,115200)
 
 # RTC の初期化
-i2c = I2C.new(0, 22, 21)
+i2c = I2C.new(22, 21)
 rtc = RC8035SA.new(i2c)
 
 #時刻は適当な値にしておく
