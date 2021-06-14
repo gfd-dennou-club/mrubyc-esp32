@@ -3,7 +3,7 @@ class I2C
   MASTER = 0
   SLAVE = 1
 
-  # 初期化
+  # 初期化.
   def initialize(port, scl, sda, freq = 400000)
     @port = port
     @scl  = scl
