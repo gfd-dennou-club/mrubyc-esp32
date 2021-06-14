@@ -9,3 +9,4 @@ sleep 3
 
 HTTPClient.init("http://www.gfd-dennou.org/") 
 HTTPClient.invoke()
+HTTPClient.cleanup()
