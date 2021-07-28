@@ -34,6 +34,9 @@
 #ifdef CONFIG_USE_ESP32_HTTP_CLIENT
 #include "mrbc_esp32_http_client.h"
 #endif
+#ifdef CONFIG_USE_ESP32_SPI
+#include "mrbc_esp32_spi.h"
+#endif
 #ifdef CONFIG_USE_ESP32_SPI_SD
 #include "mrbc_esp32_sdspi.h"
 #include "mrbc_esp32_stdio.h"
@@ -67,6 +70,9 @@
 #endif
 #ifdef CONFIG_USE_ESP32_M5STACK
 #include "models/m5stack.h"
+#endif
+#ifdef CONFIG_USE_ESP32_SPI
+#include "models/spi.h"
 #endif
 #ifdef CONFIG_USE_ESP32_UART
 #include "models/uart.h"
@@ -201,6 +207,10 @@ void app_main(void) {
   printf("start HTTPClient (C) \n");
   mrbc_mruby_esp32_httpclient_gem_init(0);
 #endif
+#ifdef CONFIG_USE_ESP32_SPI
+  printf("start SPI (C) \n");
+  mrbc_mruby_esp32_spi_gem_init(0);
+#endif
 #ifdef CONFIG_USE_ESP32_SPI_SD
   printf("start SDSPI and ESP32 stdio (C)\n");
   mrbc_mruby_esp32_sdspi_gem_init(0);
@@ -236,6 +246,10 @@ void app_main(void) {
 #ifdef CONFIG_USE_ESP32_M5STACK
   printf("start M5STACK (mruby/c class)\n");
   mrbc_create_task( m5stack, 0 );
+#endif
+#ifdef CONFIG_USE_ESP32_SPI
+  printf("start SPI (mruby/c class)\n");
+  mrbc_create_task( spi, 0 );
 #endif
 #ifdef CONFIG_USE_ESP32_UART
   printf("start UART (mruby/c class)\n");

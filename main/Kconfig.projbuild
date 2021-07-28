@@ -65,6 +65,12 @@ menu "IoTeX ESP32 mrubyc Configuration"
         help
             use CO2 sensor SENSIRION SCD30?
 
+    config USE_ESP32_SPI
+        bool "USR ESP32 SPI"
+        default n
+        help
+            use SPI function?
+
     config USE_ESP32_SPI_SD
         bool "USR ESP32 SPI_SD"
         default n
