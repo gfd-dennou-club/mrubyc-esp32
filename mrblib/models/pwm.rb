@@ -7,7 +7,7 @@ class PWM
   LEDC_TIMER_8_BIT = 8
   LEDC_HIGH_SPEED_MODE = 0
   LEDC_DEFAULT_FREQUENCY = 440
-  LEDC_DEFAULT_DUTY = 1 << (PWM::LEDC_TIMER_8_BIT - 1)
+  LEDC_DEFAULT_DUTY = 0   #1 << (PWM::LEDC_TIMER_8_BIT - 1)
   # 初期化
   def initialize(pin, ch=0, freq = PWM::LEDC_DEFAULT_FREQUENCY, duty = PWM::LEDC_DEFAULT_DUTY)
     if pin.kind_of?(Fixnum)
