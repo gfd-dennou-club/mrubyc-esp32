@@ -80,6 +80,9 @@
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_AQM0802A
 #include "models/aqm0802a.h"
 #endif
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_ILI934X
+#include "models/ili934x.h"
+#endif
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_RC8035SA
 #include "models/rc8035sa.h"
 #endif
@@ -262,6 +265,10 @@ void app_main(void) {
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_AQM0802A
   printf("start AQM0802A (mruby/c class)\n");
   mrbc_create_task( aqm0802a, 0 );
+#endif
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_ILI934X
+  printf("start ILI934X (mruby/c class)\n");
+  mrbc_create_task( ili934x, 0 );
 #endif
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_RC8035SA
   printf("start RC8035SA (mruby/c class)\n");

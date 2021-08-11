@@ -7,42 +7,79 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver/spi_master.h"
+#include "driver/gpio.h"
+#include "esp_log.h"
 
+static char* tag = "main";
 #define DMA_CHAN    2
 
 static struct RClass* mrbc_class_esp32_spi;
 spi_device_handle_t spidev;
 
-/*! Method spi_bus_initialize(mosi, miso, sclk) body : wrapper for spi_bus_initialize.
+/*! Method spi_bus_initialize(mosi, miso, sclk, cs, dc, rst, bl) body : wrapper for spi_bus_initialize.
     @param mosi MOSI Pin Number
            miso MISO Pin Number
            sclk SPI Clock Pin Number
            cs   CS Pin Number
+           dc   DC Pin Number
+           rst  RST Pin Number(If it is not needed, pass -1)
+           bl   BL Pin Number (If it is not needed, pass -1)
     @return if succeeded, return true, otherwise return false.
  */
 static void
 mrbc_esp32_spi_bus_initialize(mrb_vm* vm, mrb_value* v, int argc)
 {
+    int gpio_mosi = GET_INT_ARG(1);
+    int gpio_miso = GET_INT_ARG(2);
+    int gpio_sclk = GET_INT_ARG(3);
+    int gpio_cs = GET_INT_ARG(4);
+    int gpio_dc = GET_INT_ARG(5);
+    int gpio_rst = GET_INT_ARG(6);
+    int gpio_bl = GET_INT_ARG(7);
+
+    // gpio_pad_select_gpio(gpio_cs);
+    // gpio_set_direction(gpio_cs, GPIO_MODE_OUTPUT);
+    // gpio_set_level(gpio_cs, 0);
+
+    // gpio_pad_select_gpio(gpio_dc);
+    // gpio_set_direction(gpio_dc, GPIO_MODE_OUTPUT);
+    // gpio_set_level(gpio_dc, 0);
+
+    // if (gpio_rst >= 0)
+    // {
+    //     gpio_pad_select_gpio(gpio_rst);
+    //     gpio_set_direction(gpio_rst, GPIO_MODE_OUTPUT);
+    //     gpio_set_level(gpio_rst, 0);
+    //     vTaskDelay(pdMS_TO_TICKS(100));
+    //     gpio_set_level(gpio_rst, 1);
+    // }
+
+    // if (gpio_bl >= 0)
+    // {
+    //     gpio_pad_select_gpio(gpio_bl);
+    //     gpio_set_direction(gpio_bl, GPIO_MODE_OUTPUT);
+    //     gpio_set_level(gpio_bl, 0);
+    // }
+    
     spi_bus_config_t bus_cfg = {
-        .mosi_io_num = GET_INT_ARG(1),
-        .miso_io_num = GET_INT_ARG(2),
-        .sclk_io_num = GET_INT_ARG(3),
+        .mosi_io_num = gpio_mosi,
+        .miso_io_num = -1,
+        .sclk_io_num = gpio_sclk,
         .quadwp_io_num = -1,
         .quadhd_io_num = -1,
-        .max_transfer_sz = 4000
-        };
+        .max_transfer_sz = 4000};
+    
     esp_err_t ret = spi_bus_initialize(HSPI_HOST, &bus_cfg, DMA_CHAN);
+    assert(ret == ESP_OK);
+
     spi_device_interface_config_t devcfg = {
         .clock_speed_hz = SPI_MASTER_FREQ_40M,
-        .spics_io_num = GET_INT_ARG(4),
+        .spics_io_num = gpio_cs,
         .queue_size = 7,
         .flags = SPI_DEVICE_NO_DUMMY,
     };
     ret = spi_bus_add_device(HSPI_HOST, &devcfg, &spidev);
-    if (ret == ESP_OK)
-        SET_TRUE_RETURN();
-    else
-        SET_FALSE_RETURN();
+    assert(ret == ESP_OK);
 }
 
 /*! Method write_byte(data)
@@ -53,11 +90,19 @@ mrbc_esp32_spi_write_byte(mrb_vm* vm, mrb_value* v, int argc)
 {
     spi_transaction_t transaction;
     esp_err_t ret;
-    int data = GET_INT_ARG(1);
+    assert(GET_ARG(1).tt == MRBC_TT_ARRAY);
+    mrbc_value *data = GET_ARG(1).array->data;
+    ESP_LOGI(tag, "%d", GET_ARY_ARG(1).array->data_size);
+    uint8_t Data[1024];
+    size_t dataLength = GET_INT_ARG(2);
+    for (int i = 0; i < dataLength; i++){
+        Data[i] = data[i].i;
+        ESP_LOGI(tag, "%d", Data[i]);
+    }
 
     memset(&transaction, 0, sizeof(spi_transaction_t));
-    transaction.length = 8;
-    transaction.tx_buffer = &data;
+    transaction.length = 8 * dataLength;
+    transaction.tx_buffer = Data;
     ret = spi_device_transmit(spidev, &transaction);
     assert(ret == ESP_OK);
 }
@@ -80,15 +125,15 @@ mrbc_esp32_spi_read_byte(mrb_vm* vm, mrb_value* v, int argc)
     SET_INT_RETURN(recv_data);
 }
 
-/*! Register SDSPI Class.
+/*! Register SPI Class.
  */
 void
 mrbc_mruby_esp32_spi_gem_init(struct VM* vm)
 {
-  // クラス I2C 定義
+  // クラス SPI 定義
   mrbc_class_esp32_spi = mrbc_define_class(vm, "SPI", mrbc_class_object);
   // 各メソッド定義
-  mrbc_define_method(vm, mrbc_class_esp32_spi, "bus_initialize",          mrbc_esp32_spi_bus_initialize);
+  mrbc_define_method(vm, mrbc_class_esp32_spi, "bus_initialize",      mrbc_esp32_spi_bus_initialize);
   mrbc_define_method(vm, mrbc_class_esp32_spi, "write_byte",          mrbc_esp32_spi_write_byte);
   mrbc_define_method(vm, mrbc_class_esp32_spi, "read_byte",           mrbc_esp32_spi_read_byte);
 }
