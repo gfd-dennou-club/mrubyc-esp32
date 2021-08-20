@@ -90,3 +90,7 @@ sleep:
 uart:
 	cd mrblib/loops; \
 	ln -sf ../../example/master.rb.uart master.rb
+
+m5display:
+	cd mrblib/loops; \
+	ln -sf ../../example/master.rb.m5display master.rb

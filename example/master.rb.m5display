@@ -1,0 +1,10 @@
+display = ILI934X.new(23, 18, 14, 27, 33, 32)
+# display.fill(ILI934X.color(0,255,0))
+display.drawRectangle(20, 300, 20, 220, ILI934X.color(0,255,0))
+i = 0
+display.drawLine(0, 320, 0, 240, ILI934X.color(0, 255, 255))
+while(1)
+  display.drawPixel(i, i, ILI934X.color(255, 255, 255))
+   i += 1
+   sleep(0.01)
+end

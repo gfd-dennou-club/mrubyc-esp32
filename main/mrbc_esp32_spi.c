@@ -29,6 +29,7 @@ spi_device_handle_t spidev;
 static void
 mrbc_esp32_spi_bus_initialize(mrb_vm* vm, mrb_value* v, int argc)
 {
+
     int gpio_mosi = GET_INT_ARG(1);
     int gpio_miso = GET_INT_ARG(2);
     int gpio_sclk = GET_INT_ARG(3);
@@ -37,38 +38,13 @@ mrbc_esp32_spi_bus_initialize(mrb_vm* vm, mrb_value* v, int argc)
     int gpio_rst = GET_INT_ARG(6);
     int gpio_bl = GET_INT_ARG(7);
 
-    // gpio_pad_select_gpio(gpio_cs);
-    // gpio_set_direction(gpio_cs, GPIO_MODE_OUTPUT);
-    // gpio_set_level(gpio_cs, 0);
-
-    // gpio_pad_select_gpio(gpio_dc);
-    // gpio_set_direction(gpio_dc, GPIO_MODE_OUTPUT);
-    // gpio_set_level(gpio_dc, 0);
-
-    // if (gpio_rst >= 0)
-    // {
-    //     gpio_pad_select_gpio(gpio_rst);
-    //     gpio_set_direction(gpio_rst, GPIO_MODE_OUTPUT);
-    //     gpio_set_level(gpio_rst, 0);
-    //     vTaskDelay(pdMS_TO_TICKS(100));
-    //     gpio_set_level(gpio_rst, 1);
-    // }
-
-    // if (gpio_bl >= 0)
-    // {
-    //     gpio_pad_select_gpio(gpio_bl);
-    //     gpio_set_direction(gpio_bl, GPIO_MODE_OUTPUT);
-    //     gpio_set_level(gpio_bl, 0);
-    // }
-    
     spi_bus_config_t bus_cfg = {
         .mosi_io_num = gpio_mosi,
         .miso_io_num = -1,
         .sclk_io_num = gpio_sclk,
         .quadwp_io_num = -1,
-        .quadhd_io_num = -1,
-        .max_transfer_sz = 4000};
-    
+        .quadhd_io_num = -1};
+
     esp_err_t ret = spi_bus_initialize(HSPI_HOST, &bus_cfg, DMA_CHAN);
     assert(ret == ESP_OK);
 
@@ -92,14 +68,11 @@ mrbc_esp32_spi_write_byte(mrb_vm* vm, mrb_value* v, int argc)
     esp_err_t ret;
     assert(GET_ARG(1).tt == MRBC_TT_ARRAY);
     mrbc_value *data = GET_ARG(1).array->data;
-    ESP_LOGI(tag, "%d", GET_ARY_ARG(1).array->data_size);
     uint8_t Data[1024];
     size_t dataLength = GET_INT_ARG(2);
     for (int i = 0; i < dataLength; i++){
         Data[i] = data[i].i;
-        ESP_LOGI(tag, "%d", Data[i]);
     }
-
     memset(&transaction, 0, sizeof(spi_transaction_t));
     transaction.length = 8 * dataLength;
     transaction.tx_buffer = Data;
