@@ -25,12 +25,6 @@ menu "IoTeX ESP32 mrubyc Configuration"
         help
             use ADC function?
 
-    config USE_ESP32_M5STACK
-        bool "USR ESP32 M5STACK"
-        default y
-        help
-            use M5STACK function?
-
     config USE_ESP32_I2C
         bool "USR ESP32 I2C"
         default y

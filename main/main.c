@@ -68,9 +68,6 @@
 #ifdef CONFIG_USE_ESP32_I2C
 #include "models/i2c.h"
 #endif
-#ifdef CONFIG_USE_ESP32_M5STACK
-#include "models/m5stack.h"
-#endif
 #ifdef CONFIG_USE_ESP32_SPI
 #include "models/spi.h"
 #endif
@@ -245,10 +242,6 @@ void app_main(void) {
 #ifdef CONFIG_USE_ESP32_I2C
   printf("start I2C (mruby/c class)\n");
   mrbc_create_task( i2c, 0 );
-#endif
-#ifdef CONFIG_USE_ESP32_M5STACK
-  printf("start M5STACK (mruby/c class)\n");
-  mrbc_create_task( m5stack, 0 );
 #endif
 #ifdef CONFIG_USE_ESP32_SPI
   printf("start SPI (mruby/c class)\n");

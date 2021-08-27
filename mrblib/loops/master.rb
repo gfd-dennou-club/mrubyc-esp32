@@ -1,1 +1,1 @@
-../../example/master.rb.sdcard
+../../example/master.rb.m5display
