@@ -94,3 +94,7 @@ uart:
 m5display:
 	cd mrblib/loops; \
 	ln -sf ../../example/master.rb.m5display master.rb
+
+tof:
+	cd mrblib/loops; \
+	ln -sf ../../example/master.rb.tof master.rb

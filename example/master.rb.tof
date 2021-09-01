@@ -1,0 +1,29 @@
+# Continuous
+i2c = I2C.new(22, 21)
+tof = VL53L0X.new(i2c)
+tof.set_timeout(500)
+if !tof.init
+  puts "Failed to detect and initialize sensor!"
+else
+  tof.start_continuous
+  while true
+    puts tof.read_range_continuous_millimeters
+    puts " TIMEOUT" if tof.timeout_occurred
+    sleep 0.01
+  end
+end
+
+# Single
+# i2c = I2C.new(22, 21)
+# tof = VL53L0X.new(i2c)
+# tof.set_timeout(500)
+# if !tof.init
+#   puts "Failed to detect and initialize sensor!"
+# else
+#   tof.set_measurement_timing_budget(200000);
+#   while true
+#     puts tof.read_range_single_millimeters
+#     puts " TIMEOUT" if tof.timeout_occurred
+#     sleep 0.1
+#   end
+# end

@@ -37,6 +37,9 @@
 #ifdef CONFIG_USE_ESP32_SPI
 #include "mrbc_esp32_spi.h"
 #endif
+#ifdef CONFIG_USE_ESP32_TOF
+#include "mrbc_esp32_tof.h"
+#endif
 #ifdef CONFIG_USE_ESP32_SPI_SD
 #include "mrbc_esp32_sdspi.h"
 #include "mrbc_esp32_stdio.h"
@@ -73,6 +76,9 @@
 #endif
 #ifdef CONFIG_USE_ESP32_SPI
 #include "models/spi.h"
+#endif
+#ifdef CONFIG_USE_ESP32_TOF
+#include "models/tof.h"
 #endif
 #ifdef CONFIG_USE_ESP32_UART
 #include "models/uart.h"
@@ -214,6 +220,10 @@ void app_main(void) {
   printf("start SPI (C) \n");
   mrbc_mruby_esp32_spi_gem_init(0);
 #endif
+#ifdef CONFIG_USE_ESP32_TOF
+  printf("start TOF (C) \n");
+  mrbc_mruby_esp32_tof_gem_init(0);
+#endif
 #ifdef CONFIG_USE_ESP32_SPI_SD
   printf("start SDSPI and ESP32 stdio (C)\n");
   mrbc_mruby_esp32_sdspi_gem_init(0);
@@ -253,6 +263,10 @@ void app_main(void) {
 #ifdef CONFIG_USE_ESP32_SPI
   printf("start SPI (mruby/c class)\n");
   mrbc_create_task( spi, 0 );
+#endif
+#ifdef CONFIG_USE_ESP32_TOF
+  printf("start TOF (mruby/c class)\n");
+  mrbc_create_task( tof, 0 );
 #endif
 #ifdef CONFIG_USE_ESP32_UART
   printf("start UART (mruby/c class)\n");
