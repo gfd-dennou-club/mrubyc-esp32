@@ -22,6 +22,9 @@
 #ifdef CONFIG_USE_ESP32_I2C
 #include "mrbc_esp32_i2c.h"
 #endif
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_BMP280
+#include "mrbc_esp32_bmp280.h"
+#endif
 #ifdef CONFIG_USE_ESP32_WIFI
 #include "mrbc_esp32_wifi.h"
 #endif
@@ -82,6 +85,7 @@
 #endif
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_ILI934X
 #include "models/ili934x.h"
+#include "models/font_misaki_gothic_8.h"
 #endif
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_RC8035SA
 #include "models/rc8035sa.h"
@@ -91,6 +95,12 @@
 #endif
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_SCD30
 #include "models/scd30.h"
+#endif
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_SHT3X
+#include "models/sht3x.h"
+#endif
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_BMP280
+#include "models/bmp280.h"
 #endif
 //master
 #include "loops/master.h"
@@ -194,6 +204,10 @@ void app_main(void) {
   printf("start I2C (C)\n");
   mrbc_mruby_esp32_i2c_gem_init(0);
 #endif
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_BMP280
+  printf("start BMP280 (C)\n");
+  mrbc_mruby_esp32_bmp280_gem_init(0);
+#endif
 #ifdef CONFIG_USE_ESP32_WIFI
   printf("start WiFi (C) \n");
   mrbc_mruby_esp32_wifi_gem_init(0);
@@ -269,6 +283,8 @@ void app_main(void) {
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_ILI934X
   printf("start ILI934X (mruby/c class)\n");
   mrbc_create_task( ili934x, 0 );
+  printf("start Font (mruby/c class)\n");
+  mrbc_create_task( font_misaki_gothic_8, 0 );
 #endif
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_RC8035SA
   printf("start RC8035SA (mruby/c class)\n");
@@ -281,6 +297,14 @@ void app_main(void) {
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_SCD30
   printf("start SCD30 (mruby/c class)\n");
   mrbc_create_task( scd30, 0 );
+#endif
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_SHT3X
+  printf("start SHT3X (mruby/c class)\n");
+  mrbc_create_task( sht3x, 0 );
+#endif
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_BMP280
+  printf("start BMP280 (mruby/c class)\n");
+  mrbc_create_task( bmp280, 0 );
 #endif
 
   //master
