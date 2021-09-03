@@ -1,3 +1,7 @@
+# Reference:
+# https://github.com/pololu/vl53l0x-arduino/blob/master/examples/Continuous/Continuous.ino
+# https://github.com/pololu/vl53l0x-arduino/blob/master/examples/Single/Single.ino
+
 # Continuous
 i2c = I2C.new(22, 21)
 tof = VL53L0X.new(i2c)

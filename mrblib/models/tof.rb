@@ -1,9 +1,9 @@
-# frozen_string_literal: true
+# VL53L0X
 
 # Referense:
 # https://github.com/pololu/vl53l0x-arduino/blob/master/VL53L0X.cpp
+# https://github.com/pololu/vl53l0x-arduino/blob/master/VL53L0X.h
 
-# VL53L0X
 class VL53L0X
   ADDRESS = 0b0101001
   START_OVERHEAD = 1910
@@ -278,11 +278,6 @@ class VL53L0X
       final_range_timeout_mclks += @pre_range_mclks if @pre_range
       write_reg_16bit(0x71, encode_timeout(final_range_timeout_mclks))
 
-      print "final_range_timeout_mclks : "
-      puts final_range_timeout_mclks
-      print "encode_timeout : "
-      puts encode_timeout(final_range_timeout_mclks)
-
       @measurement_timing_budget_us = budget_us
     end
     true
@@ -409,12 +404,7 @@ class VL53L0X
     tmp = read_reg(0x92)
 
     count = tmp & 0x7f
-    # type_is_aperture = (tmp >> 7) & 0x01
-    type_is_aperture = if ((tmp >> 7) & 0x01) != 0
-                         true
-                       else
-                         false
-                       end
+    type_is_aperture = ((tmp >> 7) & 0x01 != 0) ? true : false
 
     write_reg(0x81, 0x00)
     write_reg(0xff, 0x06)
@@ -435,7 +425,6 @@ class VL53L0X
     @msrc = ((sequence_config >> 2) & 0x01) != 0 ? true : false
     @pre_range = ((sequence_config >> 6) & 0x01) != 0 ? true : false
     @final_range = ((sequence_config >> 7) & 0x01) != 0 ? true : false
-    # @final_range = ((sequence_config >> 4) & 0x01) != 0 ? true : false
   end
 
   def init_sequence_step_timeouts
@@ -489,7 +478,6 @@ class VL53L0X
 
     end
     write_reg(0x0b, 0x01)
-
     write_reg(0x00, 0x00)
 
     true
