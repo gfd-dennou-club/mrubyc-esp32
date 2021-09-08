@@ -65,7 +65,7 @@ menu "IoTeX ESP32 mrubyc Configuration"
         help
             use SPI function?
 
-    config USE_ESP32_I2C_PERIPHERALS_ILI934X
+    config USE_ESP32_SPI_PERIPHERALS_ILI934X
         bool "PERIPHERAL: LCD Display ILI934X"
 	depends on USE_ESP32_SPI
         default n
