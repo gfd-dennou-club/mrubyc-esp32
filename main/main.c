@@ -230,7 +230,7 @@ void app_main(void) {
   printf("start SPI (C) \n");
   mrbc_mruby_esp32_spi_gem_init(0);
 #endif
-#ifdef CONFIG_USE_ESP32_TOF
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_TOF
   printf("start TOF (C) \n");
   mrbc_mruby_esp32_tof_gem_init(0);
 #endif
