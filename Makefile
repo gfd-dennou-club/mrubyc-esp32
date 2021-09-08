@@ -98,3 +98,7 @@ m5display:
 tof:
 	cd mrblib/loops; \
 	ln -sf ../../example/master.rb.tof master.rb
+
+env2:
+	cd mrblib/loops; \
+	ln -sf ../../example/master.rb.env2 master.rb

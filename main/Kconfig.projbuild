@@ -72,6 +72,20 @@ menu "IoTeX ESP32 mrubyc Configuration"
         help
             use TOF function?
 
+    config USE_ESP32_I2C_PERIPHERALS_SHT3X
+        bool "PERIPHERAL: Temperature/Humidity sensor SENSIRION SHT3X"
+	depends on USE_ESP32_I2C
+        default n
+        help
+            use Temperature/Humidity sensor CENSIRION SHT3X?
+
+    config USE_ESP32_I2C_PERIPHERALS_BMP280
+        bool "PERIPHERAL: Temperature/Pressure sensor SENSIRION BMP280"
+	depends on USE_ESP32_I2C
+        default n
+        help
+            use Temperature/Pressure sensor CENSIRION BMP280?
+
     config USE_ESP32_SPI
         bool "USR ESP32 SPI"
         default n
