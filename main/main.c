@@ -22,6 +22,9 @@
 #ifdef CONFIG_USE_ESP32_I2C
 #include "mrbc_esp32_i2c.h"
 #endif
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_TOF
+#include "mrbc_esp32_tof.h"
+#endif
 #ifdef CONFIG_USE_ESP32_WIFI
 #include "mrbc_esp32_wifi.h"
 #endif
@@ -36,9 +39,6 @@
 #endif
 #ifdef CONFIG_USE_ESP32_SPI
 #include "mrbc_esp32_spi.h"
-#endif
-#ifdef CONFIG_USE_ESP32_TOF
-#include "mrbc_esp32_tof.h"
 #endif
 #ifdef CONFIG_USE_ESP32_SPI_SD
 #include "mrbc_esp32_sdspi.h"
@@ -71,23 +71,17 @@
 #ifdef CONFIG_USE_ESP32_I2C
 #include "models/i2c.h"
 #endif
-#ifdef CONFIG_USE_ESP32_M5STACK
-#include "models/m5stack.h"
-#endif
 #ifdef CONFIG_USE_ESP32_SPI
 #include "models/spi.h"
 #endif
-#ifdef CONFIG_USE_ESP32_TOF
-#include "models/tof.h"
+#ifdef CONFIG_USE_ESP32_SPI_PERIPHERALS_ILI934X
+#include "models/ili934x.h"
 #endif
 #ifdef CONFIG_USE_ESP32_UART
 #include "models/uart.h"
 #endif
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_AQM0802A
 #include "models/aqm0802a.h"
-#endif
-#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_ILI934X
-#include "models/ili934x.h"
 #endif
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_RC8035SA
 #include "models/rc8035sa.h"
@@ -97,6 +91,9 @@
 #endif
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_SCD30
 #include "models/scd30.h"
+#endif
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_TOF
+#include "models/tof.h"
 #endif
 //master
 #include "loops/master.h"
@@ -256,17 +253,13 @@ void app_main(void) {
   printf("start I2C (mruby/c class)\n");
   mrbc_create_task( i2c, 0 );
 #endif
-#ifdef CONFIG_USE_ESP32_M5STACK
-  printf("start M5STACK (mruby/c class)\n");
-  mrbc_create_task( m5stack, 0 );
-#endif
 #ifdef CONFIG_USE_ESP32_SPI
   printf("start SPI (mruby/c class)\n");
   mrbc_create_task( spi, 0 );
 #endif
-#ifdef CONFIG_USE_ESP32_TOF
-  printf("start TOF (mruby/c class)\n");
-  mrbc_create_task( tof, 0 );
+#ifdef CONFIG_USE_ESP32_SPI_PERIPHERALS_ILI934X
+  printf("start ILI934X (mruby/c class)\n");
+  mrbc_create_task( ili934x, 0 );
 #endif
 #ifdef CONFIG_USE_ESP32_UART
   printf("start UART (mruby/c class)\n");
@@ -280,13 +273,13 @@ void app_main(void) {
   printf("start AQM0802A (mruby/c class)\n");
   mrbc_create_task( aqm0802a, 0 );
 #endif
-#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_ILI934X
-  printf("start ILI934X (mruby/c class)\n");
-  mrbc_create_task( ili934x, 0 );
-#endif
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_RC8035SA
   printf("start RC8035SA (mruby/c class)\n");
   mrbc_create_task( rc8035sa, 0 );
+#endif
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_TOF
+  printf("start TOF (mruby/c class)\n");
+  mrbc_create_task( tof, 0 );
 #endif
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_SGP30
   printf("start SGP30 (mruby/c class)\n");

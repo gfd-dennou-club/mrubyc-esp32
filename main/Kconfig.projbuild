@@ -31,12 +31,6 @@ menu "IoTeX ESP32 mrubyc Configuration"
         help
             use M5STACK function?
 
-    config USE_ESP32_TOF
-        bool "USR ESP32 TOF"
-        default y
-        help
-            use TOF function?
-
     config USE_ESP32_I2C
         bool "USR ESP32 I2C"
         default y
@@ -71,13 +65,20 @@ menu "IoTeX ESP32 mrubyc Configuration"
         help
             use CO2 sensor SENSIRION SCD30?
 
+    config USE_ESP32_I2C_PERIPHERALS_TOF
+        bool "USR ESP32 TOF"
+	depends on USE_ESP32_I2C
+        default n
+        help
+            use TOF function?
+
     config USE_ESP32_SPI
         bool "USR ESP32 SPI"
         default n
         help
             use SPI function?
 
-    config USE_ESP32_I2C_PERIPHERALS_ILI934X
+    config USE_ESP32_SPI_PERIPHERALS_ILI934X
         bool "PERIPHERAL: LCD Display ILI934X"
 	depends on USE_ESP32_SPI
         default n

@@ -58,7 +58,7 @@ class GPIO
       return
     end
     GPIO.set_level(@pin, value)
-    puts "write #{value}"
+    # puts "write #{value}"
   end
 
   # 入力 値 0 または 1 を取得
