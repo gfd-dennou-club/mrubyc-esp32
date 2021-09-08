@@ -1,1 +1,4 @@
-../../example/master.rb.m5display
+while true
+  puts "Hello World"
+  sleep 5
+end
