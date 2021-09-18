@@ -3,6 +3,7 @@
 # Referense:
 # https://github.com/pololu/vl53l0x-arduino/blob/master/VL53L0X.cpp
 # https://github.com/pololu/vl53l0x-arduino/blob/master/VL53L0X.h
+# http://note.suzakugiken.jp/pololu-tof-tutorial-a/2/
 
 class VL53L0X
   ADDRESS = 0b0101001
@@ -16,13 +17,42 @@ class VL53L0X
   MIN_TIMING_BUDGET = 20_000
 
   def initialize(i2c)
+    # インスタンスの生成
+    #   Parameters:
+    #     i2c : 通信に使用するi2cオブジェクト
+
     @i2c = i2c
     @address = VL53L0X::ADDRESS
     @io_timeout = 0
     @did_timeout = false
   end
 
+  def set_address(new_addr)
+    # i2cアドレスの変更
+    #   Parameters:
+    #     new_addr : i2cアドレス
+
+    write_reg(0x8A, new_addr & 0x7f)
+    @address = new_addr
+  end
+
+  def get_address
+    # i2cアドレスの取得
+    #   Returns:
+    #     i2cアドレス(7bit)
+
+    @address
+  end
+
   def init(io_2v8 = true)
+    # センサの初期化
+    #   Parameters:
+    #     io_2v8 : true  2v8モードにする
+    #              false iv8モードにする
+    #   Returns:
+    #     true  初期化成功
+    #     false 初期化失敗
+
     return false if read_reg(0xc0) != 0xee
 
     write_reg(0x89, read_reg(0x89) | 0x01) if io_2v8
@@ -171,10 +201,10 @@ class VL53L0X
     set_measurement_timing_budget(@measurement_timing_budget_us)
 
     write_reg(0x01, 0x01)
-    return false unless perform_single_refcalibration(0x40)
+    return false unless perform_single_ref_calibration(0x40)
 
     write_reg(0x01, 0x02)
-    return false unless perform_single_refcalibration(0x00)
+    return false unless perform_single_ref_calibration(0x00)
 
     write_reg(0x01, 0xe8)
 
@@ -182,41 +212,86 @@ class VL53L0X
   end
 
   def write_reg(reg, value)
+    # センサレジスタに8bitの値を書き込む
+    #   Parameters:
+    #     reg : レジスタアドレス
+    #     value : 書き込む値(8bit)
+
     @i2c.write(@address, [reg, value])
   end
 
   def write_reg_16bit(reg, value)
+    # センサレジスタに16bitの値を書き込む
+    #   Parameters:
+    #     reg : レジスタアドレス
+    #     value : 書き込む値(16bit)
+
     @i2c.write(@address, [reg, (value >> 8) & 0xff, value & 0xff])
   end
 
   def write_reg_32bit(reg, value)
+    # センサレジスタに32bitの値を書き込む
+    #   Parameters:
+    #     reg : レジスタアドレス
+    #     value : 書き込む値(32bit)
+
     @i2c.write(@address, [reg, (value >> 24) & 0xff, (value >> 16) & 0xff, (value >> 8) & 0xff, value & 0xff])
   end
 
   def read_reg(reg)
+    # センサレジスタから8bitの値を読み込む
+    #   Parameters:
+    #     reg : レジスタアドレス
+    #   Returns:
+    #     センサレジスタの値(8bit)
+
     @i2c.write(@address, reg)
     data = @i2c.read_integer(@address, 1)
     data[0]
   end
 
   def read_reg_16bit(reg)
+    # センサレジスタから16bitの値を読み込む
+    #   Parameters:
+    #     reg : レジスタアドレス
+    #   Returns:
+    #     センサレジスタの値(16bit)
+
     @i2c.write(@address, reg)
     data = @i2c.read_integer(@address, 2)
     (data[0] << 8) | data[1]
   end
 
   def read_reg_32bit(reg)
+    # センサレジスタから32bitの値を読み込む
+    #   Parameters:
+    #     reg : レジスタアドレス
+    #   Returns:
+    #     センサレジスタの値(32bit)
+
     @i2c.write(@address, reg)
     data = @i2c.read_integer(@address, 4)
     (data[0] << 24) | (data[1] << 16) | (data[2] << 8) | data[3]
   end
 
   def write_multi(reg, src)
+    # 指定したレジスタを基点に指定した配列から値を書き込む
+    #   Parameters:
+    #     reg : レジスタアドレス
+    #     src : 配列(8bit)
+
     @i2c.write(@address, reg)
     @i2c.write(@address, src)
   end
 
   def read_multi(reg, count)
+    # 指定したレジスタを基点に指定したバイト数のレジスタの値を配列で返す
+    #   Parameters:
+    #     reg : レジスタアドレス
+    #     count : バイト数
+    #   Returns:
+    #     読み込んだデータを保持した配列(8bit)
+
     @i2c.write(@address, reg)
     dst = []
     (0...count).each do |i|
@@ -227,14 +302,30 @@ class VL53L0X
   end
 
   def calc_macro_period(vcsel_period_pclks)
+    # VCSELの周期(PCLK)から周期(ns)を算出
+    #   Returns:
+    #     周期(ns)
+
     ((2304 * vcsel_period_pclks * 1655) + 500) / 1000
   end
 
   def check_timeout_expired
+    # タイムアウトが有効(0以外)のときの時間切れの確認
+    #   Returns:
+    #     true  時間内
+    #     false 時間切れ
+
     (@io_timeout > 0) && (self.millis - @timeout_start_ms > @io_timeout)
   end
 
-  def set_signal_rate_limit(limit_mcps)
+  def set_signal_rate_limit(limit_mcps = 0.25)
+    # 戻り信号のレート制限を1秒あたりのメガカウント(MCPS)で指定した値に設定
+    #   Parameters:
+    #     limit_mcps : 指定する値(MCPS)
+    #   Returns:
+    #     true  値が有効
+    #     false 値が無効
+
     if limit_mcps < 0.0 || limit_mcps > 511.99
       false
     else
@@ -244,10 +335,22 @@ class VL53L0X
   end
 
   def get_signal_rate_limit
-    read_reg_16bit(0x44) / (1 << 7)
+    # 現在の戻り信号のレート制限(MCPS)を取得
+    #   Returns:
+    #     レート制限(MCPS)
+
+    read_reg_16bit(0x44).to_f / (1 << 7)
   end
 
   def set_measurement_timing_budget(budget_us)
+    # 測定タイミングパジェットを指定
+    # 測定タイミングパジェットは1回の距離測定に許容される時間
+    #   Parameters:
+    #     budget_us : 指定する測定タイミングパジェット(μs)
+    #   Returns:
+    #     true  値が有効
+    #     false 値が無効
+
     return false if budget_us < VL53L0X::MIN_TIMING_BUDGET
 
     used_budget_us = VL53L0X::START_OVERHEAD + VL53L0X::END_OVERHEAD
@@ -284,6 +387,10 @@ class VL53L0X
   end
 
   def get_measurement_timing_budget
+    # 測定タイミングパジェットを取得
+    #   Returns:
+    #     測定タイミングパジェット(μs)
+
     budget_us = VL53L0X::START_OVERHEAD + VL53L0X::END_OVERHEAD
     init_sequence_step_enables
     init_sequence_step_timeouts
@@ -304,7 +411,105 @@ class VL53L0X
     budget_us
   end
 
+  def set_vcsel_purse_period(type, period_pclks)
+    # 指定した同期タイプの垂直共振器面発光レーザー(VCSEL)のパルス周期(PCLK)を指定
+    #   Parameters:
+    #     type : 周期タイプ  0 (VcselPeriodPreRange)
+    #                        1 (VcselPeriodFinalRange)
+    #     period_pclks : 指定する周期(PCLK)
+
+    vcsel_period_reg = ((period_pclks) >> 1) - 1
+    init_sequence_step_enables
+    init_sequence_step_timeouts
+
+    if type == 0
+      case period_pclks
+      when 12
+        write_reg(0x57, 0x18)
+      when 14
+        write_reg(0x57, 0x30)
+      when 16
+        write_reg(0x57, 0x40)
+      when 18
+        write_reg(0x57, 0x50)
+      else
+        return false
+      end
+
+      write_reg(0x56, 0x08)
+
+      write_reg(0x50, vcsel_period_reg)
+
+      new_pre_range_timeout_mclks = timeout_microseconds_to_mclks(@msrc_dss_tcc_us, period_pclks)
+      write_reg(0x46, new_pre_range_timeout_mclks > 256 ? 255 : new_pre_range_timeout_mclks - 1)
+
+    elsif type == 1
+      case period_pclks
+      when 8
+        write_reg(0x48, 0x10)
+        write_reg(0x47, 0x08)
+        write_reg(0x32, 0x02)
+        write_reg(0x30, 0x0c)
+        write_reg(0xff, 0x01)
+        write_reg(0x30, 0x30)
+        write_reg(0xff, 0x00)
+      when 10
+        write_reg(0x48, 0x28)
+        write_reg(0x47, 0x08)
+        write_reg(0x32, 0x03)
+        write_reg(0x30, 0x09)
+        write_reg(0xff, 0x01)
+        write_reg(0x30, 0x20)
+        write_reg(0xff, 0x00)
+      when 12
+        write_reg(0x48, 0x38)
+        write_reg(0x47, 0x08)
+        write_reg(0x32, 0x03)
+        write_reg(0x30, 0x08)
+        write_reg(0xff, 0x01)
+        write_reg(0x30, 0x20)
+        write_reg(0xff, 0x00)
+      when 14
+        write_reg(0x48, 0x48)
+        write_reg(0x47, 0x08)
+        write_reg(0x32, 0x03)
+        write_reg(0x30, 0x07)
+        write_reg(0xff, 0x01)
+        write_reg(0x30, 0x20)
+        write_reg(0xff, 0x00)
+      else
+        return false
+      end
+
+      write_reg(0x70, vcsel_period_reg)
+
+      new_final_range_timeout_mclks = timeout_microseconds_to_mclks(@final_range_us, period_pclks)
+
+      new_final_range_timeout_mclks += @pre_range_mclks if @pre_range
+
+      write_reg_16bit(0x71, encode_timeout(new_final_range_timeout_mclks))
+
+    else
+      return false
+    end
+
+    set_measurement_timing_budget(@measurement_timing_budget_us)
+    sequence_config = read_reg(0x01)
+    write_reg(0x01, 0x02)
+    perform_single_ref_calibration(0x0)
+    write_reg(0x01, sequence_config)
+
+    true
+  end
+
   def get_vcsel_pulse_period(type)
+    # 指定した周期タイプの垂直共振器面発光レーザ(VCSEL)のパルス周期(PCLK)を取得
+    #   Parameters:
+    #     type : 周期タイプ  0 (VcselPeriodPreRange)
+    #                        1 (VcselPeriodFinalRange)
+    #   Returns:
+    #     パルス周期(PCLK)
+
     if type == 0
       (read_reg(0x50) + 1) << 1
     elsif type == 1
@@ -315,6 +520,12 @@ class VL53L0X
   end
 
   def start_continuous(period_ms = 0)
+    # 連続距離測定を開始
+    #   period_msが0なら, できる限り高レートで測定を行う
+    #   0以外なら測定間隔を指定した時間にして測定を行う
+    #   Parameters:
+    #     period_ms : 測定間隔(ms)
+
     write_reg(0x80, 0x01)
     write_reg(0xff, 0x01)
     write_reg(0x00, 0x00)
@@ -333,7 +544,22 @@ class VL53L0X
     end
   end
 
+  def stop_continuous
+    # 連続距離測定を停止
+
+    write_reg(0x00, 0x01)
+    write_reg(0xFF, 0x01)
+    write_reg(0x00, 0x00)
+    write_reg(0x91, 0x00)
+    write_reg(0x00, 0x01)
+    write_reg(0xFF, 0x00)
+  end
+
   def read_range_continuous_millimeters
+    # 連続距離測定時の測定値を取得
+    #   Returns:
+    #     測定値(mm)
+
     start_timeout
     while (read_reg(0x13) & 0x07) == 0
       if check_timeout_expired
@@ -347,6 +573,10 @@ class VL53L0X
   end
 
   def read_range_single_millimeters
+    # 単発距離測定を実行し, 測定値を取得
+    #   Returns:
+    #     測定値(mm)
+
     write_reg(0x80, 0x01)
     write_reg(0xFF, 0x01)
     write_reg(0x00, 0x00)
@@ -368,20 +598,44 @@ class VL53L0X
   end
 
   def set_timeout(timeout)
+    # タイムアウト期間(センサが準備できていない場合に読み取り操作が中止されるまでの期間)を設定
+    # 0のときタイムアウトを無効
+    #   Parameters:
+    #     timeout : タイムアウト期間(ms)
+
     @io_timeout = timeout
   end
 
+  def get_timeout
+    # タイムアウト期間を取得
+    #   Returns:
+    #     タイムアウト期間(ms)
+
+    @io_timeout
+  end
+
   def start_timeout
+    # タイムアウトの開始
+
     @timeout_start_ms = self.millis
   end
 
   def timeout_occurred
+    # 前回のtimeout_occurredが呼び出された後にタイムアウトが発生したか取得
+    #   Returns:
+    #     true  タイムアウトが発生
+    #     false タイムアウトが未発生
+
     tmp = @did_timeout
     @did_timeout = false
     tmp
   end
 
   def get_spad_info
+    # SPAD(single photon avalanche diode)の数とタイプを取得
+    #   Returns:
+    #     配列[bool(取得の成功失敗), SPADの数, SPADのタイプ]
+
     write_reg(0x80, 0x01)
     write_reg(0xff, 0x01)
     write_reg(0x00, 0x00)
@@ -404,7 +658,7 @@ class VL53L0X
     tmp = read_reg(0x92)
 
     count = tmp & 0x7f
-    type_is_aperture = ((tmp >> 7) & 0x01 != 0) ? true : false
+    type_is_aperture = (tmp >> 7) & 0x01 != 0
 
     write_reg(0x81, 0x00)
     write_reg(0xff, 0x06)
@@ -419,15 +673,19 @@ class VL53L0X
   end
 
   def init_sequence_step_enables
+    # シーケンスステップの可能, 不可能を取得, 設定
+
     sequence_config = read_reg(0x01)
-    @tcc = ((sequence_config >> 4) & 0x01) != 0 ? true : false
-    @dss = ((sequence_config >> 3) & 0x01) != 0 ? true : false
-    @msrc = ((sequence_config >> 2) & 0x01) != 0 ? true : false
-    @pre_range = ((sequence_config >> 6) & 0x01) != 0 ? true : false
-    @final_range = ((sequence_config >> 7) & 0x01) != 0 ? true : false
+    @tcc = ((sequence_config >> 4) & 0x01) != 0
+    @dss = ((sequence_config >> 3) & 0x01) != 0
+    @msrc = ((sequence_config >> 2) & 0x01) != 0
+    @pre_range = ((sequence_config >> 6) & 0x01) != 0
+    @final_range = ((sequence_config >> 7) & 0x01) != 0
   end
 
   def init_sequence_step_timeouts
+    # シーケンスステップのタイムアウトを取得, 設定
+
     @pre_range_vcsel_period_pclks = get_vcsel_pulse_period(0)
     @msrc_dss_tcc_mclks = read_reg(0x46) + 1
     @msrc_dss_tcc_us = timeout_mclks_to_microseconds(@msrc_dss_tcc_mclks, @pre_range_vcsel_period_pclks)
@@ -441,10 +699,22 @@ class VL53L0X
   end
 
   def decode_timeout(reg_val)
+    # シーケンスステップのタイムアウトを算出
+    #   Parameters:
+    #     reg_val : レジスタ値
+    #   Returns:
+    #     タイムアウト(MCLKS)
+
     ((reg_val & 0x00ff) << ((reg_val & 0xff00) >> 8)) + 1
   end
 
   def encode_timeout(timeout_mclks)
+    # MCLKS単位のタイムアウトからレジスタ値をエンコード
+    #   Parameters:
+    #     timeout_mclks : タイムアウト(MCLKS)
+    #   Returns:
+    #     レジスタ値(8bit)
+
     ls_byte = 0
     ms_byte = 0
     if timeout_mclks > 0
@@ -460,16 +730,37 @@ class VL53L0X
   end
 
   def timeout_mclks_to_microseconds(timeout_period_mclks, vcsel_period_pclks)
+    # VCSELの周期をPCLKで指定し, シーケンスステップのタイムアウトをMCLKSからμsに変換
+    #   Parameters:
+    #     timeout_period_mclks : タイムアウト(MCLKS)
+    #     vcsel_period_pclks : VCSELの周期(PCLK)
+    #   Returns:
+    #     タイムアウト(μs)
+
     macro_period_ns = calc_macro_period(vcsel_period_pclks)
     ((timeout_period_mclks * macro_period_ns) + 500) / 1000
   end
 
   def timeout_microseconds_to_mclks(timeout_period_us, vcsel_period_pclks)
+    # VCSELの周期をPCLKで指定し, シーケンスステップのタイムアウトをμsからMCLKSに変換
+    #   Parameters:
+    #     timeout_period_us : タイムアウト(μs)
+    #     vcsel_period_pclks : VCSELの周期(PCLK)
+    #   Returns:
+    #     タイムアウト(MCLKS)
+
     macro_period_ns = calc_macro_period(vcsel_period_pclks)
     ((timeout_period_us * 1000) + (macro_period_ns / 2)) / macro_period_ns
   end
 
-  def perform_single_refcalibration(vhv_init_byte)
+  def perform_single_ref_calibration(vhv_init_byte)
+    # 校正を行う
+    #   Parameters:
+    #     vhv_init_byte : byte指定
+    #   Returns:
+    #     true  成功
+    #     false 失敗
+
     write_reg(0x00, 0x01 | vhv_init_byte)
 
     start_timeout
