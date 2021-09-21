@@ -30,6 +30,10 @@ class GPIO
     init(mode, pull_mode, value)
   end
 
+  def get_pin
+    @pin
+  end
+
   # コンストラクタ外からの再初期化
   def init(mode = -1, pull_mode = -1, value = -1)
     if(value != -1 && (mode == GPIO::OUT || mode == GPIO::OPEN_DRAIN))
