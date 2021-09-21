@@ -59,12 +59,12 @@ menu "IoTeX ESP32 mrubyc Configuration"
         help
             use CO2 sensor SENSIRION SCD30?
 
-    config USE_ESP32_I2C_PERIPHERALS_TOF
-        bool "USR ESP32 TOF"
+    config USE_ESP32_I2C_PERIPHERALS_VL53L0X
+        bool "PERIPHERAL: Time of Flight ranging sensor SENSIRION VL53L0X"
 	depends on USE_ESP32_I2C
         default n
         help
-            use TOF function?
+            use Time of Flight ranging sensor CENSIRION VL53L0X?
 
     config USE_ESP32_I2C_PERIPHERALS_SHT3X
         bool "PERIPHERAL: Temperature/Humidity sensor SENSIRION SHT3X"

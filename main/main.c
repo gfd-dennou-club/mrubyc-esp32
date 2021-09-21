@@ -22,8 +22,8 @@
 #ifdef CONFIG_USE_ESP32_I2C
 #include "mrbc_esp32_i2c.h"
 #endif
-#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_TOF
-#include "mrbc_esp32_tof.h"
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_VL53L0X
+#include "mrbc_esp32_vl53l0x.h"
 #endif
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_BMP280
 #include "mrbc_esp32_bmp280.h"
@@ -95,8 +95,8 @@
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_SCD30
 #include "models/scd30.h"
 #endif
-#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_TOF
-#include "models/tof.h"
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_VL53L0X
+#include "models/vl53l0x.h"
 #endif
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_SHT3X
 #include "models/sht3x.h"
@@ -230,9 +230,9 @@ void app_main(void) {
   printf("start SPI (C) \n");
   mrbc_mruby_esp32_spi_gem_init(0);
 #endif
-#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_TOF
-  printf("start TOF (C) \n");
-  mrbc_mruby_esp32_tof_gem_init(0);
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_VL53L0X
+  printf("start VL53L0X (C) \n");
+  mrbc_mruby_esp32_vl53l0x_gem_init(0);
 #endif
 #ifdef CONFIG_USE_ESP32_SPI_SD
   printf("start SDSPI and ESP32 stdio (C)\n");
@@ -290,9 +290,9 @@ void app_main(void) {
   printf("start RC8035SA (mruby/c class)\n");
   mrbc_create_task( rc8035sa, 0 );
 #endif
-#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_TOF
-  printf("start TOF (mruby/c class)\n");
-  mrbc_create_task( tof, 0 );
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_VL53L0X
+  printf("start VL53L0X (mruby/c class)\n");
+  mrbc_create_task( vl53l0x, 0 );
 #endif
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_SGP30
   printf("start SGP30 (mruby/c class)\n");
