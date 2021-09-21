@@ -89,7 +89,7 @@ class PWM
     if(0 > octave && octave <= 8)
       deinit
     else
-      freq(((27.5 * (2**((M5PWM::NOTE[note] + 12 * octave)/12.0))) + 0.5).to_i)
+      freq(((27.5 * (2**((PWM::NOTE[note] + 12 * octave)/12.0))) + 0.5).to_i)
     end
   end
 end
