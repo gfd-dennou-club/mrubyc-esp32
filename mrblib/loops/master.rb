@@ -1,10 +1,14 @@
-def tof_init(i2c)
-  p 'tof init'
+def tof_init(i2c, tof)
+  tof = VL53L0X.new(i2c)
+  tof.init
+  tof.set_timeout(500)
+  tof.set_measurement_timing_budget(200_000)
+  tof
 end
 
-def tof(i2c, display)
-  p "tof now"
-  sleep 1
+def tof(i2c, tof)
+  puts tof.read_range_single_millimeters
+  puts " TIMEOUT" if tof.timeout_occurred
 end
 
 def menu(i2c, display)
@@ -28,7 +32,10 @@ swpins.each do |swpin|
 end
 
 i2c = I2C.new(22, 21)
+tof = nil
 display = ILI934X.new(23, 18, 14, 27, 33, 32)
+sleep 10
+display.drawRectangle(20, 300, 170, 180, ILI934X.color(0x28, 0xad, 0x35))
 state = 1
 tof_setup = false
 env2_setup = false
@@ -42,9 +49,9 @@ while true
   case state
   when 0
     if tof_setup
-      tof(i2c, display)
+      tof(i2c, tof)
     else
-      tof_init(i2c)
+      tof = tof_init(i2c, tof)
       tof_setup = true
     end
   when 1
