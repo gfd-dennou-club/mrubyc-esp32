@@ -65,6 +65,12 @@
 #ifdef CONFIG_USE_ESP32_I2C
 #include "models/i2c.h"
 #endif
+#ifdef CONFIG_USE_I2C_MCP9808
+#include "models/mcp9808.h"
+#endif
+#ifdef CONFIG_USE_ESP32_I2C_LCD
+#include "models/lcd.h"
+#endif
 #ifdef CONFIG_USE_ESP32_UART
 #include "models/uart.h"
 #endif
@@ -229,6 +235,14 @@ void app_main(void) {
 #ifdef CONFIG_USE_ESP32_I2C
   printf("start I2C (mruby/c class)\n");
   mrbc_create_task( i2c, 0 );
+#endif
+#ifdef CONFIG_USE_I2C_MCP9808
+  printf("start My MCP9808 (mruby/c class)\n");
+  mrbc_create_task( mcp9808, 0 );
+#endif
+#ifdef CONFIG_USE_ESP32_I2C_LCD
+  printf("start My LCD (mruby/c class)\n");
+  mrbc_create_task( lcd, 0 );
 #endif
 #ifdef CONFIG_USE_ESP32_UART
   printf("start UART (mruby/c class)\n");

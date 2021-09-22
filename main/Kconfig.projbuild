@@ -31,6 +31,20 @@ menu "IoTeX ESP32 mrubyc Configuration"
         help
             use I2C function?
 
+    config USE_I2C_MCP9808
+	bool "USE I2C TEMPSENSOR"
+	depends on USE_ESP32_I2C
+	default n
+	help
+	    use My MCP9808 sensor?
+
+    config USE_ESP32_I2C_LCD
+        bool "PERIPHERAL: LCD Display"
+        depends on USE_ESP32_I2C
+        default n
+        help
+            use My LCD Display?
+
     config USE_ESP32_I2C_PERIPHERALS_AQM0802A
         bool "PERIPHERAL: LCD Display AQM0802A"
 	depends on USE_ESP32_I2C
