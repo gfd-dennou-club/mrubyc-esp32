@@ -30,6 +30,20 @@ menu "IoTeX ESP32 mrubyc Configuration"
         default y
         help
             use I2C function?
+   #追加 
+    config USE_ESP32_I2C_TMG
+      bool "PERIPHERAL: TMG Display"
+      depends on USE_ESP32_I2C
+      default n
+      help  
+          use My TMG Display?
+
+    config USE_ESP32_I2C_LCD
+     bool "PERIPHERAL: LCD Display"
+     depends on USE_ESP32_I2C
+     default n
+     help
+         use My LCD Display?
 
     config USE_ESP32_I2C_PERIPHERALS_AQM0802A
         bool "PERIPHERAL: LCD Display AQM0802A"
