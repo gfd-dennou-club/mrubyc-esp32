@@ -21,15 +21,15 @@ class VEML
   end
 
   def level (data)
-    if data <= 400
+    if data <= 560
       return "Low"
-    elsif data >= 401 && data <= 800
+    elsif data >= 561 && data <= 1120
       return "Moderate"
-    elsif data >= 801 && data <= 1200
+    elsif data >= 1121 && data <= 1494
       return "High"
-    elsif data >= 1201 && data <= 1600
+    elsif data >= 1495 && data <= 2054
       return "Very High"
-    elsif data >= 1601
+    elsif data >= 2055
       return "Extreme"
     end
   end
