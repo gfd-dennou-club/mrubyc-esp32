@@ -18,10 +18,17 @@ end
 
 def env2_init(i2c)
   p 'env2 init'
+  sht3x = SHT3X.new(i2c)
+  bmp280 = BMP280.new(i2c)
+  return bmp280, sht3x
 end
 
-def env2(i2c, display)
-  p "env2 now"
+def env2(i2c, display, bmp280, sht3x)
+  temp_s = sht3x.readTemperature
+  temp_b = bmp280.readTemperature
+  pressure = bmp280.readTemperature
+  p "#{temp_s} C"
+  p "#{temp_b} C, #{temp_b} Pa" 
   sleep 1
 end
 
@@ -37,6 +44,8 @@ display = ILI934X.new(23, 18, 14, 27, 33, 32)
 sleep 10
 display.drawRectangle(20, 300, 170, 180, ILI934X.color(0x28, 0xad, 0x35))
 state = 1
+bmp280 = nil
+sht3x = nil
 tof_setup = false
 env2_setup = false
 
@@ -60,9 +69,9 @@ while true
     menu(i2c, display)
   when 2
     if env2_setup
-      env2(i2c, display)
+      env2(i2c, display, bmp280, sht3x)
     else
-      env2_init(i2c)
+      bmp280, sht3x = env2_init(i2c)
       env2_setup = true
     end
   end
