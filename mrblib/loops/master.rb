@@ -10,7 +10,8 @@ def vl53l0x(i2c, display, vl53l0x)
   range = vl53l0x.read_range_single_millimeters
   puts "range: #{range}"
   puts " TIMEOUT" if vl53l0x.timeout_occurred
-  display.writeString(sprintf("%4d", range), 50, 50, 20, 35, 28, ILI934X.color(0x27, 0x1c, 0x19), ILI934X.color(0xff, 0xf3, 0xec))
+  display.drawRectangle(70, 136, 70, 111, ILI934X.color(179, 255, 247))
+  display.writeString(sprintf("%4d", range), 75, 75, 14, 31, 28, ILI934X.color(0x27, 0x1c, 0x19), nil)
 end
 
 def menu(i2c, display)
@@ -32,19 +33,19 @@ def env2(i2c, display, bmp280, sht3x)
   temp_b = bmp280.readTemperature
   pressure = bmp280.readPressure
   p "#{temp_s} C"
-  p "#{temp_b} C, #{pressure} Pa" 
+  p "#{temp_b} C, #{pressure / 100} hPa" 
   draw_back(display)
-  str = sprintf("    %.2f\n    %.2f\n%d", temp_s, temp_b, pressure)
-  display.writeString(str, 75, 75, 14, 31, 28, ILI934X.color(0x27, 0x1c, 0x19), nil)
+  str = sprintf("%.1f\n%.1f\n%d", temp_s, temp_b, pressure / 100)
+  display.writeString(str, 189, 75, 14, 31, 28, ILI934X.color(0x27, 0x1c, 0x19), nil)
   sleep 1
 end
 
 def draw_back(display)
-  xs = [70, 130, 190, 250]
-  ys = [70, 120, 170]
-  3.times do |x|
-    2.times do |y|
-      display.drawRectangle(xs[x], xs[x + 1], ys[y], ys[y + 1], ILI934X.color(0xff, 0xf3, 0xec))
+  xs = [184, 217, 250] 
+  ys = [70, 103, 136, 170]
+  2.times do |x|
+    3.times do |y|
+      display.drawRectangle(xs[x], xs[x + 1], ys[y], ys[y + 1], ILI934X.color(255, 222, 179))
     end
   end
 end
