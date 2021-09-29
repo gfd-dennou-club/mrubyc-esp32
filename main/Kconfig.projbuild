@@ -6,7 +6,8 @@ menu "IoTeX ESP32 mrubyc Configuration"
         help
             use GPIO function?
 
-    config USE_ESP32_GPIO_PERIPHERALS_SHT75
+   
+     config USE_ESP32_GPIO_PERIPHERALS_SHT75
         bool "PERIPHERAL: Temperature/Humidity Sensor SENSIRION SHT75"
 	depends on USE_ESP32_GPIO
         default n
@@ -58,6 +59,13 @@ menu "IoTeX ESP32 mrubyc Configuration"
         default n
         help
             use CO2 sensor SENSIRION SCD30?
+
+    config USE_ESP32_I2C_PERIPHERALS_TMP007
+	bool "PERIPHERAL: TMP007"
+	depends on USE_ESP32_I2C
+	default n
+	help
+	    use TMP007 sensor SENSIRION_TMP007?
 
     config USE_ESP32_SPI_SD
         bool "USR ESP32 SPI_SD"
