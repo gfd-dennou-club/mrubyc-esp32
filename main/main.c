@@ -22,6 +22,12 @@
 #ifdef CONFIG_USE_ESP32_I2C
 #include "mrbc_esp32_i2c.h"
 #endif
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_VL53L0X
+#include "mrbc_esp32_vl53l0x.h"
+#endif
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_BMP280
+#include "mrbc_esp32_bmp280.h"
+#endif
 #ifdef CONFIG_USE_ESP32_WIFI
 #include "mrbc_esp32_wifi.h"
 #endif
@@ -33,6 +39,9 @@
 #endif
 #ifdef CONFIG_USE_ESP32_HTTP_CLIENT
 #include "mrbc_esp32_http_client.h"
+#endif
+#ifdef CONFIG_USE_ESP32_SPI
+#include "mrbc_esp32_spi.h"
 #endif
 #ifdef CONFIG_USE_ESP32_SPI_SD
 #include "mrbc_esp32_sdspi.h"
@@ -65,6 +74,12 @@
 #ifdef CONFIG_USE_ESP32_I2C
 #include "models/i2c.h"
 #endif
+#ifdef CONFIG_USE_ESP32_SPI
+#include "models/spi.h"
+#endif
+#ifdef CONFIG_USE_ESP32_SPI_PERIPHERALS_ILI934X
+#include "models/ili934x.h"
+#endif
 #ifdef CONFIG_USE_ESP32_UART
 #include "models/uart.h"
 #endif
@@ -79,6 +94,15 @@
 #endif
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_SCD30
 #include "models/scd30.h"
+#endif
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_VL53L0X
+#include "models/vl53l0x.h"
+#endif
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_SHT3X
+#include "models/sht3x.h"
+#endif
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_BMP280
+#include "models/bmp280.h"
 #endif
 //master
 #include "loops/master.h"
@@ -182,6 +206,10 @@ void app_main(void) {
   printf("start I2C (C)\n");
   mrbc_mruby_esp32_i2c_gem_init(0);
 #endif
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_BMP280
+  printf("start BMP280 (C)\n");
+  mrbc_mruby_esp32_bmp280_gem_init(0);
+#endif
 #ifdef CONFIG_USE_ESP32_WIFI
   printf("start WiFi (C) \n");
   mrbc_mruby_esp32_wifi_gem_init(0);
@@ -197,6 +225,14 @@ void app_main(void) {
 #ifdef CONFIG_USE_ESP32_HTTP_CLIENT
   printf("start HTTPClient (C) \n");
   mrbc_mruby_esp32_httpclient_gem_init(0);
+#endif
+#ifdef CONFIG_USE_ESP32_SPI
+  printf("start SPI (C) \n");
+  mrbc_mruby_esp32_spi_gem_init(0);
+#endif
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_VL53L0X
+  printf("start VL53L0X (C) \n");
+  mrbc_mruby_esp32_vl53l0x_gem_init(0);
 #endif
 #ifdef CONFIG_USE_ESP32_SPI_SD
   printf("start SDSPI and ESP32 stdio (C)\n");
@@ -230,6 +266,14 @@ void app_main(void) {
   printf("start I2C (mruby/c class)\n");
   mrbc_create_task( i2c, 0 );
 #endif
+#ifdef CONFIG_USE_ESP32_SPI
+  printf("start SPI (mruby/c class)\n");
+  mrbc_create_task( spi, 0 );
+#endif
+#ifdef CONFIG_USE_ESP32_SPI_PERIPHERALS_ILI934X
+  printf("start ILI934X (mruby/c class)\n");
+  mrbc_create_task( ili934x, 0 );
+#endif
 #ifdef CONFIG_USE_ESP32_UART
   printf("start UART (mruby/c class)\n");
   mrbc_create_task( uart, 0 );
@@ -246,6 +290,10 @@ void app_main(void) {
   printf("start RC8035SA (mruby/c class)\n");
   mrbc_create_task( rc8035sa, 0 );
 #endif
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_VL53L0X
+  printf("start VL53L0X (mruby/c class)\n");
+  mrbc_create_task( vl53l0x, 0 );
+#endif
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_SGP30
   printf("start SGP30 (mruby/c class)\n");
   mrbc_create_task( sgp30, 0 );
@@ -253,6 +301,14 @@ void app_main(void) {
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_SCD30
   printf("start SCD30 (mruby/c class)\n");
   mrbc_create_task( scd30, 0 );
+#endif
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_SHT3X
+  printf("start SHT3X (mruby/c class)\n");
+  mrbc_create_task( sht3x, 0 );
+#endif
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_BMP280
+  printf("start BMP280 (mruby/c class)\n");
+  mrbc_create_task( bmp280, 0 );
 #endif
 
   //master
