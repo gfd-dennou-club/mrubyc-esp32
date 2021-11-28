@@ -109,5 +109,10 @@ ESPTOOL = esptool.py
 .PHONY: spiffs
 spiffs:
 	$(MRBC) -o ./spiffs/mrbc/master.mrbc -E ./mrblib/loops/master.rb
+ifeq ($(CONFIG_ENABLE_MULTITASK),y)
+	$(MRBC) -o ./spiffs/mrbc/slave.mrbc -E ./mrblib/loops/slave.rb
+else
+	rm -rf ./spiffs/mrbc/slave.mrbc
+endif
 	$(MKSPIFFS) -c ./spiffs/mrbc -p 256 -b 4096 -s 0x4000 ./spiffs/mrbc.spiffs.bin
 	$(ESPTOOL) --chip esp32 --baud 921600 --port $(CONFIG_ESPTOOLPY_PORT) --before default_reset --after hard_reset write_flash -z --flash_mode qio --flash_freq 80m --flash_size detect 2162688 ./spiffs/mrbc.spiffs.bin
