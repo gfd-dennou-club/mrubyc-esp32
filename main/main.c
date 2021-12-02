@@ -106,11 +106,13 @@
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_BMP280
 #include "models/bmp280.h"
 #endif
+#ifdef CONFIG_USE_ESP32_FIRMWAREFLASH
 //master
 #include "loops/master.h"
 //slave
 #ifdef CONFIG_ENABLE_MULTITASK
 #include "loops/slave.h"
+#endif
 #endif
 
 static const char *TAG = "iotex-esp32-mrubyc";
@@ -208,7 +210,6 @@ static void c_debugprint(struct VM *vm, mrbc_value v[], int argc){
   for( int i = 0; i < 79; i++ ) { console_putchar('='); }
   console_putchar('\n');
 }
-
 
 void app_main(void) {
   nvs_flash_init();
@@ -372,13 +373,21 @@ void app_main(void) {
   }
 
   // master
+#ifdef CONFIG_USE_ESP32_FIRMWAREFLASH
+  ESP_LOGE(TAG,"FIRMWAREFLASH");
+  mrbc_create_task(master, 0);
+#ifdef CONFIG_ENABLE_MULTITASK
+  mrbc_create_task( slave, 0 );
+#endif
+#else
+  ESP_LOGE(TAG,"SPIFFS");
   uint8_t *master = load_mrb_file("/spiffs/master.mrbc");
-  mrbc_create_task( master, 0 );
-  
+  mrbc_create_task(master, 0);
   //slave
 #ifdef CONFIG_ENABLE_MULTITASK
   uint8_t *slave = load_mrb_file("/spiffs/slave.mrbc");
   mrbc_create_task( slave, 0 );
+#endif
 #endif
   mrbc_run();
 }
