@@ -11,36 +11,81 @@ class ILI934X
     end
 
     def init(bl)
-      @spi.write_command(0xc8)
-      @spi.write_data(0xff,0x93,0x42)
       @spi.write_command(0xc0)
-      @spi.write_data(0x12,0x12)
+      @spi.write_data(0x23)
+
       @spi.write_command(0xc1)
-      @spi.write_data(0x03)
-      @spi.write_command(0xb0)
-      @spi.write_data(0xe0)
-      @spi.write_command(0xf6)
-      @spi.write_data(0x00, 0x01, 0x01)
+      @spi.write_data(0x10)
+
+      @spi.write_command(0xc5)
+      @spi.write_data(0x3e)
+      @spi.write_data(0x28)
+
+      @spi.write_command(0xc7)
+      @spi.write_data(0x86)
+
       @spi.write_command(0x36)
       @spi.write_data(0x08)  # Memory Access Control
+
       @spi.write_command(0x3a)
       @spi.write_data(0x55)  # Pixel Format
-      @spi.write_command(0xb6)
-      @spi.write_data(0x08,0x82,0x27)  # Display Function Control
-      @spi.write_command(0xe0)
-      @spi.write_data(0x00,0x0c,0x11,0x04,0x11,0x08,0x37,0x89,0x4c,0x06,0x0c,0x0a,0x2e,0x34,0x0f)  # Set Gamma
-      @spi.write_command(0xe1)
-      @spi.write_data(0x00,0x0b,0x11,0x05,0x13,0x09,0x33,0x67,0x48,0x07,0x0e,0x0b,0x2e,0x33,0x0f)  # Set Gamma
-      @spi.write_command(0x11)
 
+      @spi.write_command(0x21)
+
+      @spi.write_command(0xb1)
+      @spi.write_data(0x00)
+      @spi.write_data(0x18)
+
+      @spi.write_command(0xb6)
+      @spi.write_data(0x08)  # Display Function Control
+      @spi.write_data(0xa2)
+      @spi.write_data(0x27)
+      @spi.write_data(0x00)
+
+      @spi.write_command(0x26)
+      @spi.write_data(0x01)
+
+      @spi.write_command(0xE0) # Positive Gamma Correction
+      @spi.write_data(0x0F)
+      @spi.write_data(0x31)
+      @spi.write_data(0x2B)
+      @spi.write_data(0x0C)
+      @spi.write_data(0x0E)
+      @spi.write_data(0x08)
+      @spi.write_data(0x4E)
+      @spi.write_data(0xF1)
+      @spi.write_data(0x37)
+      @spi.write_data(0x07)
+      @spi.write_data(0x10)
+      @spi.write_data(0x03)
+      @spi.write_data(0x0E)
+      @spi.write_data(0x09)
+      @spi.write_data(0x00)
+
+      @spi.write_command(0xE1) # Negative Gamma Correction
+      @spi.write_data(0x00)
+      @spi.write_data(0x0E)
+      @spi.write_data(0x14)
+      @spi.write_data(0x03)
+      @spi.write_data(0x11)
+      @spi.write_data(0x07)
+      @spi.write_data(0x31)
+      @spi.write_data(0xC1)
+      @spi.write_data(0x48)
+      @spi.write_data(0x08)
+      @spi.write_data(0x0F)
+      @spi.write_data(0x0C)
+      @spi.write_data(0x31)
+      @spi.write_data(0x36)
+      @spi.write_data(0x0F)
+
+      @spi.write_command(0x11) # Sleep Out
       sleep 0.12
 
-      @spi.write_command(0x29)
+      @spi.write_command(0x29) # Display ON
       if(bl >= 0)
-        @bl.write(1) # add:ILI9342C on M5Stack
+        @bl.write(1)
       end
-      @spi.write_command(0x21)
-      sleep 1 
     end
 
     def writeChar(char, x, y, height = 7, color = self.color(0, 0, 0), background_color = nil)

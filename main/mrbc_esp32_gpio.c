@@ -30,6 +30,17 @@ mrbc_nop(mrb_vm* vm, mrb_value* v, int argc)
 }
 
 
+/*! メソッド reset_pin(pin) 本体 : wrapper for gpio_reset_pin
+
+  @param pin GPIO ピン番号
+*/
+static void
+mrbc_esp32_gpio_reset_pin(mrb_vm* vm, mrb_value* v, int argc)
+{
+  int pin = GET_INT_ARG(1);
+  gpio_reset_pin(pin);
+}
+
 /*! メソッド set_pullup(pin) 本体 : wrapper for gpio_set_pull_mode
   GPIO_PULLUP_ONLY 専用
 
@@ -208,6 +219,7 @@ void
 mrbc_mruby_esp32_gpio_gem_init(struct VM* vm)
 {
 /*
+GPIO.reset_pin(pin)
 GPIO.set_pullup(pin)
 GPIO.set_pulldown(pin)
 GPIO.wakeup_enable(pin, level)
@@ -230,6 +242,7 @@ GPIO.isr_handler_add(pin, isr_handler, args)
   mrbc_class_esp32_gpio = mrbc_define_class(vm, "GPIO", mrbc_class_object);
 
   // 各メソッド定義（mruby/c ではインスタンスメソッドをクラスメソッドとしても呼び出し可能）
+  mrbc_define_method(vm, mrbc_class_esp32_gpio, "reset_pin",           mrbc_esp32_gpio_reset_pin);
   mrbc_define_method(vm, mrbc_class_esp32_gpio, "set_pullup",          mrbc_esp32_gpio_set_pullup);
   mrbc_define_method(vm, mrbc_class_esp32_gpio, "set_pulldown",        mrbc_esp32_gpio_set_pulldown);
   mrbc_define_method(vm, mrbc_class_esp32_gpio, "wakeup_enable",       mrbc_esp32_gpio_wakeup_enable);

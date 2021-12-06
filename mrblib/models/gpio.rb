@@ -36,11 +36,12 @@ class GPIO
 
   # コンストラクタ外からの再初期化
   def init(mode = -1, pull_mode = -1, value = -1)
+    GPIO.reset_pin(@pin)
+    setmode(mode)
+    setpullmode(pull_mode)
     if(value != -1 && (mode == GPIO::OUT || mode == GPIO::OPEN_DRAIN))
       write(value)
     end
-    setmode(mode)
-    setpullmode(pull_mode)
   end
 
   # wakeupモードの設定
@@ -62,7 +63,7 @@ class GPIO
       return
     end
     GPIO.set_level(@pin, value)
-    # puts "write #{value}"
+    puts "write #{value}"
   end
 
   # 入力 値 0 または 1 を取得

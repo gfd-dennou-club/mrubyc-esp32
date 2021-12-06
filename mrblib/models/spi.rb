@@ -21,17 +21,11 @@ class SPI
     end
 
     def set_command_mode
-        if(@mode != 0)
-            @dc.write(0)
-            @mode = 0
-        end
+        @dc.write(0)
     end
 
     def set_data_mode
-        if(@mode != 1)
-            @dc.write(1)
-            @mode = 1
-        end
+        @dc.write(1)
     end
 
     # Accept augements form such as
@@ -74,14 +68,8 @@ class SPI
     end
     
     def write_color(color, size)
-        data = Array.new(size * 2)
-        size_ = size * 2 - 1
-        (0..(size - 1)).each do |s|
-            data[s * 2] = (color >> 8) & 0xff;
-            data[s * 2 + 1] = color & 0xff;
-        end
         set_data_mode()
-        write(data)
+        SPI.__write_color(color, size)
     end
 
     def read()
