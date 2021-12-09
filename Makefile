@@ -106,26 +106,18 @@ env2:
 MRBC = mrbc
 ESPTOOL = esptool.py
 MAKE = make
+FLASH_FIRMWARE_CMD=$(shell make print_flash_cmd)
 MKSPIFFS=$(shell which mkspiffs|xargs -I@ basename @)
-file_ext = $(shell ls -a|grep .firmwareflash)
-.PHONY: flash
-flash:
-ifeq ($(CONFIG_USE_ESP32_FIRMWAREFLASH), y)
-	$(MAKE) app 
-	$(MAKE) app-flash
-	$(shell touch '.firmwareflash')
-else
+SPIFFS_DATA_OFFSET=$(shell awk '/spiffs/ {print $$0}' partitions.csv| cut -d , -f 4)
+SPIFFS_DATA_TABLE_SIZE=$(shell awk '/spiffs/ {print $$0}' partitions.csv| cut -d , -f 5)
+
+.PHONY: spiffs
+spiffs:
 	$(MRBC) -o ./spiffs/mrbc/master.mrbc -E ./mrblib/loops/master.rb
 ifeq ($(CONFIG_ENABLE_MULTITASK),y)
 	$(MRBC) -o ./spiffs/mrbc/slave.mrbc -E ./mrblib/loops/slave.rb
 else
 	rm -f ./spiffs/mrbc/slave.mrbc
 endif
-	$(MKSPIFFS) -c ./spiffs/mrbc -p 256 -b 4096 -s 0x4000 ./spiffs/mrbc.spiffs.bin
-ifeq ($(file_ext), .firmwareflash)
-	$(MAKE) app-flash
-	rm -f .firmwareflash
-endif
-	$(ESPTOOL) --chip esp32 --baud 921600 --port $(CONFIG_ESPTOOLPY_PORT) --before default_reset --after hard_reset write_flash -z --flash_mode qio --flash_freq 80m --flash_size detect 2162688 ./spiffs/mrbc.spiffs.bin
-endif
-
+	$(MKSPIFFS) -c ./spiffs/mrbc -p 256 -b 4096 -s $(SPIFFS_DATA_TABLE_SIZE) ./spiffs/mrbc.spiffs.bin
+	$(ESPTOOL) --chip esp32 --baud 921600 --port $(CONFIG_ESPTOOLPY_PORT) --before default_reset --after hard_reset write_flash -z --flash_mode qio --flash_freq 80m --flash_size detect $(SPIFFS_DATA_OFFSET) ./spiffs/mrbc.spiffs.bin
