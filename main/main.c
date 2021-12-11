@@ -3,8 +3,10 @@
 #include "esp_system.h"
 #include "esp_log.h"
 #include "esp_spi_flash.h"
+#include "esp_vfs.h"
+#include "esp_spiffs.h"
 #include "nvs_flash.h"
-
+#include <ctype.h>
 #include "mrubyc.h"
 
 //*********************************************
@@ -104,17 +106,47 @@
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_BMP280
 #include "models/bmp280.h"
 #endif
+#ifdef CONFIG_USE_ESP32_FIRMWAREFLASH
 //master
 #include "loops/master.h"
 //slave
 #ifdef CONFIG_ENABLE_MULTITASK
 #include "loops/slave.h"
 #endif
+#endif
 
+static const char *TAG = "iotex-esp32-mrubyc";
 
 #define MEMORY_SIZE (1024*40)
 
 static uint8_t memory_pool[MEMORY_SIZE];
+
+// SPIFFSでバイナリデータを読み込み
+uint8_t * load_mrb_file(const char *filename)
+{
+  FILE *fp = fopen(filename, "rb");
+
+  if( fp == NULL ) {
+    fprintf(stderr, "File not found (%s)\n", filename);
+    return NULL;
+  }
+
+
+  /* // get filesize */
+  fseek(fp, 0, SEEK_END);
+  size_t size = ftell(fp);
+  fseek(fp, 0, SEEK_SET);
+
+  // allocate memory
+  uint8_t *p = malloc(size);
+  if( p != NULL ) {
+    fread(p, sizeof(uint8_t), size, fp);
+  } else {
+    fprintf(stderr, "Memory allocate error.\n");
+  }
+  fclose(fp);
+  return p;
+}
 
 //================================================================
 /*! cast
@@ -178,7 +210,6 @@ static void c_debugprint(struct VM *vm, mrbc_value v[], int argc){
   for( int i = 0; i < 79; i++ ) { console_putchar('='); }
   console_putchar('\n');
 }
-
 
 void app_main(void) {
   nvs_flash_init();
@@ -310,14 +341,53 @@ void app_main(void) {
   printf("start BMP280 (mruby/c class)\n");
   mrbc_create_task( bmp280, 0 );
 #endif
-
   //master
-  mrbc_create_task( master, 0 );
+  vTaskDelay(1000 / portTICK_RATE_MS);
+  esp_vfs_spiffs_conf_t conf = {
+    .base_path = "/spiffs",
+    .partition_label = NULL,
+    .max_files = 2,
+    .format_if_mount_failed = true
+  };
+    
+  // Use settings defined above to initialize and mount SPIFFS filesystem.
+  // Note: esp_vfs_spiffs_register is an all-in-one convenience function.
+  esp_err_t ret = esp_vfs_spiffs_register(&conf);
 
-  //slave
+  if (ret != ESP_OK) {
+    if (ret == ESP_FAIL) {
+      ESP_LOGE(TAG, "Failed to mount or format filesystem");
+    } else if (ret == ESP_ERR_NOT_FOUND) {
+      ESP_LOGE(TAG, "Failed to find SPIFFS partition");
+    } else {
+      ESP_LOGE(TAG, "Failed to initialize SPIFFS (%s)", esp_err_to_name(ret));
+    }
+    return;
+  }
+  size_t total = 0, used = 0;
+  ret = esp_spiffs_info(conf.partition_label, &total, &used);
+  if (ret != ESP_OK) {
+    ESP_LOGE(TAG, "Failed to get SPIFFS partition information (%s)", esp_err_to_name(ret));
+  } else {
+    ESP_LOGI(TAG, "Partition size: total: %d, used: %d", total, used);
+  }
+
+  // master
+#ifdef CONFIG_USE_ESP32_FIRMWAREFLASH
+  printf("FIRMWAREFLASH mode\n");
+  mrbc_create_task(master, 0);
 #ifdef CONFIG_ENABLE_MULTITASK
   mrbc_create_task( slave, 0 );
 #endif
-  
+#else
+  printf("SPIFFS mode\n");
+  uint8_t *master = load_mrb_file("/spiffs/master.mrbc");
+  mrbc_create_task(master, 0);
+  //slave
+#ifdef CONFIG_ENABLE_MULTITASK
+  uint8_t *slave = load_mrb_file("/spiffs/slave.mrbc");
+  mrbc_create_task( slave, 0 );
+#endif
+#endif
   mrbc_run();
 }
