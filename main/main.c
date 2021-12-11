@@ -374,13 +374,13 @@ void app_main(void) {
 
   // master
 #ifdef CONFIG_USE_ESP32_FIRMWAREFLASH
-  ESP_LOGE(TAG,"FIRMWAREFLASH");
+  printf("FIRMWAREFLASH mode\n");
   mrbc_create_task(master, 0);
 #ifdef CONFIG_ENABLE_MULTITASK
   mrbc_create_task( slave, 0 );
 #endif
 #else
-  ESP_LOGE(TAG,"SPIFFS");
+  printf("SPIFFS mode\n");
   uint8_t *master = load_mrb_file("/spiffs/master.mrbc");
   mrbc_create_task(master, 0);
   //slave
