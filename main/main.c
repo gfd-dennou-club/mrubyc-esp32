@@ -53,6 +53,9 @@
 #ifdef CONFIG_USE_ESP32_UART
 #include "mrbc_esp32_uart.h"
 #endif
+#ifdef CONFIG_USE_ESP32_BLE
+#include "mrbc_esp32_ble.h"
+#endif
 
 //*********************************************
 // ENABLE CLASSES and MASTER files written by mruby/c
@@ -275,7 +278,11 @@ void app_main(void) {
   printf("start UART (C)\n");
   mrbc_mruby_esp32_uart_gem_init(0);
 #endif
-
+#ifdef CONFIG_USE_ESP32_BLE
+  printf("start BLET (C)\n");
+  mrbc_mruby_esp32_ble_gem_init(0);
+#endif
+  
   /*
      !!!! Add names of your ruby files                              !!!!
      !!!! example: mrbc_create_task( [replace with your task], 0 ); !!!!
