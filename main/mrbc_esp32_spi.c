@@ -15,9 +15,9 @@ static char* tag = "main";
 
 static struct RClass* mrbc_class_esp32_spi;
 spi_device_handle_t spidev;
+uint16_t dc;
 
-static void
-spi_master_write_byte(const uint8_t* Data, size_t DataLength)
+static void spi_write_byte(const uint8_t* Data, size_t DataLength)
 {
 	spi_transaction_t SPITransaction;
     esp_err_t ret;
@@ -71,6 +71,7 @@ mrbc_esp32_spi_bus_initialize(mrb_vm* vm, mrb_value* v, int argc)
         .queue_size = 7,
         .flags = SPI_DEVICE_NO_DUMMY,
     };
+    dc = gpio_dc;
     ret = spi_bus_add_device(HSPI_HOST, &dev_cfg, &spidev);
     assert(ret == ESP_OK);
 }
@@ -116,22 +117,65 @@ mrbc_esp32_spi_read_byte(mrb_vm* vm, mrb_value* v, int argc)
     SET_INT_RETURN(recv_data);
 }
 
-uint8_t Byte[1024];
-/*! Method read_byte()
-    @return recv_data
+// ILI934X library
+
+uint8_t byte[1024];
+static void ili934x_write_color(int color, int size)
+{
+	int index = 0;
+	for(int i = 0;i < size; i++) {
+		byte[index++] = (color >> 8) & 0xFF;
+		byte[index++] = color & 0xFF;
+	}
+    gpio_set_level(dc, 1);
+	spi_write_byte(byte, size * 2);
+}
+
+static void ili934x_write_command(int command)
+{
+    gpio_set_level(dc, 0);
+	spi_write_byte(&command, 1);
+}
+
+static void ili934x_write_data(int data)
+{
+    gpio_set_level(dc, 1);
+	spi_write_byte(&data, 1);
+}
+
+static void ili934x_write_addr(int addr1, int addr2)
+{
+    byte[0] = (addr1 >> 8) & 0xFF;
+	byte[1] = addr1 & 0xFF;
+	byte[2] = (addr2 >> 8) & 0xFF;
+	byte[3] = addr2 & 0xFF;
+    gpio_set_level(dc, 1);
+    spi_write_byte(byte, 4);
+}
+
+/*! Method __draw_rectangle(x1, y1, x2, y2, color)
+    @param x1 point 1 x
+           y1 point 1 y
+           x2 point 2 x
+           y2 point 2 y
+           color 16bit color 
  */
 static void
-mrbc_esp32_spi_write_color(mrb_vm* vm, mrb_value* v, int argc)
+mrbc_esp32_ili934x_draw_rectangle(mrb_vm* vm, mrb_value* v, int argc)
 {
-    int color = GET_INT_ARG(1);
-    int size = GET_INT_ARG(2);
-	int index = 0;
-	for(int i=0;i<size;i++) {
-		Byte[index++] = (color >> 8) & 0xFF;
-		Byte[index++] = color & 0xFF;
-	}
-
-	spi_master_write_byte(Byte, size * 2);
+    int x1 = GET_INT_ARG(1);
+    int y1 = GET_INT_ARG(2);
+    int x2 = GET_INT_ARG(3);
+    int y2 = GET_INT_ARG(4);
+    int color = GET_INT_ARG(5);
+    ili934x_write_command(0x2a);
+    ili934x_write_addr(x1, x2);
+    ili934x_write_command(0x2b);
+    ili934x_write_addr(y1, y2);
+    ili934x_write_command(0x2c);
+    int size = y2 - y1 + 1;
+    for (int i = x1; i <= x2; i++)
+        ili934x_write_color(color, size);
 }
 
 /*! Register SPI Class.
@@ -145,5 +189,5 @@ mrbc_mruby_esp32_spi_gem_init(struct VM* vm)
   mrbc_define_method(vm, mrbc_class_esp32_spi, "bus_initialize",      mrbc_esp32_spi_bus_initialize);
   mrbc_define_method(vm, mrbc_class_esp32_spi, "write_byte",          mrbc_esp32_spi_write_byte);
   mrbc_define_method(vm, mrbc_class_esp32_spi, "read_byte",           mrbc_esp32_spi_read_byte);
-  mrbc_define_method(vm, mrbc_class_esp32_spi, "__write_color",         mrbc_esp32_spi_write_color);
+  mrbc_define_method(vm, mrbc_class_esp32_spi, "__draw_rectangle",       mrbc_esp32_ili934x_draw_rectangle);
 }

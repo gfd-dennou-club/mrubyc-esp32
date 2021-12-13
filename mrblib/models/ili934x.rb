@@ -140,23 +140,12 @@ class ILI934X
     #   @spi.write_data_word(color)
     # end
 
-    def drawRectangle(x1, x2, y1, y2, color)
-      set_block(x1, x2, y1, y2)
-      @spi.write_command(0x2c)
-      (x2 - x1).times do
-        @spi.write_color(color, y2 - y1 + 1)
-      end
+    def draw_rectangle(x1, y1, x2, y2, color)
+      SPI.__draw_rectangle(x1, y1, x2, y2, color)
     end
 
     def fill(color)
-      drawRectangle(0, @width, 0, @height, color)
-    end
-
-    def set_block(x1, x2, y1, y2)
-      @spi.write_command(0x2a)
-      @spi.write_address(x1, x2)
-      @spi.write_command(0x2b)
-      @spi.write_address(y1, y2)
+      draw_rectangle(0, 0, @width, @height, color)
     end
 
     def self.color(r, g, b)

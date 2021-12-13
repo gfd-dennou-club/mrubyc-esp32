@@ -1,4 +1,12 @@
 display = ILI934X.new(23, 18, 14, 27, 33, 32)
-display.drawRectangle(20, 300, 20, 170, ILI934X.color(0x69, 0xba, 0xf5))
-display.drawRectangle(20, 300, 170, 180, ILI934X.color(0x28, 0xad, 0x35))
-display.drawRectangle(20, 300, 180, 220, ILI934X.color(0x55, 0x42, 0x3d))
+display.draw_rectangle(20, 20,  300, 170, ILI934X.color(0x69, 0xba, 0xf5))
+display.draw_rectangle(20, 170, 300, 180, ILI934X.color(0x28, 0xad, 0x35))
+display.draw_rectangle(20, 180, 300, 220, ILI934X.color(0x55, 0x42, 0x3d))
+sleep 1
+i = 0
+while true do
+  display.fill(ILI934X.color(i, i, i))
+  i += 1
+  p "light: #{i}" if i % 10 == 0
+  i = 0 if i == 256
+end
