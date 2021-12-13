@@ -134,6 +134,12 @@ menu "IoTeX ESP32 mrubyc Configuration"
         help
             use DEEP SLEEP function?
 
+    config USE_ESP32_BLE
+        bool "USE BLE (Bluetooth Low Energy)"
+        default n
+        help
+            use BLE (Bluetooth Low Energy) function?
+
     config ENABLE_MULTITASK
         bool "ENABLE MULTI-TASK"
         default n
