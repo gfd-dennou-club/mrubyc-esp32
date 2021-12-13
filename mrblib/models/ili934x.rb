@@ -131,14 +131,10 @@ class ILI934X
     #   end
     # end
 
-    # def drawPixel(x, y, color)
-    #   if x < 0 || x > 320 || y < 0 || y > 240
-    #     return
-    #   end
-    #   set_block(x, x, y, y)
-    #   @spi.write_command(0x2c)
-    #   @spi.write_data_word(color)
-    # end
+    def draw_pixel(x, y, color)
+      return if x < 0 || x > 320 || y < 0 || y > 240
+      SPI.__draw_pixel(x, y, color)
+    end
 
     def draw_rectangle(x1, y1, x2, y2, color)
       SPI.__draw_rectangle(x1, y1, x2, y2, color)

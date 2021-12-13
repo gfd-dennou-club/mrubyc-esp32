@@ -20,14 +20,6 @@ class SPI
         p "SPI initializing finished."
     end
 
-    def set_command_mode
-        @dc.write(0)
-    end
-
-    def set_data_mode
-        @dc.write(1)
-    end
-
     # Accept augements form such as
     # write(data1, data2, ...)
     # write([data1, data2, ...]) 
@@ -40,36 +32,13 @@ class SPI
     end
 
     def write_command(data)
-        set_command_mode()
+        @dc.write(0)
         write(data)
     end
     
-    def write_data(*data)
-        set_data_mode()
+    def write_data(data)
+        @dc.write(1)
         write(data)
-    end
-    
-    def write_address(addr1, addr2)
-        data = Array.new(4)
-        data[0] = (addr1 >> 8) & 0xFF
-        data[1] = addr1 & 0xFF
-        data[2] = (addr2 >> 8) & 0xFF
-        data[3] = addr2 & 0xFF
-        set_data_mode()
-        write(data)
-    end
-
-    def write_data_word(data)
-        data_array = Array.new(2)
-        data_array[0] = (data >> 8) & 0xFF
-        data_array[1] = data & 0xFF
-        set_data_mode()
-        write(data_array)
-    end
-    
-    def write_color(color, size)
-        set_data_mode()
-        SPI.__write_color(color, size)
     end
 
     def read()

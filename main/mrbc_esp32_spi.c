@@ -178,6 +178,28 @@ mrbc_esp32_ili934x_draw_rectangle(mrb_vm* vm, mrb_value* v, int argc)
         ili934x_write_color(color, size);
 }
 
+/*! Method __draw_pixel(x, y, color)
+    @param x point x
+           y point y
+           color 16bit color 
+ */
+static void
+mrbc_esp32_ili934x_draw_pixel(mrb_vm* vm, mrb_value* v, int argc)
+{
+    int x = GET_INT_ARG(1);
+    int y = GET_INT_ARG(2);
+    int color = GET_INT_ARG(3);
+    ili934x_write_command(0x2a);
+    ili934x_write_addr(x, x);
+    ili934x_write_command(0x2b);
+    ili934x_write_addr(y, y);
+    ili934x_write_command(0x2c);
+    byte[0] = (color >> 8) & 0xFF;
+    byte[1] = color & 0xFF;
+    gpio_set_level(dc, 1);
+    spi_write_byte(byte, 2);
+}
+
 /*! Register SPI Class.
  */
 void
@@ -189,5 +211,6 @@ mrbc_mruby_esp32_spi_gem_init(struct VM* vm)
   mrbc_define_method(vm, mrbc_class_esp32_spi, "bus_initialize",      mrbc_esp32_spi_bus_initialize);
   mrbc_define_method(vm, mrbc_class_esp32_spi, "write_byte",          mrbc_esp32_spi_write_byte);
   mrbc_define_method(vm, mrbc_class_esp32_spi, "read_byte",           mrbc_esp32_spi_read_byte);
-  mrbc_define_method(vm, mrbc_class_esp32_spi, "__draw_rectangle",       mrbc_esp32_ili934x_draw_rectangle);
+  mrbc_define_method(vm, mrbc_class_esp32_spi, "__draw_rectangle",    mrbc_esp32_ili934x_draw_rectangle);
+  mrbc_define_method(vm, mrbc_class_esp32_spi, "__draw_pixel",        mrbc_esp32_ili934x_draw_pixel);
 }
