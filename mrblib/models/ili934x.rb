@@ -2,90 +2,62 @@ class ILI934X
     def initialize(mosi, clk, cs, dc, rst, bl) # add:ILI9342C on M5Stack
       @width = 320
       @height = 240
+      @dc = GPIO.new(dc, GPIO::OUT)
       @spi = SPI.new(mosi, mosi, clk, cs, dc, rst, bl)
-      # return
-      if(bl >= 0)
-        @bl = GPIO.new(bl, GPIO::OUT)
-      end
-      init(bl)
+      init()
+      GPIO.new(bl, GPIO::OUT, -1, 1) if bl >= 0
     end
 
-    def init(bl)
-      @spi.write_command(0xc0)
-      @spi.write_data(0x23)
+    def write_command(data)
+        @dc.write(0)
+        @spi.write(data)
+    end
+    
+    def write_data(*data)
+        @dc.write(1)
+        @spi.write(data)
+    end
 
-      @spi.write_command(0xc1)
-      @spi.write_data(0x10)
+    def init()
+      write_command(0xc0)
+      write_data(0x23)
 
-      @spi.write_command(0xc5)
-      @spi.write_data(0x3e)
-      @spi.write_data(0x28)
+      write_command(0xc1)
+      write_data(0x10)
 
-      @spi.write_command(0xc7)
-      @spi.write_data(0x86)
+      write_command(0xc5)
+      write_data(0x3e, 0x28)
 
-      @spi.write_command(0x36)
-      @spi.write_data(0x08)  # Memory Access Control
+      write_command(0xc7)
+      write_data(0x86)
 
-      @spi.write_command(0x3a)
-      @spi.write_data(0x55)  # Pixel Format
+      write_command(0x36)
+      write_data(0x08)  # Memory Access Control
 
-      @spi.write_command(0x21)
+      write_command(0x3a)
+      write_data(0x55)  # Pixel Format
 
-      @spi.write_command(0xb1)
-      @spi.write_data(0x00)
-      @spi.write_data(0x18)
+      write_command(0x21)
 
-      @spi.write_command(0xb6)
-      @spi.write_data(0x08)  # Display Function Control
-      @spi.write_data(0xa2)
-      @spi.write_data(0x27)
-      @spi.write_data(0x00)
+      write_command(0xb1)
+      write_data(0x00, 0x18)
 
-      @spi.write_command(0x26)
-      @spi.write_data(0x01)
+      write_command(0xb6)
+      write_data(0x08, 0xa2, 0x27, 0x00) # Display Function Control
 
-      @spi.write_command(0xE0) # Positive Gamma Correction
-      @spi.write_data(0x0F)
-      @spi.write_data(0x31)
-      @spi.write_data(0x2B)
-      @spi.write_data(0x0C)
-      @spi.write_data(0x0E)
-      @spi.write_data(0x08)
-      @spi.write_data(0x4E)
-      @spi.write_data(0xF1)
-      @spi.write_data(0x37)
-      @spi.write_data(0x07)
-      @spi.write_data(0x10)
-      @spi.write_data(0x03)
-      @spi.write_data(0x0E)
-      @spi.write_data(0x09)
-      @spi.write_data(0x00)
+      write_command(0x26)
+      write_data(0x01)
 
-      @spi.write_command(0xE1) # Negative Gamma Correction
-      @spi.write_data(0x00)
-      @spi.write_data(0x0E)
-      @spi.write_data(0x14)
-      @spi.write_data(0x03)
-      @spi.write_data(0x11)
-      @spi.write_data(0x07)
-      @spi.write_data(0x31)
-      @spi.write_data(0xC1)
-      @spi.write_data(0x48)
-      @spi.write_data(0x08)
-      @spi.write_data(0x0F)
-      @spi.write_data(0x0C)
-      @spi.write_data(0x31)
-      @spi.write_data(0x36)
-      @spi.write_data(0x0F)
+      write_command(0xE0) # Positive Gamma Correction
+      write_data(0x0F, 0x31, 0x2B, 0x0C, 0x0E, 0x08, 0x4E, 0xF1, 0x37, 0x07, 0x10, 0x03, 0x0E, 0x09, 0x00)
 
-      @spi.write_command(0x11) # Sleep Out
+      write_command(0xE1) # Negative Gamma Correction
+      write_data(0x00, 0x0E, 0x14, 0x03, 0x11, 0x07, 0x31, 0xC1, 0x48, 0x08, 0x0F, 0x0C, 0x31, 0x36, 0x0F)
+
+      write_command(0x11) # Sleep Out
       sleep 0.12
 
-      @spi.write_command(0x29) # Display ON
-      if(bl >= 0)
-        @bl.write(1)
-      end
+      write_command(0x29) # Display ON
     end
 
     # def writeChar(char, x, y, height = 7, color = self.color(0, 0, 0), background_color = nil)
@@ -133,48 +105,45 @@ class ILI934X
 
     def draw_pixel(x, y, color)
       return if x < 0 || x > 320 || y < 0 || y > 240
-      SPI.__draw_pixel(x, y, color)
+      SPI.__draw_pixel(x, y, toc(color))
     end
 
     def draw_rectangle(x1, y1, x2, y2, color)
-      SPI.__draw_rectangle(x1, y1, x2, y2, color)
+      draw_line(x1, y1, x2, y1, color)
+      draw_line(x2, y1, x2, y2, color)
+      draw_line(x2, y2, x1, y2, color)
+      draw_line(x1, y2, x1, y1, color)
+    end
+
+    def draw_fillrectangle(x1, y1, x2, y2, color)
+      SPI.__draw_fillrectangle(x1, y1, x2, y2, toc(color))
+    end
+
+    def draw_circle(x, y, r, color)
+      SPI.__draw_circle(x, y, r, toc(color))
+    end
+
+    def draw_fillcircle(x, y, r, color)
+      SPI.__draw_fillcircle(x, y, r, toc(color))
     end
 
     def fill(color)
-      draw_rectangle(0, 0, @width, @height, color)
+      draw_fillrectangle(0, 0, @width, @height, toc(color))
     end
 
-    def self.color(r, g, b)
-      return ((r & 0xf8) << 8) | ((g & 0xfc) << 3) | (b >> 3)
+    def draw_line(x1, y1, x2, y2, color, weight = 1)
+      SPI.__draw_line(x1, y1, x2, y2, toc(color))
+    end
+
+    def toc(color)
+      r = color[0]
+      g = color[1]
+      b = color[2]
+      ((r & 0xf8) << 8) | ((g & 0xfc) << 3) | (b >> 3)
     end
 end
 
 # ILI934X Extend Methods(not in class becouse of memory issue)
-# def drawLine(display, x1, x2, y1, y2, color, weight = 1)
-#   dx = (x2 - x1).abs
-#   dy = (y2 - y1).abs
-
-#   b = dx < dy 
-#   if dx < dy
-#     x1, x2, dx, y1, y2, dy = y1, y2, dy, x1, x2, dx
-#   end
-#   x1, x2, y1, y2 = x2, x1, y2, y1 if x2 < x1
-#   sy = (y2 > y1) ? 1 : -1
-
-#   e = -dx
-#   for x in x1..x2 do
-#     if !b
-#       drawPoint(display, x, y1, color, weight)
-#     else
-#       drawPoint(display, y1, x, color, weight)
-#     end
-#     e += 2 * dy
-#     if ( e >= 0 )
-#       y1 += sy
-#       e -= 2 * dx
-#     end
-#   end
-# end
 
 # def drawPoint(display, x, y, color, weight = 1)
 #   x1 = x - weight / 2

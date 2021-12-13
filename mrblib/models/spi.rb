@@ -1,21 +1,15 @@
 class SPI
     def initialize(mosi, miso, clk, cs, dc, rst = -1, bl = -1)
         p "SPI initializing..."
-        @cs = GPIO.new(cs, GPIO::OUT)
-        @cs.write(0)
-        @dc = GPIO.new(dc, GPIO::OUT)
-        @dc.write(0)
         @mode = 0
+        GPIO.new(cs, GPIO::OUT, -1, 0)
+        GPIO.new(dc, GPIO::OUT, -1, 0)
         if(rst >= 0)
-            @rst = GPIO.new(rst, GPIO::OUT)
-            @rst.write(0)
+            @rst = GPIO.new(rst, GPIO::OUT, -1, 0)
             sleep 0.1
             @rst.write(1)
         end
-        if(bl >= 0)
-            @bl = GPIO.new(bl, GPIO::OUT)
-            @bl.write(0)
-        end
+        GPIO.new(bl, GPIO::OUT, -1, 0) if bl >= 0
         SPI.bus_initialize(mosi, miso, clk, cs, dc, rst, bl)
         p "SPI initializing finished."
     end
@@ -29,16 +23,6 @@ class SPI
         else
             SPI.write_byte(data, data.length)
         end
-    end
-
-    def write_command(data)
-        @dc.write(0)
-        write(data)
-    end
-    
-    def write_data(data)
-        @dc.write(1)
-        write(data)
     end
 
     def read()
