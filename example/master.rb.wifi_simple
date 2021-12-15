@@ -3,17 +3,16 @@
 WiFi.init()
 puts WiFi.scan()
 
-#WiFi.setup_ent_peap("ocha@example.com", "ASUS_C0_24", "ocha@example.com", "asus28DR93J")
-WiFi.setup_psk("Buffalo-G-F0C0", "3fnxjj3nes67p")
+#WiFi.setup_ent_peap("eapid", "ssid", "username", "password")
+WiFi.setup_psk("ssid", "password")
 WiFi.start()
 
 while true
-  if WiFi.is_connected?
+  if(WiFi.is_connected?)
     puts WiFi.ifconfig('STA')
     puts WiFi.ip('STA')
     puts WiFi.mac('STA')
-  else
-    puts 'disocnnected...'  
+    break
   end
   sleep 1
 end
