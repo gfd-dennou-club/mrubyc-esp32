@@ -31,15 +31,8 @@ menu "IoTeX ESP32 mrubyc Configuration"
         help
             use I2C function?
 
-    config USE_ESP32_I2C_LCD
-     	bool "PERIPHERAL: LCD Display"
-     	depends on USE_ESP32_I2C
-     	default n
-     	help
-            use My LCD Display?
-
     config USE_ESP32_I2C_VEML6070
-     	bool "PERIPHERAL: VEML6070 "
+     	bool "PERIPHERAL: VEML6070"
      	depends on USE_ESP32_I2C
      	default n
      	help

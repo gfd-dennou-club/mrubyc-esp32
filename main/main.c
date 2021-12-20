@@ -65,11 +65,8 @@
 #ifdef CONFIG_USE_ESP32_I2C
 #include "models/i2c.h"
 #endif
-#ifdef CONFIG_USE_ESP32_I2C_LCD
-#include "models/lcd.h"
-#endif
 #ifdef CONFIG_USE_ESP32_I2C_VEML6070
-#include "models/veml.h"
+#include "models/veml6070.h"
 #endif
 #ifdef CONFIG_USE_ESP32_UART
 #include "models/uart.h"
@@ -236,13 +233,9 @@ void app_main(void) {
   printf("start I2C (mruby/c class)\n");
   mrbc_create_task( i2c, 0 );
 #endif
-#ifdef CONFIG_USE_ESP32_I2C_LCD
-  printf("start My LCD (mruby/c class)\n");
-  mrbc_create_task( lcd, 0 );
-#endif
 #ifdef CONFIG_USE_ESP32_I2C_VEML6070
-  printf("start My VEML (mruby/c class)\n");
-  mrbc_create_task( veml, 0 );
+  printf("start My VEML6070 (mruby/c class)\n");
+  mrbc_create_task( veml6070, 0 );
 #endif
 #ifdef CONFIG_USE_ESP32_UART
   printf("start UART (mruby/c class)\n");
