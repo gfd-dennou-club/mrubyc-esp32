@@ -1,3 +1,4 @@
+# 参考:https://github.com/Seeed-Studio/Seeed_TMG3993
 class TMG39931
   # Enable bits
   ENABLE = {
