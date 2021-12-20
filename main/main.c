@@ -87,13 +87,9 @@
 #include "loops/slave.h"
 #endif
 
-#ifdef CONFIG_USE_ESP32_I2C_TMG
-  #include "models/tmg.h"   // システムが自動生成する mruby/c の LCD クラス (mrblib/models/lcd.rb) のヘッダファイルを読み込むための設定. 拡張子は .h に変えておくこと
-  #endif
-
-#ifdef CONFIG_USE_ESP32_I2C_LCD
-  #include "models/lcd.h" 
-  #endif
+#ifdef CONFIG_USE_ESP32_I2C_TMG39931
+#include "models/tmg39931.h"
+#endif
 
 #define MEMORY_SIZE (1024*40)
 
@@ -221,15 +217,9 @@ void app_main(void) {
      !!!! example: mrbc_create_task( [replace with your task], 0 ); !!!!
   */
 
-#ifdef CONFIG_USE_ESP32_I2C_TMG
-    printf("start My TMG (mruby/c class)\n");
-    mrbc_create_task( tmg, 0 );   // mruby/c で書かれた LCD クラス (mrblib/models/lcd.rb) を呼び出す設定
-  #endif
-
-
-#ifdef CONFIG_USE_ESP32_I2C_LCD
-    printf("start My LCD (mruby/c class)\n");
-    mrbc_create_task( lcd, 0 );   // mruby/c で書かれた LCD クラス (mrblib/models/lcd.rb) を呼び出す設定
+#ifdef CONFIG_USE_ESP32_I2C_TMG39931
+    printf("start TMG39931 (mruby/c class)\n");
+    mrbc_create_task( tmg39931, 0 );
   #endif
 
 #ifdef CONFIG_USE_ESP32_GPIO
