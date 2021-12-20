@@ -60,6 +60,8 @@
 //*********************************************
 #ifdef CONFIG_USE_ESP32_GPIO
 #include "models/gpio.h"
+#endif
+#ifdef CONFIG_USE_ESP32_GPIO_ILQHANDLER
 #include "models/irq_handler.h"
 #endif
 #ifdef CONFIG_USE_ESP32_GPIO_PERIPHERALS_SHT75
@@ -252,6 +254,9 @@ void app_main(void) {
 #ifdef CONFIG_USE_ESP32_GPIO
   printf("start GPIO (mruby/c class)\n");
   mrbc_create_task( gpio, 0 );
+#endif
+#ifdef CONFIG_USE_ESP32_GPIO_IRQHANDLER
+  printf("start GPIO IRQHandler (mruby/c task)\n");
   mrbc_create_task( irq_handler, 0 );
 #endif
 #ifdef CONFIG_USE_ESP32_LEDC
