@@ -128,7 +128,7 @@ class ILI934X
     end
 
     def fill(color)
-      draw_fillrectangle(0, 0, @width, @height, toc(color))
+      draw_fillrectangle(0, 0, @width, @height, color)
     end
 
     def draw_line(x1, y1, x2, y2, color, weight = 1)
