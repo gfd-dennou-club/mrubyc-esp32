@@ -53,14 +53,10 @@ static void event_handler(void* ctx, esp_event_base_t event_base, int32_t event_
   if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
     esp_wifi_connect();
   } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
-    if (s_retry_num < MAXIMUM_RETRY) {
-      esp_wifi_connect();
-      s_retry_num++;
-      ESP_LOGI(TAG, "retry to connect to the AP");
-    } else {
-      xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT);
-    }
+    esp_wifi_connect();
+    ESP_LOGI(TAG, "retry to connect to the AP");
     ESP_LOGI(TAG,"connect to the AP fail");
+    connection_status = DISCONNECTED;
   } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
     ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
     ESP_LOGI(TAG, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
@@ -143,9 +139,9 @@ mrbc_esp32_wifi_start(mrb_vm* vm, mrb_value* v, int argc)
   */
   //xTaskCreate(&wpa2_enterprise_example_task, "wpa2_enterprise_example_task", 4096, NULL, 5, NULL);
   /* The event will not be processed after unregister */
-  ESP_ERROR_CHECK(esp_event_handler_instance_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, instance_got_ip));
-  ESP_ERROR_CHECK(esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, instance_any_id));
-  vEventGroupDelete(s_wifi_event_group);
+  //ESP_ERROR_CHECK(esp_event_handler_instance_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, instance_got_ip));
+  //ESP_ERROR_CHECK(esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, instance_any_id));
+  //vEventGroupDelete(s_wifi_event_group);
   
 }
 
@@ -246,10 +242,9 @@ mrbc_esp32_wifi_setup_ent_peap(mrb_vm* vm, mrb_value* v, int argc)
 static void
 mrbc_esp32_wifi_is_connected(mrb_vm* vm, mrb_value* v, int argc)
 {
-  if (CONNECTED == connection_status) {
+  if(connection_status == CONNECTED) {
     SET_TRUE_RETURN();
-  }
-  else {
+  }else{
     SET_FALSE_RETURN();
   }
 }
