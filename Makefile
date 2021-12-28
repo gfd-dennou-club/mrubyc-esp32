@@ -59,6 +59,10 @@ wifi:
 	cd mrblib/loops; \
 	ln -sf ../../example/master.rb.wifi master.rb
 
+wifi_simple:
+	cd mrblib/loops; \
+	ln -sf ../../example/master.rb.wifi_simple master.rb
+
 co2:
 	cd mrblib/loops; \
 	ln -sf ../../example/master.rb.co2 master.rb
