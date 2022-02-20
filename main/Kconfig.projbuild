@@ -61,7 +61,7 @@ menu "IoTeX ESP32 mrubyc Configuration"
             use CO2 sensor SENSIRION SCD30?
 
     config USE_ESP32_I2C_PERIPHERALS_TMP007
-	bool "PERIPHERAL: TMP007"
+	bool "PERIPHERAL: Infrared Thermopile sensor SENSIRION TMP007"
 	depends on USE_ESP32_I2C
 	default n
 	help

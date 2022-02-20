@@ -68,32 +68,36 @@ class TMP007
 
   def readObjTempC()
     @i2c.write(TMP007::I2CADDR, TMP007::TOBJ) 
-
     data = @i2c.read_integer(TMP007::I2CADDR, 2)
-
     value = ((data[0]) << 8) | data[1]
     raw = value
-
     if (raw & 0x1 != 0)
       return nil
     end
     raw >>= 2
-
     tobj = raw
     tobj *= 0.03125; #convert to celsius
     return tobj
   end
 
   def readRawDieTemperature()
-    #tdie_reg
     @i2c.write(TMP007::I2CADDR, TMP007::TDIE)
-
     data = @i2c.read_integer(TMP007::I2CADDR, 2)
-
     value = ((data[0]) << 8) | data[1]
     raw = value
-
     raw >>= 2
+    return raw
+  end
+
+  def readRawVoltage()
+    @i2c.write(TMP007::I2CADDR, TMP007::VOBJ)
+    data = @i2c.read_integer(TMP007::I2CADDR, 2)
+    value = ((data[0]) << 8) | data[1]
+    raw = value
+    # v = data
+    # v *= 156.25
+    # v /= 1000
+    # return v
     return raw
   end
 
