@@ -1,0 +1,19 @@
+# coding: utf-8
+
+# I2C初期化
+i2c = I2C.new(22, 21)
+# MCP9808初期化
+mcp = MCP9808.new(i2c)
+
+if !mcp.init_begin
+  print "miss begin"
+else
+  while true
+    mcp.shutdown_wake(false)
+    temp = mcp.read_temp_c
+    print "Temp:#{temp} *C\n"
+    sleep 1
+    mcp.shutdown_wake(true)
+    sleep 1
+  end
+end
