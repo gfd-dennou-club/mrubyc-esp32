@@ -5,3 +5,5 @@ build/
 *.c~
 *.h~
 
+# build tempfile
+.firmwareflash
