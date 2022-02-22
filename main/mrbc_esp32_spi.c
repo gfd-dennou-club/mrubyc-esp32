@@ -9,6 +9,7 @@
 #include "driver/spi_master.h"
 #include "driver/gpio.h"
 #include "esp_log.h"
+#include "font.h"
 
 static char* tag = "main";
 #define DMA_CHAN    2
@@ -322,7 +323,62 @@ mrbc_esp32_ili934x_draw_pixel(mrb_vm* vm, mrb_value* v, int argc)
     ili934x_draw_pixel(x, y, color);
 }
 
-/*! Register SPI Class.
+/*! Method __draw_char(x, y, color)
+    @param x point x
+           y point y
+           c character
+           color 16bit color 
+           height height pixel size of drawing font
+ */
+static void
+mrbc_esp32_ili934x_draw_char(mrb_vm* vm, mrb_value* v, int argc)
+{
+    int x = GET_INT_ARG(1);
+    int y = GET_INT_ARG(2);
+    int c = GET_INT_ARG(3);
+    int color = GET_INT_ARG(4);
+    int height = GET_INT_ARG(5);
+
+    int index = get(c);
+    int ptr = pointers[index];
+    if (index == -1) {
+        SET_INT_RETURN(HEIGHT);
+        return;
+    }
+    int Width = bitmaps[ptr] >> 12;
+    int width = Width * height / HEIGHT;
+    int bit = 15 - 4;
+    int pre_pos = 0;
+    int n = !!(bitmaps[ptr] & 1 << bit);
+    for (int dy = 0; dy < height; dy++)
+    {
+        int i = dy * HEIGHT / height;
+        for (int dx = 0; dx < width; dx++)
+        {
+            int j = dx * Width / width;
+            int pos = i * Width + j;
+            if (pos != pre_pos)
+            {
+                bit -= (pos - pre_pos);
+                if(bit < 0) {
+                    bit += 16;
+                    ptr++;
+                }
+                if(bit >= 16) {
+                    bit -= 16;
+                    ptr--;
+                }
+                n = !!(bitmaps[ptr] & 1 << bit);
+            }
+            if(n)
+                ili934x_draw_pixel(x + dx, y + dy, color);
+            pre_pos = pos;
+        }
+    }
+    SET_INT_RETURN(width);
+}
+
+/*! Register SPI Class.p
  */
 void
 mrbc_mruby_esp32_spi_gem_init(struct VM* vm)
@@ -338,4 +394,5 @@ mrbc_mruby_esp32_spi_gem_init(struct VM* vm)
   mrbc_define_method(vm, mrbc_class_esp32_spi, "__draw_fillcircle",   mrbc_esp32_ili934x_draw_fillcircle);
   mrbc_define_method(vm, mrbc_class_esp32_spi, "__draw_line",         mrbc_esp32_ili934x_draw_line);
   mrbc_define_method(vm, mrbc_class_esp32_spi, "__draw_pixel",        mrbc_esp32_ili934x_draw_pixel);
+  mrbc_define_method(vm, mrbc_class_esp32_spi, "__draw_char",         mrbc_esp32_ili934x_draw_char);
 }

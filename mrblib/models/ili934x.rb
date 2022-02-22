@@ -60,48 +60,42 @@ class ILI934X
       write_command(0x29) # Display ON
     end
 
-    # def writeChar(char, x, y, height = 7, color = self.color(0, 0, 0), background_color = nil)
-
-    #   # Generated with TTF2BMH
-    #   # Font MisakiGothic
-    #   # Font Size: 8
-    #   font_width = 3
-    #   font_height = 7
-    #   width = height / 7 * 3
-    #   char_addr =
-    #   {
-    #     32 => [0, 0, 0], 46 => [0,32,0], 48 => [28,42,28], 49 => [36,62,32], 50 => [50,42,36], 51 => [34,42,20], 52 => [24,20,62], 53 => [46,42,18], 54 => [28,42,18], 55 => [2,58,6], 56 => [20,42,20], 57 => [36,42,28], 58 => [0,36,0]
-    #   }
-    #   code = char.ord
-    #   if code >= 32 && code <= 58 
-    #     bitmap = char_addr[code]
-    #   end
-
-    #   width.times do |dx|
-    #     height.times do |dy|
-    #       i = dx * font_width / width
-    #       j = dy * font_height / height 
-    #       if bitmap[i] & (1 << j) != 0
-    #         drawPixel(x + dx, y + dy, color)
-    #       elsif background_color != nil
-    #         drawPixel(x + dx, y + dy, background_color)
-    #       end
-    #     end
-    #   end
-    # end
-
-    # def writeString(str, x, y, margin_x, margin_y, height = 7, color = self.color(0, 0, 0), background_color = nil)
-    #   home_x = x
-    #   str.each_char do |c|
-    #     if c == "\n"
-    #       x = home_x
-    #       y += margin_y
-    #     else
-    #       writeChar(c, x, y, height, color, background_color)
-    #       x += margin_x
-    #     end
-    #   end
-    # end
+    def drawString(x, y, str, height = 12, color = [0, 0, 0], margin_x = 3, margin_y = 3)
+      home_x = x
+      ch = 0
+      size = 0
+      str.each_char do |char|
+        if char == "\n"
+          x = home_x
+          y += height
+          y += margin_y
+          next
+        end
+        c = char.ord
+        cnt = 0
+        (-7..-4).each do |i|
+          if((c & 1 << (-i)) != 0)
+            cnt += 1
+          else
+            break
+          end
+        end
+        if cnt > 1
+          size = cnt
+          ch = c & 0xff >> (cnt + 1)
+          next
+        elsif cnt == 1
+          ch <<= 6
+          ch |= (c & 0b111111)
+          size -= 1
+          next if size != 1
+        else
+          ch = c
+        end
+        x += SPI.__draw_char(x, y, ch, toc(color), height)
+        x += margin_x
+      end
+    end
 
     def draw_pixel(x, y, color)
       return if x < 0 || x > 320 || y < 0 || y > 240

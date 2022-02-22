@@ -1,8 +1,11 @@
+speaker = GPIO.new(25, GPIO::OUT, -1, 0)
 display = ILI934X.new(23, 18, 14, 27, 33, 32)
 display.draw_fillrectangle(20, 20,  300, 170, [0x69, 0xba, 0xf5])
 display.draw_fillrectangle(20, 170, 300, 180, [0x28, 0xad, 0x35])
 display.draw_fillrectangle(20, 180, 300, 220, [0x55, 0x42, 0x3d])
-sleep 3
+display.drawString(52, 52, "mruby/cの\n  世界へ\n      ようこそ！", 30, [0, 0, 0])
+display.drawString(50, 50, "mruby/cの\n  世界へ\n      ようこそ！", 30, [255, 255, 255])
+sleep 10
 i = 0
 while true do
   display.fill([i, i, i])
