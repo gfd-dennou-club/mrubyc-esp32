@@ -346,6 +346,7 @@ void app_main(void) {
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_TMP007
   printf("start TMP007 (mruby/c class)\n");
   mrbc_create_task( tmp007, 0);
+#endif
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_SHT3X
   printf("start SHT3X (mruby/c class)\n");
   mrbc_create_task( sht3x, 0 );
