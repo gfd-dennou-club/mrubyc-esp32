@@ -100,6 +100,9 @@
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_SCD30
 #include "models/scd30.h"
 #endif
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_TMP007
+#include "models/tmp007.h"
+#endif
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_VL53L0X
 #include "models/vl53l0x.h"
 #endif
@@ -340,6 +343,9 @@ void app_main(void) {
   printf("start SCD30 (mruby/c class)\n");
   mrbc_create_task( scd30, 0 );
 #endif
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_TMP007
+  printf("start TMP007 (mruby/c class)\n");
+  mrbc_create_task( tmp007, 0);
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_SHT3X
   printf("start SHT3X (mruby/c class)\n");
   mrbc_create_task( sht3x, 0 );
