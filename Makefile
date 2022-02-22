@@ -97,7 +97,11 @@ m5display:
 
 vl53l0x:
 	cd mrblib/loops; \
-	ln -sf ../../example/master.rb.vl53l0x master.rb
+	ln -sf ../../example/master.rb.vl53l0x-1 master.rb
+
+vl53l0x2:
+	cd mrblib/loops; \
+	ln -sf ../../example/master.rb.vl53l0x-2 master.rb
 
 env2:
 	cd mrblib/loops; \
