@@ -1,5 +1,8 @@
 menu "IoTeX ESP32 mrubyc Configuration"
-
+    config USE_ESP32_FIRMWAREFLASH
+        bool "USE ESP32 Firmware Flash"
+        default n
+        
     config USE_ESP32_GPIO
         bool "USR ESP32 GPIO"
         default y
@@ -67,6 +70,40 @@ menu "IoTeX ESP32 mrubyc Configuration"
         help
             use Infrared Thermopile sensor SENSIRION_TMP007?
 
+    config USE_ESP32_I2C_PERIPHERALS_VL53L0X
+        bool "PERIPHERAL: Time of Flight ranging sensor SENSIRION VL53L0X"
+	depends on USE_ESP32_I2C
+        default n
+        help
+            use Time of Flight ranging sensor CENSIRION VL53L0X?
+
+    config USE_ESP32_I2C_PERIPHERALS_SHT3X
+        bool "PERIPHERAL: Temperature/Humidity sensor SENSIRION SHT3X"
+	depends on USE_ESP32_I2C
+        default n
+        help
+            use Temperature/Humidity sensor CENSIRION SHT3X?
+
+    config USE_ESP32_I2C_PERIPHERALS_BMP280
+        bool "PERIPHERAL: Temperature/Pressure sensor SENSIRION BMP280"
+	depends on USE_ESP32_I2C
+        default n
+        help
+            use Temperature/Pressure sensor CENSIRION BMP280?
+
+    config USE_ESP32_SPI
+        bool "USR ESP32 SPI"
+        default n
+        help
+            use SPI function?
+
+    config USE_ESP32_SPI_PERIPHERALS_ILI934X
+        bool "PERIPHERAL: LCD Display ILI934X"
+	depends on USE_ESP32_SPI
+        default n
+        help
+            use LCD Display ILI934X?
+
     config USE_ESP32_SPI_SD
         bool "USR ESP32 SPI_SD"
         default n
@@ -104,6 +141,12 @@ menu "IoTeX ESP32 mrubyc Configuration"
         default n
         help
             use DEEP SLEEP function?
+
+    config USE_ESP32_BLE
+        bool "USE BLE (Bluetooth Low Energy)"
+        default n
+        help
+            use BLE (Bluetooth Low Energy) function?
 
     config ENABLE_MULTITASK
         bool "ENABLE MULTI-TASK"
