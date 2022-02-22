@@ -25,31 +25,26 @@ class TMP007
   I2CADDR = 0x40
   DEVID = 0x1F
 
-  #adafruit_tmp007
   def initialize(i2c)
     @i2c = i2c
   end
 
   def init(samplerate) 
-    #config_reg
     @i2c.write(TMP007::I2CADDR, [TMP007::CONFIG, (TMP007::CFG_RESET >> 8) & 0xFF, TMP007::CFG_RESET & 0xFF])
     sleep(0.01)
 
     @i2c.write(TMP007::I2CADDR, [TMP007::CONFIG, ((TMP007::CFG_MODEON | TMP007::CFG_ALERTEN | TMP007::CFG_TRANSC | samplerate) >> 8) & 0xFF, (TMP007::CFG_MODEON | TMP007::CFG_ALERTEN | TMP007::CFG_TRANSC | samplerate) & 0xFF])
     sleep(0.01)
 
-    #stat_reg
     @i2c.write(TMP007::I2CADDR, [TMP007::STATMASK, ((TMP007::STAT_ALERTEN | TMP007::STAT_CRTEN) >> 8) & 0xFF, (TMP007::STAT_ALERTEN | TMP007::STAT_CRTEN) & 0xFF])
     sleep(0.01)
 
-    #did_reg
     @i2c.write(TMP007::I2CADDR, TMP007::DEVID)
 
     data = @i2c.read_integer(TMP007::I2CADDR, 2)
 
     value = ((data[0]) << 8) | data[1]
     did = value
-    #printf("%x\n",did);
 
     if (did != 0x78)
       return 0
@@ -62,12 +57,12 @@ class TMP007
 
   def read_die_temp_c()
     tdie = read_raw_die_temperature()
-    tdie *= 0.03125 #convert to celsius
+    tdie *= 0.03125
     return tdie
   end
 
   def read_obj_temp_c()
-    @i2c.write(TMP007::I2CADDR, TMP007::TOBJ) 
+    @i2c.write(TMP007::I2CADDR, TMP007::TOBJ)
     data = @i2c.read_integer(TMP007::I2CADDR, 2)
     value = ((data[0]) << 8) | data[1]
     raw = value
@@ -76,7 +71,7 @@ class TMP007
     end
     raw >>= 2
     tobj = raw
-    tobj *= 0.03125; #convert to celsius
+    tobj *= 0.03125
     return tobj
   end
 
@@ -94,10 +89,6 @@ class TMP007
     data = @i2c.read_integer(TMP007::I2CADDR, 2)
     value = ((data[0]) << 8) | data[1]
     raw = value
-    # v = data
-    # v *= 156.25
-    # v /= 1000
-    # return v
     return raw
   end
 
