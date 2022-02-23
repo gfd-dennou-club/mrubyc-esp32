@@ -65,9 +65,6 @@
 #ifdef CONFIG_USE_ESP32_I2C
 #include "models/i2c.h"
 #endif
-#ifdef CONFIG_USE_I2C_MCP9808
-#include "models/mcp9808.h"
-#endif
 #ifdef CONFIG_USE_ESP32_I2C_LCD
 #include "models/lcd.h"
 #endif
@@ -85,6 +82,9 @@
 #endif
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_SCD30
 #include "models/scd30.h"
+#endif
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_MCP9808
+#include "models/mcp9808.h"
 #endif
 //master
 #include "loops/master.h"
@@ -236,10 +236,6 @@ void app_main(void) {
   printf("start I2C (mruby/c class)\n");
   mrbc_create_task( i2c, 0 );
 #endif
-#ifdef CONFIG_USE_I2C_MCP9808
-  printf("start My MCP9808 (mruby/c class)\n");
-  mrbc_create_task( mcp9808, 0 );
-#endif
 #ifdef CONFIG_USE_ESP32_I2C_LCD
   printf("start My LCD (mruby/c class)\n");
   mrbc_create_task( lcd, 0 );
@@ -267,6 +263,10 @@ void app_main(void) {
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_SCD30
   printf("start SCD30 (mruby/c class)\n");
   mrbc_create_task( scd30, 0 );
+#endif
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_MCP9808
+  printf("start My MCP9808 (mruby/c class)\n");
+  mrbc_create_task( mcp9808, 0 );
 #endif
 
   //master

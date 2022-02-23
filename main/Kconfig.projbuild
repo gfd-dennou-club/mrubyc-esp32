@@ -66,12 +66,12 @@ menu "IoTeX ESP32 mrubyc Configuration"
         help
             use CO2 sensor SENSIRION SCD30?
 
-    config USE_I2C_MCP9808
+    config USE_ESP32_I2C_PERIPHERALS_MCP9808
         bool "PERIPHERAL: High Accuracy Temperature sensor SENSIRION MCP9808"
     depends on USE_ESP32_I2C
         default n
         help
-            use Temperature sensor SENSIRION MCP9808?
+            use High Accuracy Temperature sensor SENSIRION MCP9808?
 
     config USE_ESP32_SPI_SD
         bool "USR ESP32 SPI_SD"
