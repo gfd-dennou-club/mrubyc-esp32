@@ -13,7 +13,7 @@ else
     sleep 1
     if count == 30
       sw = !sw
-      # si7021.set_heater_level(Si7021::HEAT_LEVEL["MEDIUM"])
+      # si7021.set_heater_level(Si7021::HEAT_LEVEL["LOWEST"])
       si7021.heater(sw)
       print "Heater State : "
       si7021.heater_status ? puts("ENABLED") : puts("DISENABLE")
