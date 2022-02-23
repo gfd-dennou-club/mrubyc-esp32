@@ -100,6 +100,9 @@
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_SCD30
 #include "models/scd30.h"
 #endif
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_TMG39931
+#include "models/tmg39931.h"
+#endif
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_MCP9808
 #include "models/mcp9808.h"
 #endif
@@ -309,6 +312,7 @@ void app_main(void) {
      !!!! Add names of your ruby files                              !!!!
      !!!! example: mrbc_create_task( [replace with your task], 0 ); !!!!
   */
+
 #ifdef CONFIG_USE_ESP32_GPIO
   printf("start GPIO (mruby/c class)\n");
   mrbc_create_task(gpio, 0);
@@ -386,6 +390,11 @@ void app_main(void) {
   printf("start BMP280 (mruby/c class)\n");
   mrbc_create_task( bmp280, 0 );
 #endif
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_TMG39931
+  printf("start TMG39931 (mruby/c class)\n");
+  mrbc_create_task( tmg39931, 0 );
+#endif
+
   //master
   vTaskDelay(1000 / portTICK_RATE_MS);
   esp_vfs_spiffs_conf_t conf = {
@@ -436,3 +445,4 @@ void app_main(void) {
 #endif
   mrbc_run();
 }
+

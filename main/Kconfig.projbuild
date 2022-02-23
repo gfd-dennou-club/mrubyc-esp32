@@ -63,6 +63,13 @@ menu "IoTeX ESP32 mrubyc Configuration"
         help
             use CO2 sensor SENSIRION SCD30?
 
+    config USE_ESP32_I2C_PERIPHERALS_TMG39931
+        bool "PERIPHERAL: light gesture color proximity sensor SENSIRION TMG39931"
+    depends on USE_ESP32_I2C
+        default n
+        help  
+            use light gesture color proximity sensor SENSIRION TMG39931?
+
     config USE_ESP32_I2C_PERIPHERALS_MCP9808
         bool "PERIPHERAL: High Accuracy Temperature sensor SENSIRION MCP9808"
     depends on USE_ESP32_I2C
