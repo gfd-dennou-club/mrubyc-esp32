@@ -120,14 +120,17 @@ CONFIG_ESPTOOLPY_MONITOR_BAUD=115200
 #
 # IoTeX ESP32 mrubyc Configuration
 #
+# CONFIG_USE_ESP32_FIRMWAREFLASH is not set
 # CONFIG_USE_ESP32_GPIO is not set
 # CONFIG_USE_ESP32_LEDC is not set
 # CONFIG_USE_ESP32_ADC is not set
 # CONFIG_USE_ESP32_I2C is not set
+# CONFIG_USE_ESP32_SPI is not set
 # CONFIG_USE_ESP32_SPI_SD is not set
 # CONFIG_USE_ESP32_UART is not set
 # CONFIG_USE_ESP32_WIFI is not set
 # CONFIG_USE_ESP32_SLEEP is not set
+# CONFIG_USE_ESP32_BLE is not set
 # CONFIG_ENABLE_MULTITASK is not set
 # end of IoTeX ESP32 mrubyc Configuration
 

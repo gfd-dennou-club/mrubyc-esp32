@@ -7,7 +7,24 @@ class PWM
   LEDC_TIMER_8_BIT = 8
   LEDC_HIGH_SPEED_MODE = 0
   LEDC_DEFAULT_FREQUENCY = 440
-  LEDC_DEFAULT_DUTY = 0   #1 << (PWM::LEDC_TIMER_8_BIT - 1)
+  LEDC_DEFAULT_DUTY = 1 << (PWM::LEDC_TIMER_8_BIT - 1)
+  
+  # 音階の指定
+  NOTE = {
+    "NOTE_C" => 0,
+    "NOTE_Cs" => 1,
+    "NOTE_D" => 2,
+    "NOTE_Eb" => 3,
+    "NOTE_E" => 4,
+    "NOTE_F" => 5,
+    "NOTE_Fs" => 6,
+    "NOTE_G" => 7,
+    "NOTE_Gs" => 8,
+    "NOTE_A" => 9,
+    "NOTE_Bb" => 10,
+    "NOTE_B" => 11
+  }
+
   # 初期化
   def initialize(pin, ch=0, freq = PWM::LEDC_DEFAULT_FREQUENCY, duty = PWM::LEDC_DEFAULT_DUTY)
     if pin.kind_of?(Fixnum)
@@ -65,5 +82,14 @@ class PWM
   def deinit()
     LEDC.stop(PWM::LEDC_HIGH_SPEED_MODE, @ch, 0)
     puts "Stop PWM"
+  end
+
+  # 音階とオクターブを指定して周波数を設定
+  def ledc_write_note(note, octave)
+    if(0 > octave && octave <= 8)
+      deinit
+    else
+      freq(((27.5 * (2**((PWM::NOTE[note] + 12 * octave)/12.0))) + 0.5).to_i)
+    end
   end
 end
