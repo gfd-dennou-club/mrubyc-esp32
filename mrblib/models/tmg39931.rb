@@ -215,11 +215,6 @@ class TMG39931
     2745 * rate.to_i + 2242
   end
 
-  # def get_cct
-  #   rgbc = get_rgbc_raw
-  #   get_cct(rgbc[0], rgbc[1], rgbc[2], rgbc[3])
-  # end
-
   def read_regs(addr, len)
     @i2c.write(@address, addr)
     @i2c.read_integer(@address, len)

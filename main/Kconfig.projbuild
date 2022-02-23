@@ -30,13 +30,6 @@ menu "IoTeX ESP32 mrubyc Configuration"
         default y
         help
             use I2C function?
-   #追加 
-    config USE_ESP32_I2C_TMG39931
-      bool "PERIPHERAL: light gesture color proximity sensor SENSIRION TMG39931"
-      depends on USE_ESP32_I2C
-      default n
-      help  
-          use light gesture color proximity sensor SENSIRION TMG39931?
 
     config USE_ESP32_I2C_PERIPHERALS_AQM0802A
         bool "PERIPHERAL: LCD Display AQM0802A"
@@ -65,6 +58,13 @@ menu "IoTeX ESP32 mrubyc Configuration"
         default n
         help
             use CO2 sensor SENSIRION SCD30?
+
+    config USE_ESP32_I2C_PERIPHERALS_TMG39931
+        bool "PERIPHERAL: light gesture color proximity sensor SENSIRION TMG39931"
+    depends on USE_ESP32_I2C
+        default n
+        help  
+            use light gesture color proximity sensor SENSIRION TMG39931?
 
     config USE_ESP32_SPI_SD
         bool "USR ESP32 SPI_SD"
