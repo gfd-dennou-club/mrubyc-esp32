@@ -7,7 +7,7 @@ else
   count = 0
   print "Heater State : "
   si7021.heater_status ? puts("ENABLED") : puts("DISENABLE")
-  while true
+  while true do
     puts "Humi : #{si7021.read_humid}"
     puts "Temp : #{si7021.read_temp}"
     sleep 1
