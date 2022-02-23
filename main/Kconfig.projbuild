@@ -63,6 +63,13 @@ menu "IoTeX ESP32 mrubyc Configuration"
         help
             use CO2 sensor SENSIRION SCD30?
 
+    config USE_ESP32_I2C_PERIPHERALS_SI7021
+        bool "PERIPHERAL: Temperature & Humidity sensor SENSIRION SI7021"
+	depends on USE_ESP32_I2C
+        default n
+        help
+            use Temperature & Humidity sensor SENSIRION SI7021?
+
     config USE_ESP32_I2C_PERIPHERALS_VEML6070
         bool "PERIPHERAL: UV light sensor SENSIRION VEML6070"
     depends on USE_ESP32_I2C

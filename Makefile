@@ -91,6 +91,10 @@ sht:
 	cd mrblib/loops; \
 	ln -sf ../../example/master.rb.sht master.rb
 
+si7021:
+	cd mrblib/loops; \
+	ln -sf ../../example/master.rb.si7021 master.rb
+
 veml6070:
 	cd mrblib/loops; \
 	ln -sf ../../example/master.rb.veml6070 master.rb

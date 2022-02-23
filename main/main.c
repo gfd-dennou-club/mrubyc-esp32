@@ -100,6 +100,9 @@
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_SCD30
 #include "models/scd30.h"
 #endif
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_SI7021
+#include "models/si7021.h"
+#endif
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_VEML6070
 #include "models/veml6070.h"
 #endif
@@ -345,6 +348,10 @@ void app_main(void) {
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_SCD30
   printf("start SCD30 (mruby/c class)\n");
   mrbc_create_task( scd30, 0 );
+#endif
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_SI7021
+  printf("start SI7021 (mruby/c class)\n");
+  mrbc_create_task( si7021, 0 );
 #endif
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_VEML6070
   printf("start My VEML6070 (mruby/c class)\n");
