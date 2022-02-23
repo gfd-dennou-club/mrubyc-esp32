@@ -23,6 +23,6 @@
 #   end
 # end
 while true
-  puts "Hello World"
-  sleep 5
+  puts "hello world from ESP32"
+  sleep 1
 end
