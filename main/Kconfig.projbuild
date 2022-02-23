@@ -15,7 +15,7 @@ menu "IoTeX ESP32 mrubyc Configuration"
 	depends on USE_ESP32_GPIO
         default n
         help
-            use Temperature/Humidity sensor CENSIRION SHT75?
+            use Temperature/Humidity sensor SENSIRION SHT75?
 
     config USE_ESP32_LEDC
         bool "USR ESP32 PWM (LEDC)"
@@ -103,21 +103,21 @@ menu "IoTeX ESP32 mrubyc Configuration"
 	depends on USE_ESP32_I2C
         default n
         help
-            use Time of Flight ranging sensor CENSIRION VL53L0X?
+            use Time of Flight ranging sensor SENSIRION VL53L0X?
 
     config USE_ESP32_I2C_PERIPHERALS_SHT3X
         bool "PERIPHERAL: Temperature/Humidity sensor SENSIRION SHT3X"
 	depends on USE_ESP32_I2C
         default n
         help
-            use Temperature/Humidity sensor CENSIRION SHT3X?
+            use Temperature/Humidity sensor SENSIRION SHT3X?
 
     config USE_ESP32_I2C_PERIPHERALS_BMP280
         bool "PERIPHERAL: Temperature/Pressure sensor SENSIRION BMP280"
 	depends on USE_ESP32_I2C
         default n
         help
-            use Temperature/Pressure sensor CENSIRION BMP280?
+            use Temperature/Pressure sensor SENSIRION BMP280?
 
     config USE_ESP32_SPI
         bool "USR ESP32 SPI"
