@@ -79,10 +79,14 @@ sgp30:
 	cd mrblib/loops; \
 	ln -sf ../../example/master.rb.sgp30 master.rb
 
+mcp9808:
+	cd mrblib/loops; \
+	ln -sf ../../example/master.rb.mcp9808 master.rb
+
 tmp007:
 	cd mrblib/loops; \
 	ln -sf ../../example/master.rb.tmp007 master.rb
-
+  
 rtc:
 	cd mrblib/loops; \
 	ln -sf ../../example/master.rb.rtc master.rb
