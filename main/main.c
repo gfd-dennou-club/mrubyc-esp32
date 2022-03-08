@@ -3,12 +3,14 @@
 #include "esp_system.h"
 #include "esp_log.h"
 #include "esp_spi_flash.h"
+#include "esp_vfs.h"
+#include "esp_spiffs.h"
 #include "nvs_flash.h"
-
+#include <ctype.h>
 #include "mrubyc.h"
 
 //*********************************************
-// ENABLE LIBRARY written by C 
+// ENABLE LIBRARY written by C
 //*********************************************
 #ifdef CONFIG_USE_ESP32_GPIO
 #include "mrbc_esp32_gpio.h"
@@ -50,6 +52,9 @@
 #endif
 #ifdef CONFIG_USE_ESP32_UART
 #include "mrbc_esp32_uart.h"
+#endif
+#ifdef CONFIG_USE_ESP32_BLE
+#include "mrbc_esp32_ble.h"
 #endif
 
 //*********************************************
@@ -97,6 +102,22 @@
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_SCD30
 #include "models/scd30.h"
 #endif
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_TMG39931
+#include "models/tmg39931.h"
+#endif
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_MCP9808
+#include "models/mcp9808.h"
+#endif
+// master
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_SI7021
+#include "models/si7021.h"
+#endif
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_VEML6070
+#include "models/veml6070.h"
+#endif
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_TMP007
+#include "models/tmp007.h"
+#endif
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_VL53L0X
 #include "models/vl53l0x.h"
 #endif
@@ -106,33 +127,64 @@
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_BMP280
 #include "models/bmp280.h"
 #endif
+#ifdef CONFIG_USE_ESP32_FIRMWAREFLASH
 //master
 #include "loops/master.h"
-//slave
+// slave
 #ifdef CONFIG_ENABLE_MULTITASK
 #include "loops/slave.h"
 #endif
+#endif
 
+static const char *TAG = "iotex-esp32-mrubyc";
 
 #define MEMORY_SIZE (1024*40)
 
 static uint8_t memory_pool[MEMORY_SIZE];
 
+// SPIFFSでバイナリデータを読み込み
+uint8_t * load_mrb_file(const char *filename)
+{
+  FILE *fp = fopen(filename, "rb");
+
+  if( fp == NULL ) {
+    fprintf(stderr, "File not found (%s)\n", filename);
+    return NULL;
+  }
+
+
+  /* // get filesize */
+  fseek(fp, 0, SEEK_END);
+  size_t size = ftell(fp);
+  fseek(fp, 0, SEEK_SET);
+
+  // allocate memory
+  uint8_t *p = malloc(size);
+  if( p != NULL ) {
+    fread(p, sizeof(uint8_t), size, fp);
+  } else {
+    fprintf(stderr, "Memory allocate error.\n");
+  }
+  fclose(fp);
+  return p;
+}
+
 //================================================================
 /*! cast
   ["01000101001101001110000100111100"].pack('B*').unpack('g') ができないために用意
 */
-static void c_floatCast(struct VM *vm, mrbc_value *v, int argc){
+static void c_floatCast(struct VM *vm, mrbc_value *v, int argc)
+{
 
   float Value;
-  uint32_t val  = 0;
+  uint32_t val = 0;
   uint32_t arg1 = GET_INT_ARG(1);
   uint32_t arg2 = GET_INT_ARG(2);
   uint32_t arg3 = GET_INT_ARG(3);
   uint32_t arg4 = GET_INT_ARG(4);
   mrbc_value result;
   result = mrbc_array_new(vm, 0);
-    
+
   val |= arg1;
   val <<= 8;
   val |= arg2;
@@ -142,53 +194,60 @@ static void c_floatCast(struct VM *vm, mrbc_value *v, int argc){
   val |= arg4;
   memcpy(&Value, &val, sizeof(Value));
 
-  mrbc_array_set(&result, 0, &mrbc_fixnum_value( Value * 100.0 ));
+  mrbc_array_set(&result, 0, &mrbc_fixnum_value(Value * 100.0));
   SET_RETURN(result);
   //   result = *(float*) &tempU32;
 }
 
 //================================================================
 /*! DEBUG PRINT
-*/
-void chip_info() {
-    /* Print chip information */
-    esp_chip_info_t chip_info;
-    esp_chip_info(&chip_info);
-    printf("This is ESP32 chip with %d CPU cores, WiFi%s%s, ",
-            chip_info.cores,
-            (chip_info.features & CHIP_FEATURE_BT) ? "/BT" : "",
-            (chip_info.features & CHIP_FEATURE_BLE) ? "/BLE" : "");
+ */
+void chip_info()
+{
+  /* Print chip information */
+  esp_chip_info_t chip_info;
+  esp_chip_info(&chip_info);
+  printf("This is ESP32 chip with %d CPU cores, WiFi%s%s, ",
+         chip_info.cores,
+         (chip_info.features & CHIP_FEATURE_BT) ? "/BT" : "",
+         (chip_info.features & CHIP_FEATURE_BLE) ? "/BLE" : "");
 
-    printf("silicon revision %d, ", chip_info.revision);
+  printf("silicon revision %d, ", chip_info.revision);
 
-    printf("%dMB %s flash\n", spi_flash_get_chip_size() / (1024 * 1024),
-            (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
+  printf("%dMB %s flash\n", spi_flash_get_chip_size() / (1024 * 1024),
+         (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
 }
 
-static void c_debugprint(struct VM *vm, mrbc_value v[], int argc){
-  for( int i = 0; i < 79; i++ ) { console_putchar('='); }
+static void c_debugprint(struct VM *vm, mrbc_value v[], int argc)
+{
+  for (int i = 0; i < 79; i++)
+  {
+    console_putchar('=');
+  }
   console_putchar('\n');
   chip_info();
   int total, used, free, fragment;
-  mrbc_alloc_statistics( &total, &used, &free, &fragment );
-  console_printf("Memory total:%d, used:%d, free:%d, fragment:%d\n", total, used, free, fragment );
+  mrbc_alloc_statistics(&total, &used, &free, &fragment);
+  console_printf("Memory total:%d, used:%d, free:%d, fragment:%d\n", total, used, free, fragment);
   unsigned char *key = GET_STRING_ARG(1);
   unsigned char *value = GET_STRING_ARG(2);
-  console_printf("%s:%s\n", key, value );
+  console_printf("%s:%s\n", key, value);
   heap_caps_print_heap_info(MALLOC_CAP_8BIT);
   heap_caps_print_heap_info(MALLOC_CAP_32BIT);
-  for( int i = 0; i < 79; i++ ) { console_putchar('='); }
+  for (int i = 0; i < 79; i++)
+  {
+    console_putchar('=');
+  }
   console_putchar('\n');
 }
-
 
 void app_main(void) {
   nvs_flash_init();
   mrbc_init(memory_pool, MEMORY_SIZE);
 
   mrbc_define_method(0, mrbc_class_object, "debugprint", c_debugprint);
-  mrbc_define_method(0, mrbc_class_object, "floatCast",  c_floatCast);
-  /* 
+  mrbc_define_method(0, mrbc_class_object, "floatCast", c_floatCast);
+  /*
      !!!! Add your function                            !!!!
      !!!! example: mrbc_mruby_esp32_XXXX_gem_init(0);  !!!!
   */
@@ -246,11 +305,16 @@ void app_main(void) {
   printf("start UART (C)\n");
   mrbc_mruby_esp32_uart_gem_init(0);
 #endif
-
+#ifdef CONFIG_USE_ESP32_BLE
+  printf("start BLET (C)\n");
+  mrbc_mruby_esp32_ble_gem_init(0);
+#endif
+  
   /*
      !!!! Add names of your ruby files                              !!!!
      !!!! example: mrbc_create_task( [replace with your task], 0 ); !!!!
   */
+
 #ifdef CONFIG_USE_ESP32_GPIO
   printf("start GPIO (mruby/c class)\n");
   mrbc_create_task( gpio, 0 );
@@ -261,15 +325,15 @@ void app_main(void) {
 #endif
 #ifdef CONFIG_USE_ESP32_LEDC
   printf("start PWM (mruby/c class)\n");
-  mrbc_create_task( pwm, 0 );
+  mrbc_create_task(pwm, 0);
 #endif
 #ifdef CONFIG_USE_ESP32_ADC
   printf("start ADC (mruby/c class)\n");
-  mrbc_create_task( adc, 0 );
+  mrbc_create_task(adc, 0);
 #endif
 #ifdef CONFIG_USE_ESP32_I2C
   printf("start I2C (mruby/c class)\n");
-  mrbc_create_task( i2c, 0 );
+  mrbc_create_task(i2c, 0);
 #endif
 #ifdef CONFIG_USE_ESP32_SPI
   printf("start SPI (mruby/c class)\n");
@@ -281,19 +345,19 @@ void app_main(void) {
 #endif
 #ifdef CONFIG_USE_ESP32_UART
   printf("start UART (mruby/c class)\n");
-  mrbc_create_task( uart, 0 );
+  mrbc_create_task(uart, 0);
 #endif
 #ifdef CONFIG_USE_ESP32_GPIO_PERIPHERALS_SHT75
   printf("start SHT75 (mruby/c class)\n");
-  mrbc_create_task( sht75, 0 );
+  mrbc_create_task(sht75, 0);
 #endif
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_AQM0802A
   printf("start AQM0802A (mruby/c class)\n");
-  mrbc_create_task( aqm0802a, 0 );
+  mrbc_create_task(aqm0802a, 0);
 #endif
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_RC8035SA
   printf("start RC8035SA (mruby/c class)\n");
-  mrbc_create_task( rc8035sa, 0 );
+  mrbc_create_task(rc8035sa, 0);
 #endif
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_VL53L0X
   printf("start VL53L0X (mruby/c class)\n");
@@ -301,11 +365,27 @@ void app_main(void) {
 #endif
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_SGP30
   printf("start SGP30 (mruby/c class)\n");
-  mrbc_create_task( sgp30, 0 );
+  mrbc_create_task(sgp30, 0);
 #endif
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_SCD30
   printf("start SCD30 (mruby/c class)\n");
-  mrbc_create_task( scd30, 0 );
+  mrbc_create_task(scd30, 0);
+#endif
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_MCP9808
+  printf("start My MCP9808 (mruby/c class)\n");
+  mrbc_create_task(mcp9808, 0);
+#endif
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_SI7021
+  printf("start SI7021 (mruby/c class)\n");
+  mrbc_create_task( si7021, 0 );
+#endif
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_VEML6070
+  printf("start My VEML6070 (mruby/c class)\n");
+  mrbc_create_task( veml6070, 0 );
+#endif
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_TMP007
+  printf("start TMP007 (mruby/c class)\n");
+  mrbc_create_task( tmp007, 0);
 #endif
 #ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_SHT3X
   printf("start SHT3X (mruby/c class)\n");
@@ -315,14 +395,59 @@ void app_main(void) {
   printf("start BMP280 (mruby/c class)\n");
   mrbc_create_task( bmp280, 0 );
 #endif
+#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_TMG39931
+  printf("start TMG39931 (mruby/c class)\n");
+  mrbc_create_task( tmg39931, 0 );
+#endif
 
   //master
-  mrbc_create_task( master, 0 );
+  vTaskDelay(1000 / portTICK_RATE_MS);
+  esp_vfs_spiffs_conf_t conf = {
+    .base_path = "/spiffs",
+    .partition_label = NULL,
+    .max_files = 2,
+    .format_if_mount_failed = true
+  };
+    
+  // Use settings defined above to initialize and mount SPIFFS filesystem.
+  // Note: esp_vfs_spiffs_register is an all-in-one convenience function.
+  esp_err_t ret = esp_vfs_spiffs_register(&conf);
 
-  //slave
+  if (ret != ESP_OK) {
+    if (ret == ESP_FAIL) {
+      ESP_LOGE(TAG, "Failed to mount or format filesystem");
+    } else if (ret == ESP_ERR_NOT_FOUND) {
+      ESP_LOGE(TAG, "Failed to find SPIFFS partition");
+    } else {
+      ESP_LOGE(TAG, "Failed to initialize SPIFFS (%s)", esp_err_to_name(ret));
+    }
+    return;
+  }
+  size_t total = 0, used = 0;
+  ret = esp_spiffs_info(conf.partition_label, &total, &used);
+  if (ret != ESP_OK) {
+    ESP_LOGE(TAG, "Failed to get SPIFFS partition information (%s)", esp_err_to_name(ret));
+  } else {
+    ESP_LOGI(TAG, "Partition size: total: %d, used: %d", total, used);
+  }
+
+  // master
+#ifdef CONFIG_USE_ESP32_FIRMWAREFLASH
+  printf("FIRMWAREFLASH mode\n");
+  mrbc_create_task(master, 0);
 #ifdef CONFIG_ENABLE_MULTITASK
   mrbc_create_task( slave, 0 );
 #endif
-  
+#else
+  printf("SPIFFS mode\n");
+  uint8_t *master = load_mrb_file("/spiffs/master.mrbc");
+  mrbc_create_task(master, 0);
+  //slave
+#ifdef CONFIG_ENABLE_MULTITASK
+  uint8_t *slave = load_mrb_file("/spiffs/slave.mrbc");
+  mrbc_create_task( slave, 0 );
+#endif
+#endif
   mrbc_run();
 }
+
