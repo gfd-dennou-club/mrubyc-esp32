@@ -9,8 +9,14 @@ menu "IoTeX ESP32 mrubyc Configuration"
         help
             use GPIO function?
 
-   
-     config USE_ESP32_GPIO_PERIPHERALS_SHT75
+    config USE_ESP32_GPIO_IRQHANDLER
+        bool "USR ESP32 GPIO IRQ Handler"
+	depends on USE_ESP32_GPIO
+        default n
+        help
+            use IRQ handler with GPIO?
+
+    config USE_ESP32_GPIO_PERIPHERALS_SHT75
         bool "PERIPHERAL: Temperature/Humidity Sensor SENSIRION SHT75"
 	depends on USE_ESP32_GPIO
         default n
