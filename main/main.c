@@ -66,7 +66,7 @@
 #ifdef CONFIG_USE_ESP32_GPIO
 #include "models/gpio.h"
 #endif
-#ifdef CONFIG_USE_ESP32_GPIO_ILQHANDLER
+#ifdef CONFIG_USE_ESP32_GPIO_IRQHANDLER
 #include "models/irq_handler.h"
 #endif
 #ifdef CONFIG_USE_ESP32_GPIO_PERIPHERALS_SHT75
