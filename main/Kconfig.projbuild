@@ -16,13 +16,6 @@ menu "IoTeX ESP32 mrubyc Configuration"
         help
             use IRQ handler with GPIO?
 
-    config USE_ESP32_GPIO_PERIPHERALS_SHT75
-        bool "PERIPHERAL: Temperature/Humidity Sensor SENSIRION SHT75"
-	depends on USE_ESP32_GPIO
-        default n
-        help
-            use Temperature/Humidity sensor SENSIRION SHT75?
-
     config USE_ESP32_LEDC
         bool "USR ESP32 PWM (LEDC)"
         default y
@@ -41,102 +34,11 @@ menu "IoTeX ESP32 mrubyc Configuration"
         help
             use I2C function?
 
-    config USE_ESP32_I2C_PERIPHERALS_AQM0802A
-        bool "PERIPHERAL: LCD Display AQM0802A"
-	depends on USE_ESP32_I2C
-        default n
-        help
-            use LCD Display AQM0802A?
-
-    config USE_ESP32_I2C_PERIPHERALS_RC8035SA
-        bool "PERIPHERAL: Real Time Clock RC8035SA"
-	depends on USE_ESP32_I2C
-        default n
-        help
-            use Real Time Clock RC8035SA?
-
-    config USE_ESP32_I2C_PERIPHERALS_SGP30
-        bool "PERIPHERAL: eCO2 sensor SENSIRION SGP30"
-	depends on USE_ESP32_I2C
-        default n
-        help
-            use eCO2 sensor SENSIRION SGP30?
-
-    config USE_ESP32_I2C_PERIPHERALS_SCD30
-        bool "PERIPHERAL: CO2 sensor SENSIRION SCD30"
-	depends on USE_ESP32_I2C
-        default n
-        help
-            use CO2 sensor SENSIRION SCD30?
-
-    config USE_ESP32_I2C_PERIPHERALS_TMG39931
-        bool "PERIPHERAL: light gesture color proximity sensor SENSIRION TMG39931"
-    depends on USE_ESP32_I2C
-        default n
-        help  
-            use light gesture color proximity sensor SENSIRION TMG39931?
-
-    config USE_ESP32_I2C_PERIPHERALS_MCP9808
-        bool "PERIPHERAL: High Accuracy Temperature sensor SENSIRION MCP9808"
-    depends on USE_ESP32_I2C
-        default n
-        help
-            use High Accuracy Temperature sensor SENSIRION MCP9808?
-
-    config USE_ESP32_I2C_PERIPHERALS_SI7021
-        bool "PERIPHERAL: Temperature & Humidity sensor SENSIRION SI7021"
-	depends on USE_ESP32_I2C
-        default n
-        help
-            use Temperature & Humidity sensor SENSIRION SI7021?
-
-    config USE_ESP32_I2C_PERIPHERALS_VEML6070
-        bool "PERIPHERAL: UV light sensor SENSIRION VEML6070"
-    depends on USE_ESP32_I2C
-        default n
-        help
-            use UV light sensor SENSIRION VEML6070?
-            
-    config USE_ESP32_I2C_PERIPHERALS_TMP007
-        bool "PERIPHERAL: Infrared Thermopile sensor SENSIRION TMP007"
-	depends on USE_ESP32_I2C
-        default n
-        help
-            use Infrared Thermopile sensor SENSIRION_TMP007?
-
-    config USE_ESP32_I2C_PERIPHERALS_VL53L0X
-        bool "PERIPHERAL: Time of Flight ranging sensor SENSIRION VL53L0X"
-	depends on USE_ESP32_I2C
-        default n
-        help
-            use Time of Flight ranging sensor SENSIRION VL53L0X?
-
-    config USE_ESP32_I2C_PERIPHERALS_SHT3X
-        bool "PERIPHERAL: Temperature/Humidity sensor SENSIRION SHT3X"
-	depends on USE_ESP32_I2C
-        default n
-        help
-            use Temperature/Humidity sensor SENSIRION SHT3X?
-
-    config USE_ESP32_I2C_PERIPHERALS_BMP280
-        bool "PERIPHERAL: Temperature/Pressure sensor SENSIRION BMP280"
-	depends on USE_ESP32_I2C
-        default n
-        help
-            use Temperature/Pressure sensor SENSIRION BMP280?
-
     config USE_ESP32_SPI
         bool "USR ESP32 SPI"
         default n
         help
             use SPI function?
-
-    config USE_ESP32_SPI_PERIPHERALS_ILI934X
-        bool "PERIPHERAL: LCD Display ILI934X"
-	depends on USE_ESP32_SPI
-        default n
-        help
-            use LCD Display ILI934X?
 
     config USE_ESP32_SPI_SD
         bool "USR ESP32 SPI_SD"
