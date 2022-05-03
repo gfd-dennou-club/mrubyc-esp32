@@ -24,12 +24,6 @@
 #ifdef CONFIG_USE_ESP32_I2C
 #include "mrbc_esp32_i2c.h"
 #endif
-#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_VL53L0X
-#include "mrbc_esp32_vl53l0x.h"
-#endif
-#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_BMP280
-#include "mrbc_esp32_bmp280.h"
-#endif
 #ifdef CONFIG_USE_ESP32_WIFI
 #include "mrbc_esp32_wifi.h"
 #endif
@@ -69,9 +63,6 @@
 #ifdef CONFIG_USE_ESP32_GPIO_IRQHANDLER
 #include "models/irq_handler.h"
 #endif
-#ifdef CONFIG_USE_ESP32_GPIO_PERIPHERALS_SHT75
-#include "models/sht75.h"
-#endif
 #ifdef CONFIG_USE_ESP32_LEDC
 #include "models/pwm.h"
 #endif
@@ -84,49 +75,10 @@
 #ifdef CONFIG_USE_ESP32_SPI
 #include "models/spi.h"
 #endif
-#ifdef CONFIG_USE_ESP32_SPI_PERIPHERALS_ILI934X
-#include "models/ili934x.h"
-#endif
 #ifdef CONFIG_USE_ESP32_UART
 #include "models/uart.h"
 #endif
-#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_AQM0802A
-#include "models/aqm0802a.h"
-#endif
-#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_RC8035SA
-#include "models/rc8035sa.h"
-#endif
-#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_SGP30
-#include "models/sgp30.h"
-#endif
-#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_SCD30
-#include "models/scd30.h"
-#endif
-#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_TMG39931
-#include "models/tmg39931.h"
-#endif
-#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_MCP9808
-#include "models/mcp9808.h"
-#endif
 // master
-#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_SI7021
-#include "models/si7021.h"
-#endif
-#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_VEML6070
-#include "models/veml6070.h"
-#endif
-#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_TMP007
-#include "models/tmp007.h"
-#endif
-#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_VL53L0X
-#include "models/vl53l0x.h"
-#endif
-#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_SHT3X
-#include "models/sht3x.h"
-#endif
-#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_BMP280
-#include "models/bmp280.h"
-#endif
 #ifdef CONFIG_USE_ESP32_FIRMWAREFLASH
 //master
 #include "loops/master.h"
@@ -267,10 +219,6 @@ void app_main(void) {
   printf("start I2C (C)\n");
   mrbc_mruby_esp32_i2c_gem_init(0);
 #endif
-#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_BMP280
-  printf("start BMP280 (C)\n");
-  mrbc_mruby_esp32_bmp280_gem_init(0);
-#endif
 #ifdef CONFIG_USE_ESP32_WIFI
   printf("start WiFi (C) \n");
   mrbc_mruby_esp32_wifi_gem_init(0);
@@ -290,10 +238,6 @@ void app_main(void) {
 #ifdef CONFIG_USE_ESP32_SPI
   printf("start SPI (C) \n");
   mrbc_mruby_esp32_spi_gem_init(0);
-#endif
-#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_VL53L0X
-  printf("start VL53L0X (C) \n");
-  mrbc_mruby_esp32_vl53l0x_gem_init(0);
 #endif
 #ifdef CONFIG_USE_ESP32_SPI_SD
   printf("start SDSPI and ESP32 stdio (C)\n");
@@ -339,65 +283,9 @@ void app_main(void) {
   printf("start SPI (mruby/c class)\n");
   mrbc_create_task( spi, 0 );
 #endif
-#ifdef CONFIG_USE_ESP32_SPI_PERIPHERALS_ILI934X
-  printf("start ILI934X (mruby/c class)\n");
-  mrbc_create_task( ili934x, 0 );
-#endif
 #ifdef CONFIG_USE_ESP32_UART
   printf("start UART (mruby/c class)\n");
   mrbc_create_task(uart, 0);
-#endif
-#ifdef CONFIG_USE_ESP32_GPIO_PERIPHERALS_SHT75
-  printf("start SHT75 (mruby/c class)\n");
-  mrbc_create_task(sht75, 0);
-#endif
-#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_AQM0802A
-  printf("start AQM0802A (mruby/c class)\n");
-  mrbc_create_task(aqm0802a, 0);
-#endif
-#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_RC8035SA
-  printf("start RC8035SA (mruby/c class)\n");
-  mrbc_create_task(rc8035sa, 0);
-#endif
-#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_VL53L0X
-  printf("start VL53L0X (mruby/c class)\n");
-  mrbc_create_task( vl53l0x, 0 );
-#endif
-#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_SGP30
-  printf("start SGP30 (mruby/c class)\n");
-  mrbc_create_task(sgp30, 0);
-#endif
-#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_SCD30
-  printf("start SCD30 (mruby/c class)\n");
-  mrbc_create_task(scd30, 0);
-#endif
-#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_MCP9808
-  printf("start My MCP9808 (mruby/c class)\n");
-  mrbc_create_task(mcp9808, 0);
-#endif
-#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_SI7021
-  printf("start SI7021 (mruby/c class)\n");
-  mrbc_create_task( si7021, 0 );
-#endif
-#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_VEML6070
-  printf("start My VEML6070 (mruby/c class)\n");
-  mrbc_create_task( veml6070, 0 );
-#endif
-#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_TMP007
-  printf("start TMP007 (mruby/c class)\n");
-  mrbc_create_task( tmp007, 0);
-#endif
-#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_SHT3X
-  printf("start SHT3X (mruby/c class)\n");
-  mrbc_create_task( sht3x, 0 );
-#endif
-#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_BMP280
-  printf("start BMP280 (mruby/c class)\n");
-  mrbc_create_task( bmp280, 0 );
-#endif
-#ifdef CONFIG_USE_ESP32_I2C_PERIPHERALS_TMG39931
-  printf("start TMG39931 (mruby/c class)\n");
-  mrbc_create_task( tmg39931, 0 );
 #endif
 
   //master
