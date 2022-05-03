@@ -285,7 +285,7 @@ mrbc_esp32_fseek(mrb_vm * vm, mrb_value * v, int argc) {
     SET_TRUE_RETURN();
 }
 
-void mrbc_mruby_esp32_stdio_gem_init(struct VM* vm) {
+void mrbc_esp32_stdio_gem_init(struct VM* vm) {
   mrbc_class_esp32_stdio = mrbc_define_class(vm, "ESP32_STDIO", mrbc_class_object);
   mrbc_define_method(vm, mrbc_class_esp32_stdio, "fopen", mrbc_esp32_fopen);
   mrbc_define_method(vm, mrbc_class_esp32_stdio, "fputs", mrbc_esp32_fputs);

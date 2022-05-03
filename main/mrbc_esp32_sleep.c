@@ -61,7 +61,7 @@ static void mrbc_esp32_sleep_enable_gpio_wakeup(mrb_vm *vm, mrb_value *v, int ar
   @param vm mruby/c VM
 */
 void
-mrbc_mruby_esp32_sleep_gem_init(struct VM* vm)
+mrbc_esp32_sleep_gem_init(struct VM* vm)
 {
 /*
 SLEEP.deep_sleep(time_in_us)

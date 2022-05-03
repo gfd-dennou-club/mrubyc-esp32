@@ -88,7 +88,7 @@ mrbc_esp32_sntp_sec(mrb_vm* vm, mrb_value* v, int argc)
   @param vm mruby/c VM
 */
 void
-mrbc_mruby_esp32_sntp_gem_init(struct VM* vm)
+mrbc_esp32_sntp_gem_init(struct VM* vm)
 {
 /*
 SNTP.init()

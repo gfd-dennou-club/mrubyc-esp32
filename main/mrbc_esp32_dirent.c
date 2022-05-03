@@ -191,7 +191,7 @@ static void
 mrbc_esp32_file_time_getSecond(mrb_vm * vm, mrb_value * v, int argc) {
   SET_RETURN(mrbc_instance_getiv(v, symid_systemtime_second));
 }
-void mrbc_mruby_esp32_dirent_gem_init(struct VM* vm)
+void mrbc_esp32_dirent_gem_init(struct VM* vm)
 {
   mrbc_class_esp32_dirent = mrbc_define_class(vm, "ESP32_DIRENT", mrbc_class_object);
   mrbc_define_method(vm, mrbc_class_esp32_dirent, "childrenFiles", mrbc_esp32_dir_files);

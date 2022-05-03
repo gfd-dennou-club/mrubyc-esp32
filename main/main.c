@@ -201,57 +201,57 @@ void app_main(void) {
   mrbc_define_method(0, mrbc_class_object, "floatCast", c_floatCast);
   /*
      !!!! Add your function                            !!!!
-     !!!! example: mrbc_mruby_esp32_XXXX_gem_init(0);  !!!!
+     !!!! example: mrbc_esp32_XXXX_gem_init(0);  !!!!
   */
 #ifdef CONFIG_USE_ESP32_GPIO
   printf("start GPIO (C)\n");
-  mrbc_mruby_esp32_gpio_gem_init(0);
+  mrbc_esp32_gpio_gem_init(0);
 #endif
 #ifdef CONFIG_USE_ESP32_LEDC
   printf("start PWM (C)\n");
-  mrbc_mruby_esp32_ledc_gem_init(0);
+  mrbc_esp32_ledc_gem_init(0);
 #endif
 #ifdef CONFIG_USE_ESP32_ADC
   printf("start ADC (C)\n");
-  mrbc_mruby_esp32_adc_gem_init(0);
+  mrbc_esp32_adc_gem_init(0);
 #endif
 #ifdef CONFIG_USE_ESP32_I2C
   printf("start I2C (C)\n");
-  mrbc_mruby_esp32_i2c_gem_init(0);
+  mrbc_esp32_i2c_gem_init(0);
 #endif
 #ifdef CONFIG_USE_ESP32_WIFI
   printf("start WiFi (C) \n");
-  mrbc_mruby_esp32_wifi_gem_init(0);
+  mrbc_esp32_wifi_gem_init(0);
 #endif
 #ifdef CONFIG_USE_ESP32_SLEEP
   printf("start SLEEP (C) \n");
-  mrbc_mruby_esp32_sleep_gem_init(0);
+  mrbc_esp32_sleep_gem_init(0);
 #endif
 #ifdef CONFIG_USE_ESP32_SNTP
   printf("start SNTP (C) \n");
-  mrbc_mruby_esp32_sntp_gem_init(0);
+  mrbc_esp32_sntp_gem_init(0);
 #endif
 #ifdef CONFIG_USE_ESP32_HTTP_CLIENT
   printf("start HTTPClient (C) \n");
-  mrbc_mruby_esp32_httpclient_gem_init(0);
+  mrbc_esp32_httpclient_gem_init(0);
 #endif
 #ifdef CONFIG_USE_ESP32_SPI
   printf("start SPI (C) \n");
-  mrbc_mruby_esp32_spi_gem_init(0);
+  mrbc_esp32_spi_gem_init(0);
 #endif
 #ifdef CONFIG_USE_ESP32_SPI_SD
   printf("start SDSPI and ESP32 stdio (C)\n");
-  mrbc_mruby_esp32_sdspi_gem_init(0);
-  mrbc_mruby_esp32_stdio_gem_init(0);
-  mrbc_mruby_esp32_dirent_gem_init(0);
+  mrbc_esp32_sdspi_gem_init(0);
+  mrbc_esp32_stdio_gem_init(0);
+  mrbc_esp32_dirent_gem_init(0);
 #endif
 #ifdef CONFIG_USE_ESP32_UART
   printf("start UART (C)\n");
-  mrbc_mruby_esp32_uart_gem_init(0);
+  mrbc_esp32_uart_gem_init(0);
 #endif
 #ifdef CONFIG_USE_ESP32_BLE
   printf("start BLET (C)\n");
-  mrbc_mruby_esp32_ble_gem_init(0);
+  mrbc_esp32_ble_gem_init(0);
 #endif
   
   /*

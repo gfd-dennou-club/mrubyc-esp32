@@ -109,7 +109,7 @@ mrbc_esp32_sdspi_spi_bus_free(mrb_vm* vm, mrb_value* v, int argc)
 /*! Register SDSPI Class.
  */
 void
-mrbc_mruby_esp32_sdspi_gem_init(struct VM* vm)
+mrbc_esp32_sdspi_gem_init(struct VM* vm)
 {
   //host = SDSPI_HOST_DEFAULT();
   sdmmc_host_t h_copy = SDSPI_HOST_DEFAULT();

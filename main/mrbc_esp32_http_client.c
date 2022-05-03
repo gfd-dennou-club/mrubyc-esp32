@@ -110,7 +110,7 @@ mrbc_esp32_httpclient_cleanup(mrb_vm* vm, mrb_value* v, int argc)
   @param vm mruby/c VM
 */
 void
-mrbc_mruby_esp32_httpclient_gem_init(struct VM* vm)
+mrbc_esp32_httpclient_gem_init(struct VM* vm)
 {
 /*
 HTTPClient.init("http://foo.bar/)

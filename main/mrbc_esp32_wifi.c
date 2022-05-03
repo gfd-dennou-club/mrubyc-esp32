@@ -522,7 +522,7 @@ mrbc_esp32_wifi_ifconfig(mrb_vm* vm, mrb_value* v, int argc)
   @param vm mruby/c VM
 */
 void
-mrbc_mruby_esp32_wifi_gem_init(struct VM* vm)
+mrbc_esp32_wifi_gem_init(struct VM* vm)
 {
 /*
 WiFi.init()

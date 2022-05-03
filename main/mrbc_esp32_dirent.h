@@ -3,6 +3,6 @@
 
 #include "mrubyc.h"
 
-void mrbc_mruby_esp32_dirent_gem_init(struct VM*);
+void mrbc_esp32_dirent_gem_init(struct VM*);
 
 #endif // MRBC_ESP32_DIRENT_H

@@ -205,7 +205,7 @@ mrbc_esp32_i2c_read(mrb_vm* vm, mrb_value* v, int argc)
   @param vm mruby/c VM
 */
 void
-mrbc_mruby_esp32_i2c_gem_init(struct VM* vm)
+mrbc_esp32_i2c_gem_init(struct VM* vm)
 {
 /*
 I2C.new(port, scl, sda)

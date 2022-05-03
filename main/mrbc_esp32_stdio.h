@@ -3,7 +3,7 @@
 
 #include "mrubyc.h"
 
-void mrbc_mruby_esp32_stdio_gem_init(struct VM*);
+void mrbc_esp32_stdio_gem_init(struct VM*);
 
 #endif // MRBC_ESP32_STDIO_H
 

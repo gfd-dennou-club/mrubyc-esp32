@@ -381,7 +381,7 @@ mrbc_esp32_ili934x_draw_char(mrb_vm* vm, mrb_value* v, int argc)
 /*! Register SPI Class.p
  */
 void
-mrbc_mruby_esp32_spi_gem_init(struct VM* vm)
+mrbc_esp32_spi_gem_init(struct VM* vm)
 {
   // クラス SPI 定義
   mrbc_class_esp32_spi = mrbc_define_class(vm, "SPI", mrbc_class_object);

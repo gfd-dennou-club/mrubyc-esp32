@@ -3,6 +3,6 @@
 
 #include "mrubyc.h"
 
-void mrbc_mruby_esp32_i2c_gem_init(struct VM*);
+void mrbc_esp32_i2c_gem_init(struct VM*);
 
 #endif // MRBC_ESP32_I2C_H

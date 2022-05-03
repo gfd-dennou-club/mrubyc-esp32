@@ -115,7 +115,7 @@ static void mrbc_esp32_adc_read_adc2(mrb_vm *vm, mrb_value *v, int argc){
   @param vm mruby/c VM
 */
 void
-mrbc_mruby_esp32_adc_gem_init(struct VM* vm)
+mrbc_esp32_adc_gem_init(struct VM* vm)
 {
 /*
 ADC.init_adc1(pin)

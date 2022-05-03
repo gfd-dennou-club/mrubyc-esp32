@@ -220,7 +220,7 @@ static void mrbc_esp32_uart_flush_input(mrb_vm* vm, mrb_value* v, int argc)
   uart_flush_input(uart_num);
 }
 
-void mrbc_mruby_esp32_uart_gem_init(struct VM* vm)
+void mrbc_esp32_uart_gem_init(struct VM* vm)
 {
 /*
 UART.config(uart_num,bps,bits,parity,stop)

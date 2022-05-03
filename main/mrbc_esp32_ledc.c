@@ -146,7 +146,7 @@ mrbc_esp32_ledc_stop(mrb_vm* vm, mrb_value* v, int argc)
   @param vm mruby/c VM
 */
 void
-mrbc_mruby_esp32_ledc_gem_init(struct VM* vm)
+mrbc_esp32_ledc_gem_init(struct VM* vm)
 {
 /*
 LEDC.timer_config()
