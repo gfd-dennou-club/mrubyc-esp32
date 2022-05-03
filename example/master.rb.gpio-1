@@ -1,12 +1,8 @@
+# coding: utf-8
 #概要 summary
 
-=begin JA
-実行すると一秒毎にLED１が点滅します。
-=end JA
-
-=begin EN
-LED1 will blink every second.
-=end EN
+# 実行すると一秒毎に LED１ (GPIO 13) が点滅します。
+# LED1 (GPIO 13) will blink every second.
 
 led1 = GPIO.new( 13, GPIO::OUT )
 

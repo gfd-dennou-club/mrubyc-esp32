@@ -1,14 +1,10 @@
+# coding: utf-8
 #概要 summary
-
-=begin JA
-SW1が入力されている時LED1が光る
-SW2を入力するとLED１の状態を保存する。
-=end JA
-
-=begin EN
-When SW1 is input, LED1 glows.
-When SW2 is input, the state of LED1 is saved.
-=end EN
+#
+# SW1 (GPIO 34) が ON のときに LED1 (GPIO 13) が光る
+# When SW1 status is "ON", then LED1 glows.
+# SW2 (GPIO 35) を ON のときに，LED１ の状態が保持される (SW1 を ON/OFF しても LED1 の状態は変化しない)
+# When SW2 is input, the state of LED1 is saved.
 
 callback = Proc.new { |p|
   print(p)

@@ -1,3 +1,4 @@
+# coding: utf-8
 # 概要 summary
 
 =begin JA
@@ -10,19 +11,10 @@ When you enter SW1, the music of "Tetris" will be played.
 Inputting SW2, SW3, and SW4 will speed up the tempo.
 =end EN
 
+# sleep 入れないと動かないことがる．     
+pwm = PWM.new(15)
+sleep 1
 
-
-# coding: utf-8
-led = [
-  GPIO.new(13, GPIO::OUT),
-  GPIO.new(12, GPIO::OUT),
-  GPIO.new(14, GPIO::OUT),
-  GPIO.new(27, GPIO::OUT),    
-  GPIO.new(26, GPIO::OUT),    
-  GPIO.new(25, GPIO::OUT),    
-  GPIO.new(33, GPIO::OUT),    
-  GPIO.new(32, GPIO::OUT)    
-]
 sw = [
   GPIO.new(34, GPIO::IN, GPIO::PULL_UP),
   GPIO.new(35, GPIO::IN, GPIO::PULL_UP),
@@ -54,7 +46,6 @@ freq = [
   831,
   880,
 ]
-pitch = 1
 
 sound = [
   [14, 0.8], [9, 0.4], [10, 0.4], [12, 0.8], [10, 0.4], [9, 0.4], [7, 1.2],
@@ -62,32 +53,36 @@ sound = [
   [14, 0.8], [10, 0.8], [7, 0.8], [7, 1.6]
 ]
 
+pitch = 1
+
 while true
-  
-  pwm = PWM.new(15)
-  
-  #手前にないとなぜか動かない
-  if sw[0].read == 0
-    pwm.duty(0)
-  else
-    pwm.freq(freq[sound[i][0]])
-    pwm.duty(128)
-  end
-  
-  for i in 0..18 do
-    pitch = 1
-    for j in 1..3 do
-      if sw[j].read == 1
-        pitch |= (1<<(j))
-      end
-    end
-    
+
+  # 音楽を鳴らしている間にピッチの調整など出来るようにする.
+  for i in 0..17 do
+
+    # デューティー比
     if sw[0].read == 0
       pwm.duty(0)
     else
-      pwm.freq(freq[sound[i][0]])
-      pwm.duty(128)
+      pwm.duty(512)
     end
-    sleep(sound[i][1]/pitch)
+
+    # ON になっているスイッチの判定
+    pitch = 1
+    for j in 1..3 do
+      if sw[j].read == 1
+        pitch = j + 1
+      end
+    end
+
+    # 周波数の設定
+    pwm.frequency( freq[ sound[i][0] ] )
+
+    # 継続時間の設定
+    sleep( sound[i][1]/pitch )
+    
   end
+
+  # 少し休む
+  sleep 0.2
 end

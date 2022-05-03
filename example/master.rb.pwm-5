@@ -1,3 +1,4 @@
+# coding: utf-8
 #概要 summury
 
 =begin JA
@@ -32,62 +33,54 @@ sw = [
 pwm0 = PWM.new( 15 )
 
 while true
+  
+  if(sw[3].read==0) then
+    pwm0.duty(512)
+    i1=sw[0].read+sw[1].read+sw[2].read
+    time=1-i1*0.3
+    
+    pwm0.frequency(261)
+    led[1].write(1)
+    sleep(time)
+    led[1].write(0)
+    
+    pwm0.frequency(293)
+    led[2].write(1)
+    sleep(time)
+    led[2].write(0)
+    
+    pwm0.frequency(329)
+    led[3].write(1)
+    sleep(time)
+    led[3].write(0)
 
-	if(sw[3].read==0) then
+    pwm0.frequency(349)
+    led[4].write(1)
+    sleep(time)
+    led[4].write(0)
+    
+    pwm0.frequency(391)
+    led[5].write(1)
+    sleep(time)
+    led[5].write(0)
+    
+    pwm0.frequency(440)
+    led[6].write(1)
+    sleep(time)
+    led[6].write(0)
+    
+    pwm0.frequency(493)
+    led[7].write(1)
+    sleep(time)
+    led[7].write(0)
+    
+    pwm0.frequency(523)
+    led[8].write(1)
+    sleep(time)
+    led[8].write(0)
 
-		i1=sw[0].read+sw[1].read+sw[2].read
-		time=1-i1*0.3
-		pwm0.freq(261)
-		pwm0.duty(128)
-		led[1].write(1)
-		sleep(time)
-		led[1].write(0)
+  else
 
-		pwm0.freq(293)
-		pwm0.duty(128)
-		led[2].write(1)
-		sleep(time)
-		led[2].write(0)
-
-		pwm0.freq(329)
-		pwm0.duty(128)
-		led[3].write(1)
-		sleep(time)
-		led[3].write(0)
-
-		pwm0.freq(349)
-		pwm0.duty(128)
-		led[4].write(1)
-		sleep(time)
-		led[4].write(0)
-
-		pwm0.freq(391)
-		pwm0.duty(128)
-		led[5].write(1)
-		sleep(time)
-		led[5].write(0)
-
-		pwm0.freq(440)
-		pwm0.duty(128)
-		led[6].write(1)
-		sleep(time)
-		led[6].write(0)
-
-		pwm0.freq(493)
-		pwm0.duty(128)
-		led[7].write(1)
-		sleep(time)
-		led[7].write(0)
-
-		pwm0.freq(523)
-		pwm0.duty(128)
-		led[8].write(1)
-		sleep(time)
-		led[8].write(0)
-	else
-		pwm0.freq(5000)
-		pwm0.duty(256)
-
-	end
-
+    pwm0.duty(0)
+  end  
 end
