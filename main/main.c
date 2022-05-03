@@ -60,6 +60,9 @@
 #ifdef CONFIG_USE_ESP32_GPIO
 #include "models/gpio.h"
 #endif
+#ifdef CONFIG_USE_ESP32_PIN
+#include "models/pin.h"
+#endif
 #ifdef CONFIG_USE_ESP32_GPIO_IRQHANDLER
 #include "models/irq_handler.h"
 #endif
@@ -87,6 +90,13 @@
 #include "loops/slave.h"
 #endif
 #endif
+
+//***********************************************************
+// BEGIN COMPONENTS 1: INCLUDE CLASS files associated with mruby/c
+//
+// END COMPONENTS 1
+//-----------------------------------------------------------
+
 
 static const char *TAG = "iotex-esp32-mrubyc";
 
@@ -263,6 +273,10 @@ void app_main(void) {
   printf("start GPIO (mruby/c class)\n");
   mrbc_create_task( gpio, 0 );
 #endif
+#ifdef CONFIG_USE_ESP32_PIN
+  printf("start PIN (mruby/c class)\n");
+  mrbc_create_task( pin, 0 );
+#endif  
 #ifdef CONFIG_USE_ESP32_GPIO_IRQHANDLER
   printf("start GPIO IRQHandler (mruby/c task)\n");
   mrbc_create_task( irq_handler, 0 );
@@ -288,6 +302,12 @@ void app_main(void) {
   mrbc_create_task(uart, 0);
 #endif
 
+//***********************************************************
+// BEGIN COMPONENTS 2: INCLUDE CLASS files associated with mruby/c
+//
+// END COMPONENTS 2
+//-----------------------------------------------------------
+ 
   //master
   vTaskDelay(1000 / portTICK_RATE_MS);
   esp_vfs_spiffs_conf_t conf = {
