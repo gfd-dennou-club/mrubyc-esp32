@@ -1,4 +1,4 @@
-# coding: utf-8-hfs
+# coding: utf-8
 
 # `クラス変数`が働かないためグローバル変数で実装する
 $irq_instances = nil
@@ -36,7 +36,7 @@ class GPIO
 
   # コンストラクタ外からの再初期化
   def init(mode = -1, pull_mode = -1, value = -1)
-    GPIO.reset_pin(@pin)
+    gpio_reset_pin(@pin)
     setmode(mode)
     setpullmode(pull_mode)
     if(value != -1 && (mode == GPIO::OUT || mode == GPIO::OPEN_DRAIN))
@@ -49,10 +49,10 @@ class GPIO
   def set_wakeup(is_enable, level = 0)
     if(is_enable)
       puts "GPIO wakeup enable in #{@pin}"
-      GPIO.wakeup_enable(@pin, level + 4)
+      gpio_wakeup_enable(@pin, level + 4)
     else
       puts "GPIO wakeup disable in #{@pin}"
-      GPIO.wakeup_disable(@pin)
+      gpio_wakeup_disable(@pin)
     end
   end
 
@@ -62,27 +62,42 @@ class GPIO
       puts "invalid value detected"
       return
     end
-    GPIO.set_level(@pin, value)
+    gpio_set_level(@pin, value)
     puts "write #{value}"
   end
-
+  
+  # write(1) の別名
+  def on
+    write(1)
+  end
+  
+  # write(0) の別名
+  def off
+    write(0)
+  end
+  
   # 入力 値 0 または 1 を取得
   def read
-    GPIO.get_level(@pin)
+    gpio_get_level(@pin)
   end
 
+  # read の別名
+  def value
+    gpio_get_level(@pin)
+  end
+  
   # 入出力方向設定
   def setmode(mode)
     @mode = mode
     case @mode
     when GPIO::OUT then
-      GPIO.set_mode_output(@pin)
+      gpio_set_mode_output(@pin)
       puts "GPIO output mode #{@pin}"
     when GPIO::IN then
-      GPIO.set_mode_input(@pin)
+      gpio_set_mode_input(@pin)
       puts "GPIO input mode #{@pin}"
     when GPIO::OPEN_DRAIN then
-      GPIO.set_mode_open_drain(@pin)
+      gpio_set_mode_open_drain(@pin)
       puts "GPIO open_drain mode #{@pin}"
     end
   end
@@ -91,19 +106,19 @@ class GPIO
   def setpullmode(pull_mode)
     case pull_mode
     when GPIO::PULL_UP then
-      GPIO.set_pullup(@pin)
+      gpio_set_pullup(@pin)
       puts "GPIO pull_up #{@pin}"
     when GPIO::PULL_DOWN then
-      GPIO.set_pulldown(@pin)
+      gpio_set_pulldown(@pin)
       puts "GPIO pull_down #{@pin}"
     when GPIO::PULL_HOLD then
       if(@mode == GPIO::OUT || @mode == GPIO::OPEN_DRAIN)
-        GPIO.set_hold_enable(@pin)
+        gpio_set_hold_enable(@pin)
         puts "GPIO hold_enable #{@pin}"
       end
     else
       if(@mode == GPIO::OUT || @mode == GPIO::OPEN_DRAIN)
-        GPIO.set_hold_disable(@pin)
+        gpio_set_hold_disable(@pin)
         puts "GPIO hold_disable #{@pin}"
       end
     end
@@ -119,7 +134,7 @@ class GPIO
 
   # `ハンドラーの発火 0.01秒に一度自動で実行される
   def __check_handler()
-    if(GPIO.get_pin_state(@pin) & @trigger != 0)
+    if(gpio_get_pin_state(@pin) & @trigger != 0)
       @handler.(self)
     end
   end
