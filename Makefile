@@ -16,6 +16,12 @@ MKSPIFFS=$(shell which mkspiffs|xargs -I@ basename @)
 SPIFFS_DATA_OFFSET=$(shell awk '/spiffs/ {print $$0}' partitions.csv| cut -d , -f 4)
 SPIFFS_DATA_TABLE_SIZE=$(shell awk '/spiffs/ {print $$0}' partitions.csv| cut -d , -f 5)
 
+gems:
+	python bin/make-gems.py
+
+gems-clean:
+	python bin/clean-gems.py
+
 .PHONY: spiffs
 spiffs:
 	$(MRBC) -o ./spiffs/mrbc/master.mrbc -E ./mrblib/loops/master.rb
