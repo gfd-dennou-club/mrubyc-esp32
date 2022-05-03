@@ -1,7 +1,6 @@
 /*! @file
   @brief
-  mruby/c ADC class for ESP32
-  本クラスはインスタンスを生成せず利用する
+  mruby/c ADC functions for ESP32
 */
 
 #include "mrbc_esp32_adc.h"
@@ -20,22 +19,8 @@ static const adc_unit_t unit1 = ADC_UNIT_1;
 static const adc_unit_t unit2 = ADC_UNIT_2;
 
 
-/*! メソッド nop(count) 本体 : nop (no operation)
-
-  @param count nop の長さ、ダミー処理ループの回数
-*/
-static void
-mrbc_nop(mrb_vm* vm, mrb_value* v, int argc)
-{
-  // NO OPERATION
-  int max = GET_INT_ARG(1);
-  for ( int i = 0 ; i < max ; ++i ) {
-    unreferenced += 1;
-  }
-}
-
-/*! メソッド init_adc1(channel, atten, width)
-  @param channel  ADC のチャンネル (ピンによって決まっている)
+/*! init_adc1(channel, atten, width)
+  @param channel  ADC のチャンネル (ピンによって決まっている)
   @param atten    ADC の入力電圧の減衰率
   @param width    ADC のキャプチャ幅
 */
@@ -52,8 +37,27 @@ static void mrbc_esp32_adc_init_adc1(mrb_vm *vm, mrb_value *v, int argc){
   esp_adc_cal_characterize(unit1, atten, width, DEFAULT_VREF, adc_chars);
 }
 
-/*! メソッド read_adc1(channel)
-  @param channel  ADC のチャンネル (ピンによって決まっている)
+/*! rawread_adc1(channel)
+  @param channel  ADC のチャンネル (ピンによって決まっている)
+*/
+static void mrbc_esp32_adc_rawread_adc1(mrb_vm *vm, mrb_value *v, int argc){
+
+  uint32_t adc_reading = 0;
+
+  adc1_channel_t channel = GET_INT_ARG(1);
+  
+  //Multisampling
+  for (int i = 0; i < NO_OF_SAMPLES; i++) {
+    adc_reading += adc1_get_raw( channel );
+  }
+  adc_reading /= NO_OF_SAMPLES;
+  
+  //値を戻す
+  SET_INT_RETURN(adc_reading);
+}
+
+/*! read_adc1(channel)
+  @param channel  ADC のチャンネル (ピンによって決まっている)
 */
 static void mrbc_esp32_adc_read_adc1(mrb_vm *vm, mrb_value *v, int argc){
 
@@ -74,8 +78,8 @@ static void mrbc_esp32_adc_read_adc1(mrb_vm *vm, mrb_value *v, int argc){
   SET_INT_RETURN(millivolts);
 }
 
-/*! メソッド init_adc2(channel, atten, width)
-  @param channel  ADC のチャンネル (ピンによって決まっている)
+/*! init_adc2(channel, atten, width)
+  @param channel  ADC のチャンネル (ピンによって決まっている)
   @param atten    ADC の入力電圧の減衰率
   @param width    ADC のキャプチャ幅
 */
@@ -89,8 +93,28 @@ static void mrbc_esp32_adc_init_adc2(mrb_vm *vm, mrb_value *v, int argc){
   esp_adc_cal_characterize(unit2, atten, width, DEFAULT_VREF, adc_chars);
 }
 
-/*! メソッド read_adc2(channel, width)
-  @param channel  ADC のチャンネル (ピンによって決まっている)
+/*! rawread_adc2(channel, width)
+  @param channel  ADC のチャンネル (ピンによって決まっている)
+  @param width    ADC のキャプチャ幅
+*/
+static void mrbc_esp32_adc_rawread_adc2(mrb_vm *vm, mrb_value *v, int argc){
+  uint32_t adc_reading = 0;
+
+  adc2_channel_t channel = GET_INT_ARG(1);
+  int            width   = GET_INT_ARG(2);
+
+  for (int i = 0; i < NO_OF_SAMPLES; i++) {
+    int raw;
+    adc2_get_raw(channel, width, &raw);
+    adc_reading += raw;
+  }
+  adc_reading /= NO_OF_SAMPLES;
+
+  SET_INT_RETURN(adc_reading);
+}
+
+/*! read_adc2(channel, width)
+  @param channel  ADC のチャンネル (ピンによって決まっている)
   @param width    ADC のキャプチャ幅
 */
 static void mrbc_esp32_adc_read_adc2(mrb_vm *vm, mrb_value *v, int argc){
@@ -110,26 +134,17 @@ static void mrbc_esp32_adc_read_adc2(mrb_vm *vm, mrb_value *v, int argc){
 }
 
 /*! クラス定義処理を記述した関数
-  この関数を呼ぶことでクラス ADC が定義される
 
   @param vm mruby/c VM
 */
 void
 mrbc_esp32_adc_gem_init(struct VM* vm)
 {
-/*
-ADC.init_adc1(pin)
-ADC.read_adc1(pin)
-ADC.init_adc2(pin)
-ADC.read_adc2(pin)
-*/
-  // クラス ADC 定義
-  mrbc_class_esp32_adc = mrbc_define_class(vm, "ADC", mrbc_class_object);
-
   // 各メソッド定義（mruby/c ではインスタンスメソッドをクラスメソッドとしても呼び出し可能）
-  mrbc_define_method(vm, mrbc_class_esp32_adc, "init_adc1",      mrbc_esp32_adc_init_adc1);
-  mrbc_define_method(vm, mrbc_class_esp32_adc, "read_adc1",      mrbc_esp32_adc_read_adc1);
-  mrbc_define_method(vm, mrbc_class_esp32_adc, "init_adc2",      mrbc_esp32_adc_init_adc2);
-  mrbc_define_method(vm, mrbc_class_esp32_adc, "read_adc2",      mrbc_esp32_adc_read_adc2);
-  mrbc_define_method(vm, mrbc_class_esp32_adc, "nop",            mrbc_nop);
+  mrbc_define_method(vm, mrbc_class_esp32_adc, "adc1_init",      mrbc_esp32_adc_init_adc1);
+  mrbc_define_method(vm, mrbc_class_esp32_adc, "adc1_read",      mrbc_esp32_adc_read_adc1);
+  mrbc_define_method(vm, mrbc_class_esp32_adc, "adc1_rawread",   mrbc_esp32_adc_rawread_adc1);  
+  mrbc_define_method(vm, mrbc_class_esp32_adc, "adc2_init",      mrbc_esp32_adc_init_adc2);
+  mrbc_define_method(vm, mrbc_class_esp32_adc, "adc2_read",      mrbc_esp32_adc_read_adc2);
+  mrbc_define_method(vm, mrbc_class_esp32_adc, "adc2_rawread",   mrbc_esp32_adc_rawread_adc2);  
 }

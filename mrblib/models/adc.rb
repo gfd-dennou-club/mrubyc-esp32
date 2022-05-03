@@ -1,4 +1,4 @@
-# coding: utf-8-hfs
+# coding: utf-8
 class ADC
 
   # 定数
@@ -34,9 +34,9 @@ class ADC
     end
 
     if (@unit == 1)
-      ADC.init_adc1( @channel, @atten, @width )
+      adc1_init( @channel, @atten, @width )
     elsif(@unit == 2)
-      ADC.init_adc2( @channel, @atten, @width )
+      adc2_init( @channel, @atten, @width )
     end
 
     puts "*** adc.rb ***"
@@ -50,9 +50,18 @@ class ADC
   # 値の取得
   def read
     if (@unit == 1)
-      ADC.read_adc1( @channel )
+      adc1_read( @channel )
     elsif(@unit == 2)
-      ADC.read_adc2( @channel, @width )
+      adc2_read( @channel, @width )
+    end
+  end  
+
+  # カウント値の取得
+  def rawread
+    if (@unit == 1)
+      adc1_rawread( @channel )
+    elsif(@unit == 2)
+      adc2_rawread( @channel, @width )
     end
   end  
 end
