@@ -1,4 +1,4 @@
-menu "IoTeX ESP32 mrubyc Configuration"
+menu "mrubyc-esp32 Configuration"
     config USE_ESP32_FIRMWAREFLASH
         bool "USE ESP32 Firmware Flash"
         default n
