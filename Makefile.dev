@@ -30,7 +30,14 @@ gems:
 gems-clean:
 	python bin/clean-gems.py
 
-.PHONY: spiffs
+store-bin:
+	cp build/mrubyc-esp32.bin firmware/
+	cp build/mrubyc-esp32.elf firmware/
+	cp build/ota_data_initial.bin firmware/
+	cp build/partitions.bin firmware/
+	cp build/bootloader/bootloader.bin firmware/
+
+.PHONY: spiffs 
 
 spiffs:
 	$(MRBC) -o ./spiffs/mrbc/master.mrbc -E ./mrblib/master.rb
