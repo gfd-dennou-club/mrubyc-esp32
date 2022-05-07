@@ -35,6 +35,12 @@ all: single-task
 
 spiffs: single-task
 
+usr-mode:
+	ln -sf Makefile.usr Makefile
+
+dev-mode:
+	ln -sf Makefile.dev Makefile
+
 monitor: 
 	$(MONITOR) --port $(port) --baud 115900 $(FIRMWAREDIR)/mrubyc-esp32.elf
 
