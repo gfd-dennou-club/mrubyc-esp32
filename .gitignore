@@ -7,3 +7,6 @@ build/
 
 # build tempfile
 .firmwareflash
+
+# old file
+sdkconfig.old
