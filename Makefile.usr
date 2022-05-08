@@ -27,7 +27,8 @@ SPIFFS_OTA_OFFSET=$(shell awk '/otadata/ {print $$0}' partitions.csv| cut -d , -
 SPIFFS_OTA0_OFFSET=$(shell awk '/app0/ {print $$0}' partitions.csv| cut -d , -f 4)
 SPIFFS_DATA_OFFSET=$(shell awk '/spiffs/ {print $$0}' partitions.csv| cut -d , -f 4)
 SPIFFS_DATA_TABLE_SIZE=$(shell awk '/spiffs/ {print $$0}' partitions.csv| cut -d , -f 5)
-FIRMWAREDIR=./firmware
+FIRMWAREDIR_S=./firmware/single
+FIRMWAREDIR_M=./firmware/multi
 
 .PHONY: single-task multi-task flash
 
@@ -66,5 +67,10 @@ multi-task:
 	$(MKSPIFFS) -c ./spiffs/mrbc -p 256 -b 4096 -s $(SPIFFS_DATA_TABLE_SIZE) ./spiffs/mrbc.spiffs.bin
 	$(ESPTOOL) --chip esp32 --baud 921600 --port $(port) --before default_reset --after hard_reset write_flash -z --flash_mode qio --flash_freq 80m --flash_size detect $(SPIFFS_DATA_OFFSET) ./spiffs/mrbc.spiffs.bin
 
-flash:
-	$(ESPTOOL) --chip esp32 --baud 921600 --port $(port) --before default_reset --after hard_reset write_flash -z --flash_mode dio --flash_freq 40m --flash_size detect $(SPIFFS_OTA_OFFSET) $(FIRMWAREDIR)/ota_data_initial.bin 0x1000 $(FIRMWAREDIR)/bootloader.bin $(SPIFFS_OTA0_OFFSET) $(FIRMWAREDIR)/mrubyc-esp32.bin 0x8000 $(FIRMWAREDIR)/partitions.bin
+flash: flash-vm-single
+
+flash-vm-single:
+	$(ESPTOOL) --chip esp32 --baud 921600 --port $(port) --before default_reset --after hard_reset write_flash -z --flash_mode dio --flash_freq 40m --flash_size detect $(SPIFFS_OTA_OFFSET) $(FIRMWAREDIR_S)/ota_data_initial.bin 0x1000 $(FIRMWAREDIR_S)/bootloader.bin $(SPIFFS_OTA0_OFFSET) $(FIRMWAREDIR_S)/mrubyc-esp32.bin 0x8000 $(FIRMWAREDIR_S)/partitions.bin
+
+flash-vm-multi:
+	$(ESPTOOL) --chip esp32 --baud 921600 --port $(port) --before default_reset --after hard_reset write_flash -z --flash_mode dio --flash_freq 40m --flash_size detect $(SPIFFS_OTA_OFFSET) $(FIRMWAREDIR_M)/ota_data_initial.bin 0x1000 $(FIRMWAREDIR_M)/bootloader.bin $(SPIFFS_OTA0_OFFSET) $(FIRMWAREDIR_M)/mrubyc-esp32.bin 0x8000 $(FIRMWAREDIR_M)/partitions.bin
