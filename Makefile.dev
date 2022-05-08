@@ -18,8 +18,12 @@ MKSPIFFS=$(shell which mkspiffs|xargs -I@ basename @)
 SPIFFS_DATA_OFFSET=$(shell awk '/spiffs/ {print $$0}' partitions.csv| cut -d , -f 4)
 SPIFFS_DATA_TABLE_SIZE=$(shell awk '/spiffs/ {print $$0}' partitions.csv| cut -d , -f 5)
 
+user-mode: usr-mode
+
 usr-mode:
 	ln -sf Makefile.usr Makefile
+
+developer-mode: dev-mode
 
 dev-mode:
 	ln -sf Makefile.dev Makefile

@@ -29,21 +29,21 @@ SPIFFS_DATA_OFFSET=$(shell awk '/spiffs/ {print $$0}' partitions.csv| cut -d , -
 SPIFFS_DATA_TABLE_SIZE=$(shell awk '/spiffs/ {print $$0}' partitions.csv| cut -d , -f 5)
 FIRMWAREDIR=./firmware
 
-.PHONY: single-task multi-task monitor flash
+.PHONY: single-task multi-task flash
 
 all: single-task
 
 spiffs: single-task
 
+user-mode: usr-mode
+
 usr-mode:
 	ln -sf Makefile.usr Makefile
 
+developer-mode: dev-mode
+
 dev-mode:
 	ln -sf Makefile.dev Makefile
-
-monitor: 
-	$(MONITOR) --port $(port) --baud 115900 $(FIRMWAREDIR)/mrubyc-esp32.elf
-
 clean:
 ifeq ("$(mrbc_exist_bin)","./spiffs/mrbc.spiffs.bin")
 	$(RM) ./spiffs/mrbc.spiffs.bin
