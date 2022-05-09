@@ -1,7 +1,6 @@
 /*! @file
   @brief
-  mruby/c WiFi class for ESP32
-  本クラスはインスタンスを生成せず利用する
+  mruby/c WiFi functions for ESP32
   init() を最初に呼び出し、setup_psk() もしくは setup_ent_peap() で各種設定の後、start() で接続が開始される
 */
 
@@ -524,25 +523,16 @@ mrbc_esp32_wifi_ifconfig(mrb_vm* vm, mrb_value* v, int argc)
 void
 mrbc_esp32_wifi_gem_init(struct VM* vm)
 {
-/*
-WiFi.init()
-WiFi.setup_psk(ssid: ssid, password: password)
-WiFi.setup_ent_peap(id: id, ssid: ssid, username: username, password: password)
-WiFi.start()
-*/
-
-  // クラス WiFi 定義
-  mrbc_class_esp32_wifi = mrbc_define_class(vm, "WiFi", mrbc_class_object);
   // 各メソッド定義
-  mrbc_define_method(vm, mrbc_class_esp32_wifi, "init",           mrbc_esp32_wifi_init);
-  mrbc_define_method(vm, mrbc_class_esp32_wifi, "start",          mrbc_esp32_wifi_start);
-  mrbc_define_method(vm, mrbc_class_esp32_wifi, "setup_psk",      mrbc_esp32_wifi_setup_psk);
-  mrbc_define_method(vm, mrbc_class_esp32_wifi, "setup_ent_peap", mrbc_esp32_wifi_setup_ent_peap);
-  mrbc_define_method(vm, mrbc_class_esp32_wifi, "is_connected?",  mrbc_esp32_wifi_is_connected);
-  mrbc_define_method(vm, mrbc_class_esp32_wifi, "scan",  mrbc_esp32_wifi_scan);
-  mrbc_define_method(vm, mrbc_class_esp32_wifi, "mac",  mrbc_esp32_wifi_config_mac);
-  mrbc_define_method(vm, mrbc_class_esp32_wifi, "ip",  mrbc_esp32_wifi_config_ip);
-  mrbc_define_method(vm, mrbc_class_esp32_wifi, "ifconfig",  mrbc_esp32_wifi_ifconfig);
-  mrbc_define_method(vm, mrbc_class_esp32_wifi, "active",  mrbc_esp32_wifi_active);
+  mrbc_define_method(vm, mrbc_class_esp32_wifi, "wifi_init",           mrbc_esp32_wifi_init);
+  mrbc_define_method(vm, mrbc_class_esp32_wifi, "wifi_start",          mrbc_esp32_wifi_start);
+  mrbc_define_method(vm, mrbc_class_esp32_wifi, "wifi_setup_psk",      mrbc_esp32_wifi_setup_psk);
+  mrbc_define_method(vm, mrbc_class_esp32_wifi, "wifi_setup_ent_peap", mrbc_esp32_wifi_setup_ent_peap);
+  mrbc_define_method(vm, mrbc_class_esp32_wifi, "wifi_is_connected?",  mrbc_esp32_wifi_is_connected);
+  mrbc_define_method(vm, mrbc_class_esp32_wifi, "wifi_scan",           mrbc_esp32_wifi_scan);
+  mrbc_define_method(vm, mrbc_class_esp32_wifi, "wifi_mac",            mrbc_esp32_wifi_config_mac);
+  mrbc_define_method(vm, mrbc_class_esp32_wifi, "wifi_ip",             mrbc_esp32_wifi_config_ip);
+  mrbc_define_method(vm, mrbc_class_esp32_wifi, "wifi_ifconfig",       mrbc_esp32_wifi_ifconfig);
+  mrbc_define_method(vm, mrbc_class_esp32_wifi, "wifi_active",         mrbc_esp32_wifi_active);
 
 }

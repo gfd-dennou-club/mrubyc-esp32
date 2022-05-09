@@ -1,0 +1,34 @@
+# coding: utf-8
+
+wlan = WLAN.new('STA')
+wlan.active(true)
+
+# scan
+wlan.scan
+
+# connection
+wlan.connect("BFW6K-G-1DF00", "v7fykw68sebv")
+
+HTTPClient.init("http://www.gfd-dennou.org/") 
+HTTPClient.invoke()
+HTTPClient.cleanup()
+
+while true
+  # メインループ
+  puts wlan.ifconfig
+  puts wlan.config('ip')
+  puts wlan.config('mac')
+  
+  # WiFiの接続が切れたときに自動的に際接続する
+  if( ! wlan.is_connected? )
+    puts 'start reconnect....'
+    wlan.connect("BFW6K-G-1DF00", "v7fykw68sebv")
+    while true
+      if( wlan.is_connected? )
+        break
+      end
+      sleep 1
+    end
+  end
+  sleep 1
+end
