@@ -39,11 +39,6 @@
 #ifdef CONFIG_USE_ESP32_SPI
 #include "mrbc_esp32_spi.h"
 #endif
-#ifdef CONFIG_USE_ESP32_SPI_SD
-#include "mrbc_esp32_sdspi.h"
-#include "mrbc_esp32_stdio.h"
-#include "mrbc_esp32_dirent.h"
-#endif
 #ifdef CONFIG_USE_ESP32_UART
 #include "mrbc_esp32_uart.h"
 #endif
@@ -251,12 +246,6 @@ void app_main(void) {
 #ifdef CONFIG_USE_ESP32_SPI
   printf("start SPI (C) \n");
   mrbc_esp32_spi_gem_init(0);
-#endif
-#ifdef CONFIG_USE_ESP32_SPI_SD
-  printf("start SDSPI and ESP32 stdio (C)\n");
-  mrbc_esp32_sdspi_gem_init(0);
-  mrbc_esp32_stdio_gem_init(0);
-  mrbc_esp32_dirent_gem_init(0);
 #endif
 #ifdef CONFIG_USE_ESP32_UART
   printf("start UART (C)\n");
