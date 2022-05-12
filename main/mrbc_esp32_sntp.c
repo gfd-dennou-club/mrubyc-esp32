@@ -25,6 +25,9 @@ mrbc_esp32_sntp_init(mrb_vm* vm, mrb_value* v, int argc)
   const int len = 7;    //時刻の要素は 7
   uint8_t buf[len];
  
+  // Array インスタンスを生成
+  result = mrbc_array_new(vm, len);
+
   // STNP 初期化
   ESP_LOGI(tag, "Initializing SNTP");
   sntp_setoperatingmode(SNTP_OPMODE_POLL);
@@ -48,14 +51,15 @@ mrbc_esp32_sntp_init(mrb_vm* vm, mrb_value* v, int argc)
   localtime_r(&now, &timeinfo);
 
   //配列 buf に登録
-  buf[0] = timeinfo.tm_year + 1900;
+  //  buf[0] = timeinfo.tm_year + 1900;
+  buf[0] = timeinfo.tm_year;
   buf[1] = timeinfo.tm_mon + 1;
   buf[2] = timeinfo.tm_mday;
   buf[3] = timeinfo.tm_wday;
   buf[4] = timeinfo.tm_hour;
   buf[5] = timeinfo.tm_min;
   buf[6] = timeinfo.tm_sec;
-  
+
   // Array インスタンス result に Fixnum インスタンスとして read データをセット
   for ( int x = 0; x < len; ++x ) {
     mrbc_array_set(&result, x, &mrbc_fixnum_value(buf[x]));
@@ -64,7 +68,6 @@ mrbc_esp32_sntp_init(mrb_vm* vm, mrb_value* v, int argc)
   // Array インスタンス result を本メソッドの返り値としてセット
   SET_RETURN( result );
 }
-
 /*
 static void
 mrbc_esp32_sntp_year(mrb_vm* vm, mrb_value* v, int argc)
@@ -102,7 +105,6 @@ mrbc_esp32_sntp_sec(mrb_vm* vm, mrb_value* v, int argc)
    SET_INT_RETURN( timeinfo.tm_sec);
 }
 */
-
 /*! クラス定義処理を記述した関数
 
   @param vm mruby/c VM

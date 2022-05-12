@@ -1,0 +1,27 @@
+# coding: utf-8
+wlan = WLAN.new('STA')
+wlan.active(true)
+
+# scan
+wlan.scan
+
+# connection
+while true
+  # ネットワークパラメタを定期的に表示
+  puts wlan.ifconfig
+  puts wlan.config('ip')
+  puts wlan.config('mac')
+
+  # WiFiの接続が切れたときに自動的に際接続する
+  if( ! wlan.is_connected? )
+    puts 'start reconnect....'
+    wlan.connect("SugiyamaLab", "epi.it.matsue-ct.jp")
+    while true
+      if( wlan.is_connected? )
+        break
+      end
+      sleep 1
+    end
+  end
+  sleep 1
+end
