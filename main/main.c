@@ -26,15 +26,11 @@
 #endif
 #ifdef CONFIG_USE_ESP32_WIFI
 #include "mrbc_esp32_wifi.h"
+#include "mrbc_esp32_sntp.h"
+#include "mrbc_esp32_http_client.h"
 #endif
 #ifdef CONFIG_USE_ESP32_SLEEP
 #include "mrbc_esp32_sleep.h"
-#endif
-#ifdef CONFIG_USE_ESP32_SNTP
-#include "mrbc_esp32_sntp.h"
-#endif
-#ifdef CONFIG_USE_ESP32_HTTP_CLIENT
-#include "mrbc_esp32_http_client.h"
 #endif
 #ifdef CONFIG_USE_ESP32_SPI
 #include "mrbc_esp32_spi.h"
@@ -72,6 +68,7 @@
 #endif
 #ifdef CONFIG_USE_ESP32_WIFI
 #include "models/wlan.h"
+#include "models/sntp.h"
 #endif
 #ifdef CONFIG_USE_ESP32_SPI
 #include "models/spi.h"
@@ -230,18 +227,12 @@ void app_main(void) {
 #ifdef CONFIG_USE_ESP32_WIFI
   printf("start WiFi (C) \n");
   mrbc_esp32_wifi_gem_init(0);
+  mrbc_esp32_sntp_gem_init(0);
+  mrbc_esp32_httpclient_gem_init(0);  
 #endif
 #ifdef CONFIG_USE_ESP32_SLEEP
   printf("start SLEEP (C) \n");
   mrbc_esp32_sleep_gem_init(0);
-#endif
-#ifdef CONFIG_USE_ESP32_SNTP
-  printf("start SNTP (C) \n");
-  mrbc_esp32_sntp_gem_init(0);
-#endif
-#ifdef CONFIG_USE_ESP32_HTTP_CLIENT
-  printf("start HTTPClient (C) \n");
-  mrbc_esp32_httpclient_gem_init(0);
 #endif
 #ifdef CONFIG_USE_ESP32_SPI
   printf("start SPI (C) \n");
@@ -288,6 +279,7 @@ void app_main(void) {
 #ifdef CONFIG_USE_ESP32_WIFI
   printf("start WLAN (mruby/c class) \n");
   mrbc_create_task(wlan, 0);
+  mrbc_create_task(sntp, 0);
 #endif
 #ifdef CONFIG_USE_ESP32_SPI
   printf("start SPI (mruby/c class)\n");

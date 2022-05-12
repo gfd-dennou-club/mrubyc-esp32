@@ -1,0 +1,15 @@
+# coding: utf-8
+wlan = WLAN.new('STA')
+wlan.active(true)
+
+# WiFiの接続
+puts 'start connect....'
+wlan.connect("SugiyamaLab", "epi.it.matsue-ct.jp")
+
+# 時刻合わせ
+puts 'start SNTP...'
+sntp = SNTP.new
+puts sprintf("%02d-%02d-%02d", sntp.year2, sntp.mon, sntp.mday)
+puts sprintf("%02d:%02d:%02d", sntp.hour,  sntp.min, sntp.sec )
+
+

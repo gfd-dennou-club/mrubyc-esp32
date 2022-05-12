@@ -1,0 +1,69 @@
+# coding: utf-8
+
+#I2C 初期化
+i2c = I2C.new(22, 21)
+
+# RTC 初期化. 時刻設定
+rtc = RX8035SA.new(i2c)
+
+# LCD 初期化
+lcd = AQM0802A.new(i2c)
+
+# Wi-Fi 初期化
+wlan = WLAN.new('STA')
+wlan.active(true)
+
+# WiFiの接続
+puts 'start connect....'
+wlan.connect("SugiyamaLab", "epi.it.matsue-ct.jp")
+
+# 時刻合わせ
+puts 'start SNTP...'
+sntp = SNTP.new
+puts sprintf("%02d-%02d-%02d", sntp.year2, sntp.mon, sntp.mday)
+puts sprintf("%02d:%02d:%02d", sntp.hour,  sntp.min, sntp.sec )
+
+# 書き込み. 年(下2桁), 月, 日, 曜日, 時, 分, 秒
+rtc.write([sntp.year2,
+           sntp.mon,
+           sntp.mday,
+           sntp.wday,
+           sntp.hour,
+           sntp.min,
+           sntp.sec
+          ]) 
+
+# LCD に "Hello World" 表示
+lcd.cursor(1, 0)
+lcd.write_string("Hello!")
+
+# i2c で直接送信
+lcd.cursor(0, 1)
+#opcode = 0x40.chr
+#i2c.write(0x3e, opcode + "from ESP")
+lcd.write_string("from ESP")
+sleep(10)
+
+
+while true
+ 
+  # 時刻取得
+  tt = rtc.read
+
+  # 書き出し
+  puts sprintf("%02d-%02d-%02d", tt[0], tt[1], tt[2])
+  puts sprintf("%02d:%02d:%02d", tt[4], tt[5], tt[6])
+
+  # 時刻表示
+  lcd.cursor(0, 0)
+  lcd.write_string( sprintf("%02d-%02d-%02d", tt[0], tt[1], tt[2]) )
+  lcd.cursor(0, 1)
+  lcd.write_string( sprintf("%02d:%02d:%02d", tt[4], tt[5], tt[6]) )
+  
+  # 待ち時間
+  sleep 0.5
+end
+
+
+
+
