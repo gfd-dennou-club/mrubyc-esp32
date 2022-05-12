@@ -24,7 +24,7 @@ dirs = glob.glob('components/*')
 for dir in dirs:
     if os.path.basename(dir) != "mrubyc":
 
-        files = glob.glob(dir + '/mrblib/*rb')
+        files = glob.glob(dir + '/mrblib/models/*rb')
         for file in files:
             path, ext = os.path.splitext( os.path.basename(file) )
             path2     = os.path.splitext( os.path.dirname(file) )
