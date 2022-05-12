@@ -1,7 +1,6 @@
 /*! @file
   @brief
   mruby/c SNTP class for ESP32
-  本クラスはインスタンスを生成せず利用する
 */
 
 #include "mrbc_esp32_sntp.h"
@@ -20,8 +19,11 @@ struct tm timeinfo = { 0 };
 static void
 mrbc_esp32_sntp_init(mrb_vm* vm, mrb_value* v, int argc)
 {
+  mrbc_value result;
   int retry  = 0;
   const int retry_count = 10;
+  const int len = 7;    //時刻の要素は 7
+  uint8_t buf[len];
  
   // STNP 初期化
   ESP_LOGI(tag, "Initializing SNTP");
@@ -44,8 +46,26 @@ mrbc_esp32_sntp_init(mrb_vm* vm, mrb_value* v, int argc)
 
   //tm 構造体に格納
   localtime_r(&now, &timeinfo);
+
+  //配列 buf に登録
+  buf[0] = timeinfo.tm_year + 1900;
+  buf[1] = timeinfo.tm_mon + 1;
+  buf[2] = timeinfo.tm_mday;
+  buf[3] = timeinfo.tm_wday;
+  buf[4] = timeinfo.tm_hour;
+  buf[5] = timeinfo.tm_min;
+  buf[6] = timeinfo.tm_sec;
+  
+  // Array インスタンス result に Fixnum インスタンスとして read データをセット
+  for ( int x = 0; x < len; ++x ) {
+    mrbc_array_set(&result, x, &mrbc_fixnum_value(buf[x]));
+  }
+
+  // Array インスタンス result を本メソッドの返り値としてセット
+  SET_RETURN( result );
 }
 
+/*
 static void
 mrbc_esp32_sntp_year(mrb_vm* vm, mrb_value* v, int argc)
 {
@@ -81,29 +101,23 @@ mrbc_esp32_sntp_sec(mrb_vm* vm, mrb_value* v, int argc)
 {
    SET_INT_RETURN( timeinfo.tm_sec);
 }
+*/
 
 /*! クラス定義処理を記述した関数
-  この関数を呼ぶことでクラス SNTP が定義される
 
   @param vm mruby/c VM
 */
 void
 mrbc_esp32_sntp_gem_init(struct VM* vm)
 {
-/*
-SNTP.init()
-SNTP.get_time()
-*/
-  // クラス SNTP 定義
-  mrbc_class_esp32_sntp = mrbc_define_class(vm, "SNTP", mrbc_class_object);
-
-  // 各メソッド定義（mruby/c ではインスタンスメソッドをクラスメソッドとしても呼び出し可能）
-  mrbc_define_method(vm, mrbc_class_esp32_sntp, "init",  mrbc_esp32_sntp_init);
-  mrbc_define_method(vm, mrbc_class_esp32_sntp, "year",  mrbc_esp32_sntp_year);
-  mrbc_define_method(vm, mrbc_class_esp32_sntp, "mon",   mrbc_esp32_sntp_mon);
-  mrbc_define_method(vm, mrbc_class_esp32_sntp, "mday",  mrbc_esp32_sntp_mday);
-  mrbc_define_method(vm, mrbc_class_esp32_sntp, "wday",  mrbc_esp32_sntp_wday);
-  mrbc_define_method(vm, mrbc_class_esp32_sntp, "hour",  mrbc_esp32_sntp_hour);
-  mrbc_define_method(vm, mrbc_class_esp32_sntp, "min",   mrbc_esp32_sntp_min);
-  mrbc_define_method(vm, mrbc_class_esp32_sntp, "sec",   mrbc_esp32_sntp_sec);
+  mrbc_define_method(vm, mrbc_class_esp32_sntp, "sntp_init",  mrbc_esp32_sntp_init);
+  /*
+  mrbc_define_method(vm, mrbc_class_esp32_sntp, "sntp_year",  mrbc_esp32_sntp_year);
+  mrbc_define_method(vm, mrbc_class_esp32_sntp, "sntp_mon",   mrbc_esp32_sntp_mon);
+  mrbc_define_method(vm, mrbc_class_esp32_sntp, "sntp_mday",  mrbc_esp32_sntp_mday);
+  mrbc_define_method(vm, mrbc_class_esp32_sntp, "sntp_wday",  mrbc_esp32_sntp_wday);
+  mrbc_define_method(vm, mrbc_class_esp32_sntp, "sntp_hour",  mrbc_esp32_sntp_hour);
+  mrbc_define_method(vm, mrbc_class_esp32_sntp, "sntp_min",   mrbc_esp32_sntp_min);
+  mrbc_define_method(vm, mrbc_class_esp32_sntp, "sntp_sec",   mrbc_esp32_sntp_sec);
+  */
 }

@@ -45,12 +45,6 @@ menu "mrubyc-esp32 Configuration"
         help
             use SPI function?
 
-    config USE_ESP32_SPI_SD
-        bool "USR ESP32 SPI_SD"
-        default n
-        help
-            use SPI SD function?
-
     config USE_ESP32_UART
         bool "USR ESP32 UART"
         default n
@@ -62,20 +56,6 @@ menu "mrubyc-esp32 Configuration"
         default y
         help
             use WIFI function?
-
-    config USE_ESP32_SNTP
-        bool "SERVICE: SNTP"
-	depends on USE_ESP32_WIFI
-        default y
-        help
-            use SNTP function?
-
-    config USE_ESP32_HTTP_CLIENT
-        bool "SERVICE: HTTP_CLIENT"
-	depends on USE_ESP32_WIFI	
-        default y
-        help
-            use HTTP_CLIENT function?
 
     config USE_ESP32_SLEEP
         bool "USE DEEP SLEEP"
