@@ -15,7 +15,7 @@ while true
   # WiFiの接続が切れたときに自動的に際接続する
   if( ! wlan.is_connected? )
     puts 'start reconnect....'
-    wlan.connect("SugiyamaLab", "epi.it.matsue-ct.jp")
+    wlan.connect("essid", "passwd")
     while true
       if( wlan.is_connected? )
         break
