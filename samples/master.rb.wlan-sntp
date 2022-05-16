@@ -4,7 +4,7 @@ wlan.active(true)
 
 # WiFiの接続
 puts 'start connect....'
-wlan.connect("SugiyamaLab", "epi.it.matsue-ct.jp")
+wlan.connect("essid", "passwd")
 
 # 時刻合わせ
 puts 'start SNTP...'
