@@ -1,41 +1,156 @@
 # coding: utf-8
 
+###
+### Hello World
+###
+=begin
 while true
   puts "hello world from ESP32"
   sleep 1
 end
+=end
+
+###
+### GPIO PIN or SWITCH
+###
 
 =begin
-sleep 0.1
-wlan = WLAN.new('STA')
-wlan.active(true)
+led1 = GPIO.new( 13, GPIO::OUT )
+sw1  = GPIO.new( 34, GPIO::IN, GPIO::PULL_UP )
 
-# scan
-wlan.scan
-
-# connection
 while true
-  # ネットワークパラメタを定期的に表示
-  puts wlan.ifconfig
-  puts wlan.config('ip')
-  puts wlan.config('mac')
-  wlan.invoke( "http://www.gfd-dennou.org/" )
-  
-  # WiFiの接続が切れたときに自動的に際接続する
-  if( ! wlan.is_connected? )
-    puts 'start reconnect....'
-#    wlan.connect("essid", "pass")
-    wlan.connect("SugiyamaLab", "epi.it.matsue-ct.jp")
-    while true
-      if( wlan.is_connected? )
-        break
-      end
-      sleep 1
-    end
+ if (sw1.read == 1)
+    led1.write(1)
+  else
+    led1.write(0)
   end
   sleep 1
 end
 =end
+
+=begin
+led1 = GPIO.new( 12, GPIO::OUT )
+while true
+  led1.on
+  sleep 1
+
+  led1.off
+  sleep 1
+end
+=end
+
+=begin
+led1 = GPIO.new( 13, GPIO::OUT )
+while true
+  led1.write(1)
+  sleep 1
+
+  led1.write(0)
+  sleep 1
+end
+=end
+
+###
+### PWM
+###
+
+=begin
+pwm = PWM.new(13)
+pwm.frequency( 1000 )
+num = 10
+
+while true
+  for i in 0..num do
+    duty = ( 1023 / num ) * i
+    pwm.duty( duty )
+    sleep 10.0 / num
+  end
+  # 少し休む
+  sleep 0.2
+end
+=end
+
+=begin
+pwm0 = PWM.new( 15 )
+
+pwm0.freq(5000)
+pwm0.duty(512)
+sleep 10
+pwm0.deinit
+=end
+
+###
+### ADC
+###
+
+=begin
+# A/D 変換 初期化
+adc = ADC.new( 39, ADC::ATTEN_11DB, ADC::WIDTH_12BIT )
+
+#温度計測用変数初期化
+B = 3435.0
+To = 25.0
+V = 3300.0
+Rref = 10.0
+
+while true
+  voltage = adc.read()
+  temp = 1.0 / ( 1.0 / B * Math.log( (V - voltage) / (voltage/ Rref) / Rref) + 1.0 / (To + 273.0)) - 273.0
+  puts "#{voltage} mV, #{temp} K"
+  sleep(10)
+end
+=end
+
+
+###
+### UART
+### 
+
+=begin
+# GPS初期化 txPin = 17, rxPin = 16 のため uart_num = 2 とする
+gps = UART.new(2, 9600)
+
+# GPSの電源を設定
+gps_pw = GPIO.new(5, GPIO::OUT)
+gps_pw.write(0)
+
+# データの到着まで少し待つ
+sleep 2
+
+# 4096バイトもデータがないため、nilが表示される
+puts "> gps.read(4096)"
+p gps.read(4096)
+
+# 4096バイトのデータはないが、
+# nonblockのため到着している分のデータが表示される
+puts "> gps.read_nonblock(4096)"
+puts gps.read_nonblock(4096)
+
+# データの到着まで少し待つ
+sleep 2
+
+# 入力データをclear_tx_bufferで消去する
+puts "> gps.clear_tx_buffer"
+gps.clear_tx_buffer
+# こちらは消去されているため何も表示されない
+puts "> gps.read_nonblock(4096)"
+puts gps.read_nonblock(4096)
+
+puts "*---------------------------*"
+# データの到着まで少し待つ
+sleep 2
+
+while true
+    # 以下、1行ずつ読み込んで表示
+    puts gps.gets()
+    sleep 1
+end
+=end
+
+
+###
+### I2C
+###
 
 =begin
 @lcd_address = 0x3e
@@ -115,7 +230,6 @@ def rtc2_get(i2c, tt)
   tt['sec']  = buf[1]
 end
 
-
 #I2C 初期化
 i2c = I2C.new(22, 21)
 
@@ -159,122 +273,94 @@ while true
 end
 =end
 
+
+###
+### WLAN
+###
+
 =begin
-# GPS初期化 txPin = 17, rxPin = 16 のため uart_num = 2 とする
-gps = UART.new(2, 9600)
+sleep 0.1
+wlan = WLAN.new('STA')
+wlan.active(true)
 
-# GPSの電源を設定
-gps_pw = GPIO.new(5, GPIO::OUT)
-gps_pw.write(0)
+# scan
+wlan.scan
 
-# データの到着まで少し待つ
-sleep 2
-
-# 4096バイトもデータがないため、nilが表示される
-puts "> gps.read(4096)"
-p gps.read(4096)
-
-# 4096バイトのデータはないが、
-# nonblockのため到着している分のデータが表示される
-puts "> gps.read_nonblock(4096)"
-puts gps.read_nonblock(4096)
-
-# データの到着まで少し待つ
-sleep 2
-
-# 入力データをclear_tx_bufferで消去する
-puts "> gps.clear_tx_buffer"
-gps.clear_tx_buffer
-# こちらは消去されているため何も表示されない
-puts "> gps.read_nonblock(4096)"
-puts gps.read_nonblock(4096)
-
-puts "*---------------------------*"
-# データの到着まで少し待つ
-sleep 2
-
+# connection
 while true
-    # 以下、1行ずつ読み込んで表示
-    puts gps.gets()
-    sleep 1
-end
-=end
-=begin
-# A/D 変換 初期化
-adc = ADC.new( 39, ADC::ATTEN_11DB, ADC::WIDTH_12BIT )
-
-#温度計測用変数初期化
-B = 3435.0
-To = 25.0
-V = 3300.0
-Rref = 10.0
-
-while true
-  voltage = adc.read()
-  temp = 1.0 / ( 1.0 / B * Math.log( (V - voltage) / (voltage/ Rref) / Rref) + 1.0 / (To + 273.0)) - 273.0
-  puts "#{voltage} mV, #{temp} K"
-  sleep(10)
-end
-=end
-
-=begin
-pwm = PWM.new(13)
-pwm.frequency( 1000 )
-num = 10
-
-while true
-  for i in 0..num do
-    duty = ( 1023 / num ) * i
-    pwm.duty( duty )
-    sleep 10.0 / num
-  end
-  # 少し休む
-  sleep 0.2
-end
-=end
-
-=begin
-pwm0 = PWM.new( 15 )
-
-pwm0.freq(5000)
-pwm0.duty(512)
-sleep 10
-pwm0.deinit
-=end
-
-=begin
-led1 = GPIO.new( 13, GPIO::OUT )
-sw1  = GPIO.new( 34, GPIO::IN, GPIO::PULL_UP )
-
-while true
- if (sw1.read == 1)
-    led1.write(1)
-  else
-    led1.write(0)
+  # ネットワークパラメタを定期的に表示
+  puts wlan.ifconfig
+  puts wlan.config('ip')
+  puts wlan.config('mac')
+  wlan.invoke( "http://www.gfd-dennou.org/" )
+  
+  # WiFiの接続が切れたときに自動的に際接続する
+  if( ! wlan.is_connected? )
+    puts 'start reconnect....'
+    wlan.connect("essid", "pass")
+    while true
+      if( wlan.is_connected? )
+        break
+      end
+      sleep 1
+    end
   end
   sleep 1
 end
 =end
 
-=begin
-led1 = GPIO.new( 12, GPIO::OUT )
-while true
-  led1.on
-  sleep 1
 
-  led1.off
+###
+### WLAN
+###
+
+=begin
+sleep 0.1
+wlan = WLAN.new('STA')
+wlan.active(true)
+
+# scan
+wlan.scan
+
+# connection
+while true
+  # ネットワークパラメタを定期的に表示
+  puts wlan.ifconfig
+  puts wlan.config('ip')
+  puts wlan.config('mac')
+  wlan.invoke( "http://www.gfd-dennou.org/" )
+  
+  # WiFiの接続が切れたときに自動的に際接続する
+  if( ! wlan.is_connected? )
+    puts 'start reconnect....'
+    wlan.connect("essid", "pass")
+    while true
+      if( wlan.is_connected? )
+        break
+      end
+      sleep 1
+    end
+  end
   sleep 1
 end
 =end
 
+
+###
+### WLAN + SNTP
+###
 =begin
-led1 = GPIO.new( 13, GPIO::OUT )
-while true
-  led1.write(1)
-  sleep 1
+sleep 0.1
+wlan = WLAN.new('STA')
+wlan.active(true)
 
-  led1.write(0)
-  sleep 1
-end
+# connect
+wlan.connect("essid", "pass")
+
+# SNTP
+time = SNTP.new()
+
+# 表示
+puts "現在時刻:"
+puts sprintf("%04d-%02d-%02d %02d:%02d:%02d", time.year, time.mon, time.mday, time.hour, time.min, time.sec)
 =end
-

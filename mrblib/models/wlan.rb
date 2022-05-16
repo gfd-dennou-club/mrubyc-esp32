@@ -56,11 +56,20 @@ class WLAN
     end
   end
 
-  # HTTP_client
+  
+  ###
+  ### HTTP_client
+  ###
   def invoke( url )
     HTTPClient.init( url )
     HTTPClient.invoke()
     HTTPClient.cleanup()
   end
 
+  def access( url )
+    HTTPClient.init( url )
+    HTTPClient.invoke()
+    HTTPClient.cleanup()
+  end
+ 
 end
