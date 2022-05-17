@@ -4,9 +4,10 @@ class WLAN
 
   STA_IF = 0   #端末
   AP_IF  = 1   #アクセスポイント
- 
+  ACTIVE = true
+  
   # 初期化
-  def initialize( name )
+  def initialize( name, flag = false )
 
     if name == 'STA'
       puts "STA_IF mode is selected"
@@ -14,6 +15,10 @@ class WLAN
     else
       puts "Sorry, AP_IF is not supported"
       stop
+    end
+
+    if flag == true 
+      wifi_init()
     end
   end
 
