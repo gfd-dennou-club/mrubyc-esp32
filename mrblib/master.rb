@@ -3,13 +3,13 @@
 ###
 ### Hello World
 ###
-=begin
+
 $msg = "ESP32"
 while true
   puts "hello world from #{$msg}"
   sleep 1
 end
-=end
+
 
 ###
 ### GPIO PIN or SWITCH
@@ -326,172 +326,4 @@ time = SNTP.new()
 puts "現在時刻:"
 puts sprintf("%04d-%02d-%02d %02d:%02d:%02d", time.year, time.mon, time.mday, time.hour, time.min, time.sec)
 =end
-
-
-
-
-###
-### IoT 
-###
-
-
-@lcd_address = 0x3e
-@rtc_address = 0x32
-
-def lcd_cmd(i2c, cmd)
-  i2c.writeto(@lcd_address, [0x00, cmd])
-end
-
-def lcd_data(i2c, data)
-  i2c.writeto(@lcd_address, [0x40, data])
-end
-
-def lcd_clear(i2c)
-  lcd_cmd(i2c, 0x01)
-  sleep 0.1
-end
-
-def lcd_home0(i2c)
-  lcd_cmd(i2c, 0x02)
-  sleep 0.1
-end
-
-def lcd_home1(i2c)
-  lcd_cmd(i2c, 0x40|0x80)
-  sleep 0.1
-end
-
-def lcd_cursor(i2c, x, y)
-  pos = (x + y * 0x40) | 0x80
-  lcd_cmd(i2c, pos)
-  sleep 0.1
-end
-
-def lcd_init(i2c)
-  sleep 0.2
-  [0x38, 0x39, 0x14, 0x70, 0x56, 0x6c].each do |cmd|
-    lcd_cmd(i2c, cmd)
-  end
-  sleep(0.3)
-  [0x38, 0x0c, 0x01].each do |cmd|
-    lcd_cmd(i2c, cmd)
-  end
-  sleep(0.1)
-end
-
-def lcd_print(i2c, data)
-  data.length.times do |n|
-    lcd_data(i2c, data[n].ord)
-  end
-end
-
-def rtc2_init(i2c)
-  i2c.writeto(0x32, [0xE0, 0x00, 0x00])
-  sleep 0.1
-end
-
-def rtc2_set( i2c, year, mon, mday, wday, hour, min, sec )
-#  p year, mon, mday, wday, hour, min, sec 
-  
-  # BCDコードへ変換. 年(下2桁), 月, 日, 曜日, 時, 分, 秒
-  year0 = (year / 10).to_i(2) << 4 | (year % 10).to_i(2)
-  mon0  = (mon  / 10).to_i(2) << 4 | (mon  % 10).to_i(2)
-  mday0 = (mday / 10).to_i(2) << 4 | (mday % 10).to_i(2)
-  wday0 = (wday / 10).to_i(2) << 4 | (wday % 10).to_i(2)
-  hour0 = (hour / 10).to_i(2) << 4 | (hour % 10).to_i(2)
-  min0  = (min  / 10).to_i(2) << 4 | (min  % 10).to_i(2)
-  sec0  = (sec  / 10).to_i(2) << 4 | (sec  % 10).to_i(2)
-
-  i2c.writeto(@rtc_address, [0x00, sec0, min0, hour0|0x80, wday0, mday0, mon0, year0])
-  sleep 0.1
-  i2c.writeto(@rtc_address, [0xF0, 0x00])
-  sleep 0.1
-end
-
-def rtc2_get(i2c, tt)
-  buf = i2c.read(@rtc_address, 8)   # 8 バイト分読み込み --> strings
-  p buf
-  buf = i2c.readfrom(@rtc_address, 8)   # 8 バイト分読み込み
-  p buf
-
-  tt['year'] = buf[7]
-  tt['mon']  = buf[6]
-  tt['mday'] = buf[5]
-  tt['hour'] = buf[3] & 0x3f
-  tt['min']  = buf[2]
-  tt['sec']  = buf[1]
-end
-
-#I2C 初期化
-i2c = I2C.new(22, 21)
-
-# RTC 初期化. 時刻設定
-rtc2_init( i2c )
-
-# LCD 初期化
-lcd_init( i2c )
-
-# A/D 変換 初期化
-adc = ADC.new( 39, ADC::ATTEN_11DB, ADC::WIDTH_12BIT )
-
-#温度計測用変数初期化
-B = 3435.0
-To = 25.0
-V = 3300.0
-Rref = 10.0
-
-# 無線初期化
-wlan = WLAN.new('STA', WLAN::ACTIVE)
-
-# connect
-wlan.connect("SugiyamaLab", "epi.it.matsue-ct.jp")
-
-# SNTP
-time = SNTP.new()
-
-# RTCに時刻を与える.
-rtc2_set(i2c, time.year2, time.mon, time.mday, time.wday, time.hour, time.min, time.sec)
-
-# LCD に "Hello World" 表示
-lcd_cursor(i2c, 1, 0)
-lcd_print(i2c, "Hello!")
-
-lcd_home1(i2c)
-lcd_print(i2c, "from ESP")
-
-sleep(5)
-
-# パラメタ
-host = "test"
-
-while true
-
-  # 温度計測 by ADC
-  voltage = adc.read()
-  temp = 1.0 / ( 1.0 / B * Math.log( (V - voltage) / (voltage/ Rref) / Rref) + 1.0 / (To + 273.0)) - 273.0
-  puts "#{voltage} mV, #{temp} K"
-  
-  # 時刻
-  tt = {}  #ハッシュ
-  rtc2_get(i2c, tt)  #時刻取得
-
-  time0 = sprintf("%02x-%02x-%02x", tt['year'], tt['mon'], tt['mday'])
-  time1 = sprintf("%02x:%02x:%02x", tt['hour'], tt['min'], tt['sec'])
-  time2 = sprintf("%02x%02x%02x%02x%02x%02x", tt['year'], tt['mon'], tt['mday'], tt['hour'], tt['min'], tt['sec'])
-  puts time2
-  
-  # LCD 表示
-  lcd_home0(i2c)
-  lcd_print(i2c, time0)
-  lcd_home1(i2c)
-  lcd_print(i2c, time1)
-
-  # データ送信
-  if tt['sec'].to_i == 0
-    url = "https://pluto.epi.it.matsue-ct.jp/gps/monitoring.php?hostname=#{host}&time=#{time2}&temp=#{temp}"
-    wlan.access( url )
-  end
-  
-  sleep(1)
-end
 
