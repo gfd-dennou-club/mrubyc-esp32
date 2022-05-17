@@ -156,7 +156,7 @@ while true
 
   # データ送信
   if tt['sec'].to_i == 0
-    url = "https://pluto.epi.it.matsue-ct.jp/gps/monitoring.php?hostname=#{host}&time=#{time2}&temp=#{temp}"
+    url = "https://pluto.epi.it.matsue-ct.jp/iotex2/monitoring3.php?hostname=#{host}&time=#{time2}&temp=#{temp}"
     wlan.access( url )
   end
   
