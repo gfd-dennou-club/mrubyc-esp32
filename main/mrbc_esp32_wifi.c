@@ -95,6 +95,8 @@ mrbc_esp32_wifi_init(mrb_vm* vm, mrb_value* v, int argc)
                                                       &instance_got_ip));
   ESP_ERROR_CHECK( esp_wifi_set_storage(WIFI_STORAGE_RAM));
   ESP_ERROR_CHECK( esp_wifi_set_mode(WIFI_MODE_STA) );
+
+  vTaskDelay(3000 / portTICK_PERIOD_MS);  //wait
 }
 /*
 static void wpa2_enterprise_example_task(void *pvParameters)

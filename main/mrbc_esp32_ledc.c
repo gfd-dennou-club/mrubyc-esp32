@@ -33,6 +33,8 @@ mrbc_esp32_ledc_timer_config(mrb_vm* vm, mrb_value* v, int argc)
   };
 
   ledc_timer_config(&config);
+
+  vTaskDelay(500 / portTICK_PERIOD_MS);  //wait
 }
 
 /*! channel_config() 本体 : wrapper for ledc_channel_config
@@ -56,6 +58,8 @@ mrbc_esp32_ledc_channel_config(mrb_vm* vm, mrb_value* v, int argc)
   };
 
   ledc_channel_config(&config);
+
+  vTaskDelay(500 / portTICK_PERIOD_MS);  //wait  
 }
 
 

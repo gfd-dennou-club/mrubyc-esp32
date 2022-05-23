@@ -96,6 +96,7 @@
 static const char *TAG = "iotex-esp32-mrubyc";
 
 #define MEMORY_SIZE (1024*40)
+#define WAIT_TIME 100
 
 static uint8_t memory_pool[MEMORY_SIZE];
 
@@ -202,49 +203,64 @@ void app_main(void) {
   nvs_flash_init();
   mrbc_init(memory_pool, MEMORY_SIZE);
 
+  vTaskDelay(WAIT_TIME / portTICK_PERIOD_MS);  //wait
+
   mrbc_define_method(0, mrbc_class_object, "debugprint", c_debugprint);
   mrbc_define_method(0, mrbc_class_object, "floatCast", c_floatCast);
+
+  vTaskDelay(WAIT_TIME / portTICK_PERIOD_MS);  //wait
+
   /*
      !!!! Add your function                            !!!!
      !!!! example: mrbc_esp32_XXXX_gem_init(0);  !!!!
   */
+
 #ifdef CONFIG_USE_ESP32_GPIO
   printf("start GPIO (C)\n");
   mrbc_esp32_gpio_gem_init(0);
+  vTaskDelay(WAIT_TIME / portTICK_PERIOD_MS);  //wait
 #endif
 #ifdef CONFIG_USE_ESP32_LEDC
   printf("start PWM (C)\n");
   mrbc_esp32_ledc_gem_init(0);
+  vTaskDelay(WAIT_TIME / portTICK_PERIOD_MS);  //wait
 #endif
 #ifdef CONFIG_USE_ESP32_ADC
   printf("start ADC (C)\n");
   mrbc_esp32_adc_gem_init(0);
+  vTaskDelay(WAIT_TIME / portTICK_PERIOD_MS);  //wait
 #endif
 #ifdef CONFIG_USE_ESP32_I2C
   printf("start I2C (C)\n");
   mrbc_esp32_i2c_gem_init(0);
+  vTaskDelay(WAIT_TIME / portTICK_PERIOD_MS);  //wait
 #endif
 #ifdef CONFIG_USE_ESP32_WIFI
   printf("start WiFi (C) \n");
   mrbc_esp32_wifi_gem_init(0);
   mrbc_esp32_sntp_gem_init(0);
-  mrbc_esp32_httpclient_gem_init(0);  
+  mrbc_esp32_httpclient_gem_init(0);
+  vTaskDelay(WAIT_TIME / portTICK_PERIOD_MS);  //wait
 #endif
 #ifdef CONFIG_USE_ESP32_SLEEP
   printf("start SLEEP (C) \n");
   mrbc_esp32_sleep_gem_init(0);
+  vTaskDelay(WAIT_TIME / portTICK_PERIOD_MS);  //wait
 #endif
 #ifdef CONFIG_USE_ESP32_SPI
   printf("start SPI (C) \n");
   mrbc_esp32_spi_gem_init(0);
+  vTaskDelay(WAIT_TIME / portTICK_PERIOD_MS);  //wait
 #endif
 #ifdef CONFIG_USE_ESP32_UART
   printf("start UART (C)\n");
   mrbc_esp32_uart_gem_init(0);
+  vTaskDelay(WAIT_TIME / portTICK_PERIOD_MS);  //wait
 #endif
 #ifdef CONFIG_USE_ESP32_BLE
   printf("start BLET (C)\n");
   mrbc_esp32_ble_gem_init(0);
+  vTaskDelay(WAIT_TIME / portTICK_PERIOD_MS);  //wait
 #endif
   
   /*
@@ -255,6 +271,7 @@ void app_main(void) {
 #ifdef CONFIG_USE_ESP32_GPIO
   printf("start GPIO (mruby/c class)\n");
   mrbc_create_task( gpio, 0 );
+  vTaskDelay(WAIT_TIME / portTICK_PERIOD_MS);  //wait
 #endif
 //#ifdef CONFIG_USE_ESP32_PIN
 //  printf("start PIN (mruby/c class)\n");
@@ -263,31 +280,38 @@ void app_main(void) {
 #ifdef CONFIG_USE_ESP32_GPIO_IRQHANDLER
   printf("start GPIO IRQHandler (mruby/c task)\n");
   mrbc_create_task( irq_handler, 0 );
+  vTaskDelay(WAIT_TIME / portTICK_PERIOD_MS);  //wait
 #endif
 #ifdef CONFIG_USE_ESP32_LEDC
   printf("start PWM (mruby/c class)\n");
   mrbc_create_task(pwm, 0);
+  vTaskDelay(WAIT_TIME / portTICK_PERIOD_MS);  //wait
 #endif
 #ifdef CONFIG_USE_ESP32_ADC
   printf("start ADC (mruby/c class)\n");
   mrbc_create_task(adc, 0);
+  vTaskDelay(WAIT_TIME / portTICK_PERIOD_MS);  //wait
 #endif
 #ifdef CONFIG_USE_ESP32_I2C
   printf("start I2C (mruby/c class)\n");
   mrbc_create_task(i2c, 0);
+  vTaskDelay(WAIT_TIME / portTICK_PERIOD_MS);  //wait
 #endif
 #ifdef CONFIG_USE_ESP32_WIFI
   printf("start WLAN (mruby/c class) \n");
   mrbc_create_task(wlan, 0);
   mrbc_create_task(sntp, 0);
+  vTaskDelay(WAIT_TIME / portTICK_PERIOD_MS);  //wait
 #endif
 #ifdef CONFIG_USE_ESP32_SPI
   printf("start SPI (mruby/c class)\n");
   mrbc_create_task( spi, 0 );
+  vTaskDelay(WAIT_TIME / portTICK_PERIOD_MS);  //wait
 #endif
 #ifdef CONFIG_USE_ESP32_UART
   printf("start UART (mruby/c class)\n");
   mrbc_create_task(uart, 0);
+  vTaskDelay(WAIT_TIME / portTICK_PERIOD_MS);  //wait
 #endif
 
 //***********************************************************
@@ -304,7 +328,7 @@ void app_main(void) {
     .max_files = 2,
     .format_if_mount_failed = true
   };
-    
+
   // Use settings defined above to initialize and mount SPIFFS filesystem.
   // Note: esp_vfs_spiffs_register is an all-in-one convenience function.
   esp_err_t ret = esp_vfs_spiffs_register(&conf);
@@ -327,6 +351,7 @@ void app_main(void) {
     ESP_LOGI(TAG, "Partition size: total: %d, used: %d", total, used);
   }
 
+  vTaskDelay(WAIT_TIME / portTICK_PERIOD_MS);  //wait
   // master
 #ifdef CONFIG_USE_ESP32_FIRMWAREFLASH
   printf("FIRMWAREFLASH mode\n");
@@ -344,6 +369,9 @@ void app_main(void) {
   mrbc_create_task( slave, 0 );
 #endif
 #endif
+
+  vTaskDelay(1000 / portTICK_PERIOD_MS);  //wait
+
   mrbc_run();
 }
 

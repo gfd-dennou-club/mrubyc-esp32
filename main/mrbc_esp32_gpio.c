@@ -5,15 +5,14 @@
 
 #include "mrbc_esp32_gpio.h"
 #include "driver/gpio.h"
-#define PIN_NUM 39
 
+#define PIN_NUM 39
 
 static struct RClass* mrbc_class_esp32_gpio;
 
-static int unreferenced;
+//static int unreferenced;
 
 static int pins_state[PIN_NUM + 1];
-
 
 
 /*!  reset_pin(pin) 本体 : wrapper for gpio_reset_pin
@@ -25,6 +24,7 @@ mrbc_esp32_gpio_reset_pin(mrb_vm* vm, mrb_value* v, int argc)
 {
   int pin = GET_INT_ARG(1);
   gpio_reset_pin(pin);
+  vTaskDelay(1000 / portTICK_PERIOD_MS);  //wait
 }
 
 /*!  set_pullup(pin) 本体 : wrapper for gpio_set_pull_mode
@@ -37,6 +37,7 @@ mrbc_esp32_gpio_set_pullup(mrb_vm* vm, mrb_value* v, int argc)
 {
   int pin = GET_INT_ARG(1);
   gpio_set_pull_mode(pin, GPIO_PULLUP_ONLY);
+  vTaskDelay(100 / portTICK_PERIOD_MS); // wait
 }
 
 /*!  set_pulldown(pin) 本体 : wrapper for gpio_set_pull_mode
@@ -49,6 +50,7 @@ mrbc_esp32_gpio_set_pulldown(mrb_vm* vm, mrb_value* v, int argc)
 {
   int pin = GET_INT_ARG(1);
   gpio_set_pull_mode(pin, GPIO_PULLDOWN_ONLY);
+  vTaskDelay(100 / portTICK_PERIOD_MS); // wait
 }
 
 /*!  wakeup_enable(pin) 本体 : wrapper for gpio_wakeup_enable
@@ -63,6 +65,7 @@ mrbc_esp32_gpio_wakeup_enable(mrb_vm* vm, mrb_value* v, int argc)
   int pin = GET_INT_ARG(1);
   gpio_int_type_t level = GET_INT_ARG(2);
   gpio_wakeup_enable(pin, level);
+  vTaskDelay(100 / portTICK_PERIOD_MS); // wait
 }
 
 /*!  wakeup_disable(pin) 本体 : wrapper for gpio_wakeup_disable
@@ -75,6 +78,7 @@ mrbc_esp32_gpio_wakeup_disable(mrb_vm* vm, mrb_value* v, int argc)
 {
   int pin = GET_INT_ARG(1);
   gpio_wakeup_disable(pin);
+  vTaskDelay(100 / portTICK_PERIOD_MS); // wait
 }
 
 /*!  set_floating(pin) 本体 : wrapper for gpio_set_pull_mode
@@ -87,6 +91,7 @@ mrbc_esp32_gpio_set_floating(mrb_vm* vm, mrb_value* v, int argc)
 {
   int pin = GET_INT_ARG(1);
   gpio_set_pull_mode(pin, GPIO_FLOATING);
+  vTaskDelay(100 / portTICK_PERIOD_MS); // wait
 }
 
 /*!  set_hold_enable(pin) 本体 : wrapper for gpio_hold_en
@@ -98,6 +103,7 @@ mrbc_esp32_gpio_set_hold_enable(mrb_vm* vm, mrb_value* v, int argc)
 {
   int pin = GET_INT_ARG(1);
   gpio_hold_en(pin);
+  vTaskDelay(100 / portTICK_PERIOD_MS); // wait
 }
 
 /*!  set_hold_enable(pin) 本体 : wrapper for gpio_hold_dis
@@ -109,6 +115,7 @@ mrbc_esp32_gpio_set_hold_disable(mrb_vm* vm, mrb_value* v, int argc)
 {
   int pin = GET_INT_ARG(1);
   gpio_hold_dis(pin);
+  vTaskDelay(100 / portTICK_PERIOD_MS); // wait
 }
 
 /*!  set_mode_input(pin) 本体 : wrapper for gpio_set_direction
@@ -123,6 +130,7 @@ mrbc_esp32_gpio_set_mode_input(mrb_vm* vm, mrb_value* v, int argc)
   gpio_pad_select_gpio(pin);
   gpio_set_direction(pin, GPIO_MODE_INPUT);
   //  gpio_set_pull_mode(pin, GPIO_PULLUP_ONLY);
+  vTaskDelay(100 / portTICK_PERIOD_MS); // wait
 }
 
 
@@ -137,6 +145,7 @@ mrbc_esp32_gpio_set_mode_output(mrb_vm* vm, mrb_value* v, int argc)
   int pin = GET_INT_ARG(1);
   gpio_pad_select_gpio(pin);
   gpio_set_direction(pin, GPIO_MODE_OUTPUT);
+  vTaskDelay(100 / portTICK_PERIOD_MS); // wait
 }
 
 /*!  set_mode_open_drain(pin) 本体 : wrapper for gpio_set_direction
@@ -150,6 +159,7 @@ mrbc_esp32_gpio_set_mode_open_drain(mrb_vm* vm, mrb_value* v, int argc)
   int pin = GET_INT_ARG(1);
   gpio_pad_select_gpio(pin);
   gpio_set_direction(pin, GPIO_MODE_INPUT_OUTPUT_OD);
+  vTaskDelay(100 / portTICK_PERIOD_MS); // wait
 }
 
 /*!  set_level(pin, level) 本体 : wrapper for gpio_set_level
