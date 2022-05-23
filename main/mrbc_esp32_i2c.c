@@ -79,6 +79,8 @@ mrbc_esp32_i2c_driver_install(mrb_vm* vm, mrb_value* v, int argc)
 
   ESP_ERROR_CHECK( i2c_param_config(port, &config) );
   ESP_ERROR_CHECK( i2c_driver_install(port, mode, 0, 0, 0) );
+
+  vTaskDelay(1000 / portTICK_PERIOD_MS);  //wait
 }
 
 

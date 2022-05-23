@@ -35,6 +35,8 @@ static void mrbc_esp32_adc_init_adc1(mrb_vm *vm, mrb_value *v, int argc){
 
   adc_chars = calloc(1, sizeof(esp_adc_cal_characteristics_t));
   esp_adc_cal_characterize(unit1, atten, width, DEFAULT_VREF, adc_chars);
+
+  vTaskDelay(1000 / portTICK_PERIOD_MS);  //wait
 }
 
 /*! rawread_adc1(channel)
@@ -54,6 +56,8 @@ static void mrbc_esp32_adc_rawread_adc1(mrb_vm *vm, mrb_value *v, int argc){
   
   //値を戻す
   SET_INT_RETURN(adc_reading);
+
+  vTaskDelay(1000 / portTICK_PERIOD_MS);  //wait
 }
 
 /*! read_adc1(channel)

@@ -63,6 +63,7 @@ static void mrbc_esp32_uart_driver_install(mrb_vm* vm,mrb_value* v, int argc)
   uart_driver_install(uart_num,BUF_SIZE * 2, 0, 0, NULL, 0);
   if(uart_is_driver_installed(uart_num) == 1) printf("UART: driver was successfully installed\n");
 
+  vTaskDelay(1000 / portTICK_PERIOD_MS);  //wait
 }
 
 /*! メソッド driver_delete(uart_num)  本体:wrapper for uart_driver_delete

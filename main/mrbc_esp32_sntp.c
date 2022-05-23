@@ -65,6 +65,8 @@ mrbc_esp32_sntp_init(mrb_vm* vm, mrb_value* v, int argc)
     mrbc_array_set(&result, x, &mrbc_fixnum_value(buf[x]));
   }
 
+  vTaskDelay(2000 / portTICK_PERIOD_MS); //wait
+  
   // Array インスタンス result を本メソッドの返り値としてセット
   SET_RETURN( result );
 }

@@ -74,6 +74,8 @@ mrbc_esp32_spi_bus_initialize(mrb_vm* vm, mrb_value* v, int argc)
     dc = gpio_dc;
     ret = spi_bus_add_device(HSPI_HOST, &dev_cfg, &spidev);
     assert(ret == ESP_OK);
+
+    vTaskDelay(1000 / portTICK_PERIOD_MS);  //wait
 }
 
 /*! Method write_byte(data)
