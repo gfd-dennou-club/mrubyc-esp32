@@ -4,14 +4,7 @@
 */
 
 #include "mrbc_esp32_ledc.h"
-
 #include "driver/ledc.h"
-
-
-static struct RClass* mrbc_class_esp32_ledc;
-
-static int unreferenced;
-
 
 /*! timer_config() 本体 : wrapper for ledc_timer_config
 
@@ -33,8 +26,6 @@ mrbc_esp32_ledc_timer_config(mrb_vm* vm, mrb_value* v, int argc)
   };
 
   ledc_timer_config(&config);
-
-  vTaskDelay(500 / portTICK_PERIOD_MS);  //wait
 }
 
 /*! channel_config() 本体 : wrapper for ledc_channel_config
@@ -58,8 +49,6 @@ mrbc_esp32_ledc_channel_config(mrb_vm* vm, mrb_value* v, int argc)
   };
 
   ledc_channel_config(&config);
-
-  vTaskDelay(500 / portTICK_PERIOD_MS);  //wait  
 }
 
 
@@ -135,10 +124,10 @@ mrbc_esp32_ledc_stop(mrb_vm* vm, mrb_value* v, int argc)
 void
 mrbc_esp32_ledc_gem_init(struct VM* vm)
 {
-  mrbc_define_method(vm, mrbc_class_esp32_ledc, "ledc_timer_config",    mrbc_esp32_ledc_timer_config);
-  mrbc_define_method(vm, mrbc_class_esp32_ledc, "ledc_channel_config",  mrbc_esp32_ledc_channel_config);  
-  mrbc_define_method(vm, mrbc_class_esp32_ledc, "ledc_set_freq",        mrbc_esp32_ledc_set_freq);
-  mrbc_define_method(vm, mrbc_class_esp32_ledc, "ledc_set_duty",        mrbc_esp32_ledc_set_duty);
-  mrbc_define_method(vm, mrbc_class_esp32_ledc, "ledc_update_duty",     mrbc_esp32_ledc_update_duty);
-  mrbc_define_method(vm, mrbc_class_esp32_ledc, "ledc_stop",            mrbc_esp32_ledc_stop);
+  mrbc_define_method(0, mrbc_class_object, "ledc_timer_config",    mrbc_esp32_ledc_timer_config);
+  mrbc_define_method(0, mrbc_class_object, "ledc_channel_config",  mrbc_esp32_ledc_channel_config);  
+  mrbc_define_method(0, mrbc_class_object, "ledc_set_freq",        mrbc_esp32_ledc_set_freq);
+  mrbc_define_method(0, mrbc_class_object, "ledc_set_duty",        mrbc_esp32_ledc_set_duty);
+  mrbc_define_method(0, mrbc_class_object, "ledc_update_duty",     mrbc_esp32_ledc_update_duty);
+  mrbc_define_method(0, mrbc_class_object, "ledc_stop",            mrbc_esp32_ledc_stop);
 }

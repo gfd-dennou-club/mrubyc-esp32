@@ -22,7 +22,6 @@
 #include "lwip/err.h"
 #include "lwip/sys.h"
 
-static struct RClass* mrbc_class_esp32_wifi;
 static char* TAG = "WiFi";
 
 typedef enum {
@@ -95,8 +94,6 @@ mrbc_esp32_wifi_init(mrb_vm* vm, mrb_value* v, int argc)
                                                       &instance_got_ip));
   ESP_ERROR_CHECK( esp_wifi_set_storage(WIFI_STORAGE_RAM));
   ESP_ERROR_CHECK( esp_wifi_set_mode(WIFI_MODE_STA) );
-
-  vTaskDelay(3000 / portTICK_PERIOD_MS);  //wait
 }
 /*
 static void wpa2_enterprise_example_task(void *pvParameters)
@@ -526,15 +523,15 @@ void
 mrbc_esp32_wifi_gem_init(struct VM* vm)
 {
   // 各メソッド定義
-  mrbc_define_method(vm, mrbc_class_esp32_wifi, "wifi_init",           mrbc_esp32_wifi_init);
-  mrbc_define_method(vm, mrbc_class_esp32_wifi, "wifi_start",          mrbc_esp32_wifi_start);
-  mrbc_define_method(vm, mrbc_class_esp32_wifi, "wifi_setup_psk",      mrbc_esp32_wifi_setup_psk);
-  mrbc_define_method(vm, mrbc_class_esp32_wifi, "wifi_setup_ent_peap", mrbc_esp32_wifi_setup_ent_peap);
-  mrbc_define_method(vm, mrbc_class_esp32_wifi, "wifi_is_connected?",  mrbc_esp32_wifi_is_connected);
-  mrbc_define_method(vm, mrbc_class_esp32_wifi, "wifi_scan",           mrbc_esp32_wifi_scan);
-  mrbc_define_method(vm, mrbc_class_esp32_wifi, "wifi_mac",            mrbc_esp32_wifi_config_mac);
-  mrbc_define_method(vm, mrbc_class_esp32_wifi, "wifi_ip",             mrbc_esp32_wifi_config_ip);
-  mrbc_define_method(vm, mrbc_class_esp32_wifi, "wifi_ifconfig",       mrbc_esp32_wifi_ifconfig);
-  mrbc_define_method(vm, mrbc_class_esp32_wifi, "wifi_active",         mrbc_esp32_wifi_active);
+  mrbc_define_method(0, mrbc_class_object, "wifi_init",           mrbc_esp32_wifi_init);
+  mrbc_define_method(0, mrbc_class_object, "wifi_start",          mrbc_esp32_wifi_start);
+  mrbc_define_method(0, mrbc_class_object, "wifi_setup_psk",      mrbc_esp32_wifi_setup_psk);
+  mrbc_define_method(0, mrbc_class_object, "wifi_setup_ent_peap", mrbc_esp32_wifi_setup_ent_peap);
+  mrbc_define_method(0, mrbc_class_object, "wifi_is_connected?",  mrbc_esp32_wifi_is_connected);
+  mrbc_define_method(0, mrbc_class_object, "wifi_scan",           mrbc_esp32_wifi_scan);
+  mrbc_define_method(0, mrbc_class_object, "wifi_mac",            mrbc_esp32_wifi_config_mac);
+  mrbc_define_method(0, mrbc_class_object, "wifi_ip",             mrbc_esp32_wifi_config_ip);
+  mrbc_define_method(0, mrbc_class_object, "wifi_ifconfig",       mrbc_esp32_wifi_ifconfig);
+  mrbc_define_method(0, mrbc_class_object, "wifi_active",         mrbc_esp32_wifi_active);
 
 }

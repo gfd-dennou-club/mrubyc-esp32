@@ -12,7 +12,6 @@
 static char* tag = "main";
 #define DMA_CHAN    2
 
-static struct RClass* mrbc_class_esp32_spi;
 spi_device_handle_t spidev;
 uint16_t dc;
 
@@ -74,8 +73,6 @@ mrbc_esp32_spi_bus_initialize(mrb_vm* vm, mrb_value* v, int argc)
     dc = gpio_dc;
     ret = spi_bus_add_device(HSPI_HOST, &dev_cfg, &spidev);
     assert(ret == ESP_OK);
-
-    vTaskDelay(1000 / portTICK_PERIOD_MS);  //wait
 }
 
 /*! Method write_byte(data)
@@ -125,7 +122,7 @@ void
 mrbc_esp32_spi_gem_init(struct VM* vm)
 {
   // 各メソッド定義
-  mrbc_define_method(vm, mrbc_class_esp32_spi, "spi_bus_initialize", mrbc_esp32_spi_bus_initialize);
-  mrbc_define_method(vm, mrbc_class_esp32_spi, "spi_write_byte",     mrbc_esp32_spi_write_byte);
-  mrbc_define_method(vm, mrbc_class_esp32_spi, "spi_read_byte",      mrbc_esp32_spi_read_byte);
+  mrbc_define_method(0, mrbc_class_object, "spi_bus_initialize", mrbc_esp32_spi_bus_initialize);
+  mrbc_define_method(0, mrbc_class_object, "spi_write_byte",     mrbc_esp32_spi_write_byte);
+  mrbc_define_method(0, mrbc_class_object, "spi_read_byte",      mrbc_esp32_spi_read_byte);
 }

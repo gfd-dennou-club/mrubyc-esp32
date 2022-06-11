@@ -16,11 +16,8 @@
 #include "esp_event.h"
 #include "esp_http_client.h"
 
-
-static struct RClass* mrbc_class_esp32_httpclient;
-static char* tag = "main";
+static char* tag = "HTTP_CLIENT";
 static esp_http_client_handle_t client;
-
 
 /*! HTTP イベントハンドラ
   各種 HTTP イベントが発生した際に呼び出される
@@ -112,16 +109,8 @@ mrbc_esp32_httpclient_cleanup(mrb_vm* vm, mrb_value* v, int argc)
 void
 mrbc_esp32_httpclient_gem_init(struct VM* vm)
 {
-/*
-HTTPClient.init("http://foo.bar/)
-HTTPClient.invoke()
-HTTPClient.cleanup()
-*/
-
-  // クラス HTTPClient 定義
-  mrbc_class_esp32_httpclient = mrbc_define_class(vm, "HTTPClient", mrbc_class_object);
   // 各メソッド定義
-  mrbc_define_method(vm, mrbc_class_esp32_httpclient, "init",    mrbc_esp32_httpclient_init);
-  mrbc_define_method(vm, mrbc_class_esp32_httpclient, "invoke",  mrbc_esp32_httpclient_invoke);
-  mrbc_define_method(vm, mrbc_class_esp32_httpclient, "cleanup", mrbc_esp32_httpclient_cleanup);
+  mrbc_define_method(0, mrbc_class_object, "httpclient_init",    mrbc_esp32_httpclient_init);
+  mrbc_define_method(0, mrbc_class_object, "httpclient_invoke",  mrbc_esp32_httpclient_invoke);
+  mrbc_define_method(0, mrbc_class_object, "httpclient_cleanup", mrbc_esp32_httpclient_cleanup);
 }
