@@ -4,20 +4,15 @@
 */
 
 #include "mrbc_esp32_adc.h"
-
 #include "driver/adc.h"
 #include "esp_adc_cal.h"
 
 #define DEFAULT_VREF    1100
 #define NO_OF_SAMPLES   64
 
-static struct RClass* mrbc_class_esp32_adc;
-static int unreferenced;
-
 static esp_adc_cal_characteristics_t *adc_chars;
 static const adc_unit_t unit1 = ADC_UNIT_1;
 static const adc_unit_t unit2 = ADC_UNIT_2;
-
 
 /*! init_adc1(channel, atten, width)
   @param channel  ADC のチャンネル (ピンによって決まっている)
@@ -35,8 +30,6 @@ static void mrbc_esp32_adc_init_adc1(mrb_vm *vm, mrb_value *v, int argc){
 
   adc_chars = calloc(1, sizeof(esp_adc_cal_characteristics_t));
   esp_adc_cal_characterize(unit1, atten, width, DEFAULT_VREF, adc_chars);
-
-  vTaskDelay(1000 / portTICK_PERIOD_MS);  //wait
 }
 
 /*! rawread_adc1(channel)
@@ -56,8 +49,6 @@ static void mrbc_esp32_adc_rawread_adc1(mrb_vm *vm, mrb_value *v, int argc){
   
   //値を戻す
   SET_INT_RETURN(adc_reading);
-
-  vTaskDelay(1000 / portTICK_PERIOD_MS);  //wait
 }
 
 /*! read_adc1(channel)
@@ -144,11 +135,10 @@ static void mrbc_esp32_adc_read_adc2(mrb_vm *vm, mrb_value *v, int argc){
 void
 mrbc_esp32_adc_gem_init(struct VM* vm)
 {
-  // 各メソッド定義（mruby/c ではインスタンスメソッドをクラスメソッドとしても呼び出し可能）
-  mrbc_define_method(vm, mrbc_class_esp32_adc, "adc1_init",      mrbc_esp32_adc_init_adc1);
-  mrbc_define_method(vm, mrbc_class_esp32_adc, "adc1_read",      mrbc_esp32_adc_read_adc1);
-  mrbc_define_method(vm, mrbc_class_esp32_adc, "adc1_rawread",   mrbc_esp32_adc_rawread_adc1);  
-  mrbc_define_method(vm, mrbc_class_esp32_adc, "adc2_init",      mrbc_esp32_adc_init_adc2);
-  mrbc_define_method(vm, mrbc_class_esp32_adc, "adc2_read",      mrbc_esp32_adc_read_adc2);
-  mrbc_define_method(vm, mrbc_class_esp32_adc, "adc2_rawread",   mrbc_esp32_adc_rawread_adc2);  
+  mrbc_define_method(0, mrbc_class_object, "adc1_init",      mrbc_esp32_adc_init_adc1);
+  mrbc_define_method(0, mrbc_class_object, "adc1_read",      mrbc_esp32_adc_read_adc1);
+  mrbc_define_method(0, mrbc_class_object, "adc1_rawread",   mrbc_esp32_adc_rawread_adc1);  
+  mrbc_define_method(0, mrbc_class_object, "adc2_init",      mrbc_esp32_adc_init_adc2);
+  mrbc_define_method(0, mrbc_class_object, "adc2_read",      mrbc_esp32_adc_read_adc2);
+  mrbc_define_method(0, mrbc_class_object, "adc2_rawread",   mrbc_esp32_adc_rawread_adc2);  
 }

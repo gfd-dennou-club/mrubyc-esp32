@@ -10,7 +10,6 @@
 #include "esp_system.h"
 #include "esp_event.h"
 
-static struct RClass* mrbc_class_esp32_sntp;
 static char* tag = "sntp";
 
 time_t now = 0;
@@ -65,8 +64,6 @@ mrbc_esp32_sntp_init(mrb_vm* vm, mrb_value* v, int argc)
     mrbc_array_set(&result, x, &mrbc_fixnum_value(buf[x]));
   }
 
-  vTaskDelay(2000 / portTICK_PERIOD_MS); //wait
-  
   // Array インスタンス result を本メソッドの返り値としてセット
   SET_RETURN( result );
 }
@@ -114,14 +111,14 @@ mrbc_esp32_sntp_sec(mrb_vm* vm, mrb_value* v, int argc)
 void
 mrbc_esp32_sntp_gem_init(struct VM* vm)
 {
-  mrbc_define_method(vm, mrbc_class_esp32_sntp, "sntp_init",  mrbc_esp32_sntp_init);
+  mrbc_define_method(0, mrbc_class_object, "sntp_init",  mrbc_esp32_sntp_init);
   /*
-  mrbc_define_method(vm, mrbc_class_esp32_sntp, "sntp_year",  mrbc_esp32_sntp_year);
-  mrbc_define_method(vm, mrbc_class_esp32_sntp, "sntp_mon",   mrbc_esp32_sntp_mon);
-  mrbc_define_method(vm, mrbc_class_esp32_sntp, "sntp_mday",  mrbc_esp32_sntp_mday);
-  mrbc_define_method(vm, mrbc_class_esp32_sntp, "sntp_wday",  mrbc_esp32_sntp_wday);
-  mrbc_define_method(vm, mrbc_class_esp32_sntp, "sntp_hour",  mrbc_esp32_sntp_hour);
-  mrbc_define_method(vm, mrbc_class_esp32_sntp, "sntp_min",   mrbc_esp32_sntp_min);
-  mrbc_define_method(vm, mrbc_class_esp32_sntp, "sntp_sec",   mrbc_esp32_sntp_sec);
+  mrbc_define_method(0, mrbc_class_object, "sntp_year",  mrbc_esp32_sntp_year);
+  mrbc_define_method(0, mrbc_class_object, "sntp_mon",   mrbc_esp32_sntp_mon);
+  mrbc_define_method(0, mrbc_class_object, "sntp_mday",  mrbc_esp32_sntp_mday);
+  mrbc_define_method(0, mrbc_class_object, "sntp_wday",  mrbc_esp32_sntp_wday);
+  mrbc_define_method(0, mrbc_class_object, "sntp_hour",  mrbc_esp32_sntp_hour);
+  mrbc_define_method(0, mrbc_class_object, "sntp_min",   mrbc_esp32_sntp_min);
+  mrbc_define_method(0, mrbc_class_object, "sntp_sec",   mrbc_esp32_sntp_sec);
   */
 }

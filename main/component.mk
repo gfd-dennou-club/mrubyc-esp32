@@ -8,7 +8,7 @@ COMPONENT_EXTRA_CLEAN = SRCFILES
 
 MRBC = mrbc
 SRCDIR = $(PROJECT_PATH)/mrblib
-SRCFILES = $(wildcard $(SRCDIR)/*.rb) $(wildcard $(SRCDIR)/**/*.rb)
+SRCFILES = $(wildcard $(SRCDIR)/*.rb)
 OBJS = $(patsubst %.rb,%.h,$(SRCFILES))
 
 main.o: $(OBJS)

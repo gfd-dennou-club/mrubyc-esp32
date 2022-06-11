@@ -5,7 +5,6 @@
 */
 
 #include "mrbc_esp32_i2c.h"
-
 #include "driver/i2c.h"
 
 
@@ -14,13 +13,11 @@
 */
 #define MAX_READ_LEN  32
 
-
 static struct RClass* mrbc_class_esp32_i2c;
 static mrbc_sym symid_port;
 static mrbc_sym symid_scl;
 static mrbc_sym symid_sda;
 static mrbc_sym symid_freq;
-
 
 /*! メソッド msleep(milisec) 本体 : sleep by milisec
 
@@ -79,8 +76,6 @@ mrbc_esp32_i2c_driver_install(mrb_vm* vm, mrb_value* v, int argc)
 
   ESP_ERROR_CHECK( i2c_param_config(port, &config) );
   ESP_ERROR_CHECK( i2c_driver_install(port, mode, 0, 0, 0) );
-
-  vTaskDelay(1000 / portTICK_PERIOD_MS);  //wait
 }
 
 
@@ -216,7 +211,6 @@ I2C#driver_delete
 I2C#write(addr, data)
 I2C#read(addr, len)
 */
-
   // クラス I2C 定義
   mrbc_class_esp32_i2c = mrbc_define_class(vm, "I2C", mrbc_class_object);
   // 各メソッド定義

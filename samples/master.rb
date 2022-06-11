@@ -280,33 +280,25 @@ end
 ###
 
 =begin
-sleep 0.1
 wlan = WLAN.new('STA')
 wlan.active(true)
+#wlan = WLAN.new('STA', WLAN::ACTIVE)
 
-# scan
-wlan.scan
+#scan
+#wlan.scan
 
-# connection
+#connect
+wlan.connect("essid", "pass")
+
 while true
   # ネットワークパラメタを定期的に表示
-  puts wlan.ifconfig
-  puts wlan.config('ip')
-  puts wlan.config('mac')
-  wlan.invoke( "http://www.gfd-dennou.org/" )
-  
-  # WiFiの接続が切れたときに自動的に際接続する
-  if( ! wlan.is_connected? )
-    puts 'start reconnect....'
-    wlan.connect("essid", "pass")
-    while true
-      if( wlan.is_connected? )
-        break
-      end
-      sleep 1
-    end
+  if( wlan.is_connected? )
+    puts wlan.ifconfig
+    puts wlan.config('ip')
+    puts wlan.config('mac')
+    wlan.invoke( "http://www.gfd-dennou.org/" )
   end
-  sleep 1
+  sleep 10
 end
 =end
 
