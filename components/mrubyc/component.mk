@@ -1,3 +1,3 @@
-CFLAGS = -mlongcalls -DMRBC_DEBUG
+CFLAGS = -mlongcalls
 COMPONENT_ADD_INCLUDEDIRS := src
 COMPONENT_SRCDIRS := src src/hal
