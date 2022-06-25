@@ -6,17 +6,9 @@
 # SW2 (GPIO 35) を ON のときに，LED１ の状態が保持される (SW1 を ON/OFF しても LED1 の状態は変化しない)
 # When SW2 is input, the state of LED1 is saved.
 
-callback = Proc.new { |p|
-  print(p)
-  puts("called")
-}
-
 led1 = GPIO.new( 13, GPIO::OUT )
 sw1  = GPIO.new( 34, GPIO::IN, GPIO::PULL_UP )
 sw2  = GPIO.new( 35, GPIO::IN, GPIO::PULL_UP )
-
-# スイッチ１にIRQを登録し、スイッチ１に変更があるたびにcallback関数が呼ばれるようにする
-sw1.irq(callback)
 
 while true
 
