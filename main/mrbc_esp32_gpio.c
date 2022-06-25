@@ -3,12 +3,89 @@
   mruby/c GPIO functions for ESP32
 */
 
-#include "mrbc_esp32_gpio.h"
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/queue.h"
 #include "driver/gpio.h"
+#include "mrbc_esp32_gpio.h"
 
-#define PIN_NUM 39
+#define ESP_INTR_FLAG_DEFAULT 0
 
-static int pins_state[PIN_NUM + 1];
+#define INTR_NUM 2
+
+static int isr_flag;
+static int isr_state[INTR_NUM];
+static int ISR_NOT_STARTED_FLAG = 1;
+
+static xQueueHandle gpio_evt_queue = NULL;
+
+static void IRAM_ATTR gpio_isr_handler(void* arg)
+{
+  uint32_t gpio_num = (uint32_t) arg;
+  xQueueSendFromISR(gpio_evt_queue, &gpio_num, NULL);
+}
+
+static void gpio_task_example(void* arg)
+{
+  uint32_t io_num;
+  for(;;) {
+    if(xQueueReceive(gpio_evt_queue, &io_num, portMAX_DELAY)){
+      isr_state[0] = io_num;
+      isr_state[1] = gpio_get_level(io_num);
+      printf("GPIO[%d] intr, val: %d\n", io_num, gpio_get_level(io_num));
+    }
+  }
+}
+
+static void gpio_isr_start()
+{
+  //install gpio isr service
+  gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
+
+  //create a queue to handle gpio event from isr
+  gpio_evt_queue = xQueueCreate(10, sizeof(uint32_t));
+
+  //start gpio task
+  xTaskCreate(gpio_task_example, "gpio_task_example", 2048, NULL, 10, NULL);
+
+  //MESSAGE
+  printf("START ISR SERVICE\n");
+}
+
+static void
+mrbc_esp32_gpio_isr_state(mrb_vm* vm, mrb_value* v, int argc)
+{
+  mrbc_value result = mrbc_array_new(vm, INTR_NUM);
+  
+  // Array インスタンス result に Fixnum インスタンスとしてデータをセット
+  for ( int x = 0; x < INTR_NUM; ++x ) {
+    mrbc_array_set(&result, x, &mrbc_fixnum_value(isr_state[x]));
+  }
+  
+  // Array インスタンス result を本メソッドの返り値としてセット
+  SET_RETURN(result);
+}
+
+static void
+mrbc_esp32_gpio_set_intr(mrb_vm* vm, mrb_value* v, int argc)
+{
+  uint32_t pin = GET_INT_ARG(1);
+  uint8_t mode = GET_INT_ARG(2);
+  
+  printf("pin: %d, mode: %d\n", pin, mode);
+  gpio_set_intr_type(pin, mode);
+
+  if (ISR_NOT_STARTED_FLAG) {
+    gpio_isr_start();
+    ISR_NOT_STARTED_FLAG = 0;
+  }
+    
+  //hook isr handler for specific gpio pin
+  gpio_isr_handler_add(pin, gpio_isr_handler, (void*) pin); 
+}
 
 /*!  reset_pin(pin) 本体 : wrapper for gpio_reset_pin
 
@@ -119,7 +196,6 @@ mrbc_esp32_gpio_set_mode_input(mrb_vm* vm, mrb_value* v, int argc)
   //  gpio_set_pull_mode(pin, GPIO_PULLUP_ONLY);
 }
 
-
 /*!  set_mode_input(pin) 本体 : wrapper for gpio_set_direction
   GPIO_MODE_OUTPUT 専用
 
@@ -159,7 +235,6 @@ mrbc_esp32_gpio_set_level(mrb_vm* vm, mrb_value* v, int argc)
   gpio_set_level(pin, level);
 }
 
-
 /*!  get_level(pin) 本体 : wrapper for gpio_get_level
 
   @param pin GPIO ピン番号
@@ -173,23 +248,6 @@ mrbc_esp32_gpio_get_level(mrb_vm* vm, mrb_value* v, int argc)
   SET_INT_RETURN(gpio_get_level(pin));
 }
 
-/*!  get_pin_state(pin) IRQ 制御用の状態管理関数
-
-  @param pin GPIO ピン番号
-  @return    トリガーの状態
-*/
-static void
-mrbc_esp32_gpio_get_pin_state(mrb_vm* vm, mrb_value* v, int argc)
-{
-  int pin = GET_INT_ARG(1);
-  int value = gpio_get_level(pin);
-  int result = 4 << value;
-  if(value != pins_state[pin])
-    result |= 1 << pins_state[pin];
-  pins_state[pin] = value;
-  SET_INT_RETURN(result);
-}
-
 /*! クラス定義処理を記述した関数
 
   @param vm mruby/c VM
@@ -197,10 +255,9 @@ mrbc_esp32_gpio_get_pin_state(mrb_vm* vm, mrb_value* v, int argc)
 void
 mrbc_esp32_gpio_gem_init(struct VM* vm)
 {
-  //ISR ハンドラーサービスのインストール
-  gpio_install_isr_service(0);
-
   //メソッド定義
+  mrbc_define_method(0, mrbc_class_object, "gpio_set_intr",            mrbc_esp32_gpio_set_intr);
+  mrbc_define_method(0, mrbc_class_object, "gpio_isr_state",           mrbc_esp32_gpio_isr_state);
   mrbc_define_method(0, mrbc_class_object, "gpio_reset_pin",           mrbc_esp32_gpio_reset_pin);
   mrbc_define_method(0, mrbc_class_object, "gpio_set_pullup",          mrbc_esp32_gpio_set_pullup);
   mrbc_define_method(0, mrbc_class_object, "gpio_set_pulldown",        mrbc_esp32_gpio_set_pulldown);
@@ -214,5 +271,4 @@ mrbc_esp32_gpio_gem_init(struct VM* vm)
   mrbc_define_method(0, mrbc_class_object, "gpio_set_mode_open_drain", mrbc_esp32_gpio_set_mode_open_drain);
   mrbc_define_method(0, mrbc_class_object, "gpio_set_level",           mrbc_esp32_gpio_set_level);
   mrbc_define_method(0, mrbc_class_object, "gpio_get_level",           mrbc_esp32_gpio_get_level);
-  mrbc_define_method(0, mrbc_class_object, "gpio_get_pin_state",       mrbc_esp32_gpio_get_pin_state);
 }

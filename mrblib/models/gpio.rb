@@ -1,10 +1,6 @@
 # coding: utf-8
 
-# `クラス変数`が働かないためグローバル変数で実装する
-$irq_instances = nil
 class GPIO
-  # 定数
-  PIN_COUNT = 39
   # for mode
   OUT = 0
   IN  = 1
@@ -17,21 +13,19 @@ class GPIO
   PULL_DOWN = 6
   PULL_HOLD = 7
 
-  # for irq trigger
-  IRQ_RISING     = 0b0001
-  IRQ_FALLING    = 0b0010
-  IRQ_LOW_LEVEL  = 0b0100
-  IRQ_HIGH_LEVEL = 0b1000
-
+  # for Interupt trigger
+  INTR_DISABLE    = 0   # 割り込み無効
+  INTR_POSEDGE    = 1   # 立ち上がりエッジ
+  INTR_NEGEDGE    = 2   # 立ち下がりエッジ
+  INTR_ANYEDGE    = 3   # 両エッジ
+  INTR_LOW_LEVEL  = 4   # 入力Low割り込み
+  INTR_HIGH_LEVEL = 5   # 入力High割り込み
+  
   # 初期化
   def initialize(pin, mode = -1, pull_mode = -1, value = -1)
     @pin = pin
     
     init(mode, pull_mode, value)
-  end
-
-  def get_pin
-    @pin
   end
 
   # コンストラクタ外からの再初期化
@@ -44,19 +38,7 @@ class GPIO
     end
   end
 
-  # wakeupモードの設定
-  # 第二引数は、起床するパワーモード(0 or 1)
-  def set_wakeup(is_enable, level = 0)
-    if(is_enable)
-      puts "GPIO wakeup enable in #{@pin}"
-      gpio_wakeup_enable(@pin, level + 4)
-    else
-      puts "GPIO wakeup disable in #{@pin}"
-      gpio_wakeup_disable(@pin)
-    end
-  end
-
-  # 出力 `ピンを0か1に設定`
+  # 出力
   def write(value)
     unless(value == 0 || value == 1)
       puts "invalid value detected"
@@ -124,18 +106,20 @@ class GPIO
     end
   end
 
-  # irq ハンドラーの設定
-  def irq(handler = nil, trigger = (GPIO::IRQ_FALLING | GPIO::IRQ_RISING))
-    $irq_instances = Array.new(GPIO::PIN_COUNT + 1) unless $irq_instances
-    @handler = handler
-    @trigger = trigger
-    $irq_instances[@pin] = self
+  # 割り込み
+  def intr(mode)
+    puts "intr : #{mode}"
+    gpio_set_intr(@pin, mode)
   end
 
-  # `ハンドラーの発火 0.01秒に一度自動で実行される
-  def __check_handler()
-    if(gpio_get_pin_state(@pin) & @trigger != 0)
-      @handler.(self)
-    end
-  end
+  def intr_info
+    array = gpio_isr_state
+    
+    intr = Hash.new
+    intr['pin']  = array[0]
+    intr['val']  = array[1]
+
+    return intr
+  end  
+
 end

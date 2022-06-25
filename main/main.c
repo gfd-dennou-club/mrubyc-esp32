@@ -73,7 +73,9 @@ uint8_t * load_mrb_file(const char *filename)
 void app_main(void) {
 
   nvs_flash_init();
+
   mrbc_init(memory_pool, MEMORY_SIZE);
+
   printf("start GPIO (C)\n");
   mrbc_esp32_gpio_gem_init(0);
   printf("start PWM (C)\n");
@@ -92,16 +94,16 @@ void app_main(void) {
   mrbc_esp32_sleep_gem_init(0);
   printf("start SPI (C) \n");
   mrbc_esp32_spi_gem_init(0);
-  
-  // Ruby 側のクラス・メソッド定義
-  extern const uint8_t my_mrblib_bytecode[];
-  mrbc_run_mrblib(my_mrblib_bytecode);
 
 //***********************************************************
 // BEGIN COMPONENTS 2: INCLUDE CLASS files associated with mruby/c
 //
 // END COMPONENTS 2
 //-----------------------------------------------------------
+    
+  // Ruby 側のクラス・メソッド定義
+  extern const uint8_t mrblib_bytecode[];
+  mrbc_run_mrblib(mrblib_bytecode);
 
   //master
   vTaskDelay(1000 / portTICK_RATE_MS);
