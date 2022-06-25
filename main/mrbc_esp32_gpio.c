@@ -14,7 +14,7 @@
 
 #define ESP_INTR_FLAG_DEFAULT 0
 
-#define INTR_NUM 3
+#define INTR_NUM 2
 
 static int isr_flag;
 static int isr_state[INTR_NUM];
@@ -32,14 +32,11 @@ static void gpio_task_example(void* arg)
 {
   uint32_t io_num;
   for(;;) {
-    isr_flag = xQueueReceive(gpio_evt_queue, &io_num, portMAX_DELAY);
-    isr_state[0] = isr_flag;
-    isr_state[1] = io_num;
-    isr_state[2] = gpio_get_level(io_num);
-    //    if( isr_flag ) {
-    //      printf("GPIO[%d] intr, val: %d\n", io_num, gpio_get_level(io_num));
-    //      isr_state[io_num] = gpio_get_level(io_num);
-    //    }
+    if(xQueueReceive(gpio_evt_queue, &io_num, portMAX_DELAY)){
+      isr_state[0] = io_num;
+      isr_state[1] = gpio_get_level(io_num);
+      printf("GPIO[%d] intr, val: %d\n", io_num, gpio_get_level(io_num));
+    }
   }
 }
 

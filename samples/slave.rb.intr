@@ -1,10 +1,19 @@
+# coding: utf-8
+#初期化
+pre = {'pin' => 0, 'val' => 0}
 
 while true
-  info = gpio_isr_state[0]
-  if info[0] == 1
-    puts "Flag: #{info[0]}, Pin: #{info[1]}, State: #{info[2]}"
-    $led2.write(info[2])
+  now = GPIO.intr_info
+
+  if now != pre
+    if now['pin'] == 34
+      $led1.write(now['val'])
+    elsif now['pin'] == 35
+      $led2.write(now['val'])
+    end
   end
   sleep_ms 10
+
+  pre = now
 end
 

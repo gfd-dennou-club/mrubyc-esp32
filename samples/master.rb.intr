@@ -9,6 +9,7 @@ $sw2.intr( GPIO::INTR_POSEDGE )
 num = 0
 while true
   $led1.write( num % 2 )
-  $led2.write( 0 )
+  $led2.write( num % 2 )
   sleep 10
+  num += 1
 end

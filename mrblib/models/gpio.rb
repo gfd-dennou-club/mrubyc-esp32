@@ -13,14 +13,14 @@ class GPIO
   PULL_DOWN = 6
   PULL_HOLD = 7
 
-  # for irq trigger
+  # for Interupt trigger
   INTR_DISABLE    = 0   # 割り込み無効
   INTR_POSEDGE    = 1   # 立ち上がりエッジ
   INTR_NEGEDGE    = 2   # 立ち下がりエッジ
   INTR_ANYEDGE    = 3   # 両エッジ
   INTR_LOW_LEVEL  = 4   # 入力Low割り込み
   INTR_HIGH_LEVEL = 5   # 入力High割り込み
-
+  
   # 初期化
   def initialize(pin, mode = -1, pull_mode = -1, value = -1)
     @pin = pin
@@ -114,11 +114,12 @@ class GPIO
 
   def intr_info
     array = gpio_isr_state
-    hash = Hash.new
-    hash['flag'] = array[0]
-    hash['pin']  = array[1]
-    hash['val']  = array[2]
+    
+    intr = Hash.new
+    intr['pin']  = array[0]
+    intr['val']  = array[1]
 
-    return hash
+    return intr
   end  
+
 end
