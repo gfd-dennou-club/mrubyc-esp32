@@ -18,7 +18,7 @@ num4 = 1
 # リンクを削除
 #
 print( "** remove symlinks **")
-checks = [ 'mrblib/models/*.rb', 'main/*.c', 'main/*.h' ]
+checks = [ 'mrblib/*.rb', 'main/*.c', 'main/*.h' ]
 for dir in checks:
     files = glob.glob( dir )
     for file in files:

@@ -16,7 +16,7 @@ exclude  = 'mrubyc'
 pattern1 = 'BEGIN COMPONENTS 1'
 pattern2 = 'BEGIN COMPONENTS 2'
 dst_c    = 'main'
-dst_ruby = 'mrblib/models'
+dst_ruby = 'mrblib'
 
 # components 以下のファイルを検索 -> main.c へ書き込む内容に.
 #
@@ -24,15 +24,13 @@ dirs = glob.glob('components/*')
 for dir in dirs:
     if os.path.basename(dir) != "mrubyc":
 
-        files = glob.glob(dir + '/mrblib/models/*rb')
+        files = glob.glob(dir + '/mrblib/*rb')
         for file in files:
             path, ext = os.path.splitext( os.path.basename(file) )
             path2     = os.path.splitext( os.path.dirname(file) )
-            insert1  += ["#include \"models/"+path+".h\""]
-            insert2  += ["  mrbc_create_task( "+path+", 0 );"]
             rubyfiles+= [ [path2[0], path, file] ]
             
-        files = glob.glob(dir + '/src/*c')
+        files = glob.glob(dir + '/main/*c')
         for file in files:
             path, ext = os.path.splitext( os.path.basename(file) )
             path2     = os.path.splitext( os.path.dirname(file) )
@@ -44,7 +42,7 @@ for dir in dirs:
 #
 print("*** make links (.rb) ***")
 for file in rubyfiles:
-    src = "../../"+file[2]
+    src = "../"+file[2]
     dst = dst_ruby+"/"+file[1]+".rb"
     if not os.path.isfile( dst ):
         os.symlink( src, dst )
