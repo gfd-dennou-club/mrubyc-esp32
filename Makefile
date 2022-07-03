@@ -45,10 +45,10 @@ gems-clean:
 .PHONY: spiffs spiffs-clean spiffs-monitor store-vm flash-vm 
 
 spiffs: 
-	@echo $(MRBC) -o ./spiffs/mrbc/master.mrbc -E ./mrblib/master.rb
-	$(MRBC) -o ./spiffs/mrbc/master.mrbc -E ./mrblib/master.rb
-	@echo $(MRBC) -o ./spiffs/mrbc/slave.mrbc -E ./mrblib/slave.rb
-	$(MRBC) -o ./spiffs/mrbc/slave.mrbc -E ./mrblib/slave.rb
+	@echo $(MRBC) -o ./spiffs/mrbc/master.mrbc -E ./src/master.rb
+	$(MRBC) -o ./spiffs/mrbc/master.mrbc -E ./src/master.rb
+	@echo $(MRBC) -o ./spiffs/mrbc/slave.mrbc -E ./src/slave.rb
+	$(MRBC) -o ./spiffs/mrbc/slave.mrbc -E ./src/slave.rb
 	@echo $(MKSPIFFS) -c ./spiffs/mrbc -p 256 -b 4096 -s $(SPIFFS_DATA_TABLE_SIZE) ./spiffs/mrbc.spiffs.bin
 	$(MKSPIFFS) -c ./spiffs/mrbc -p 256 -b 4096 -s $(SPIFFS_DATA_TABLE_SIZE) ./spiffs/mrbc.spiffs.bin
 	@echo $(ESPTOOL) --chip esp32 --baud 921600 --port $(PORT0) --before default_reset --after hard_reset write_flash -z --flash_mode qio --flash_freq 80m --flash_size detect $(SPIFFS_DATA_OFFSET) ./spiffs/mrbc.spiffs.bin
@@ -61,7 +61,6 @@ spiffs-clean:
 	$(RM) ./spiffs/mrbc/master.mrbc
 	@echo $(RM) ./spiffs/mrbc/slave.mrbc
 	$(RM) ./spiffs/mrbc/slave.mrbc
-
 
 spiffs-monitor:
 	python bin/idf_monitor.py --port $(PORT0) firmware/mrubyc-esp32.elf
