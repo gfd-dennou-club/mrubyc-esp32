@@ -2,6 +2,6 @@
 
 $msg = "ESP32"
 while true
-  puts "hello world from #{$msg}"
+  puts "hello world from #{$msg} (master)"
   sleep 1
 end
