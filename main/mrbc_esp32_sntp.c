@@ -4,11 +4,8 @@
 */
 
 #include "mrbc_esp32_sntp.h"
-
 #include "esp_sntp.h"
 #include "esp_log.h"
-#include "esp_system.h"
-#include "esp_event.h"
 
 static char* tag = "sntp";
 
