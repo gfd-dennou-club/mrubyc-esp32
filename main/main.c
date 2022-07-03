@@ -102,8 +102,8 @@ void app_main(void) {
 //-----------------------------------------------------------
     
   // Ruby 側のクラス・メソッド定義
-  extern const uint8_t mrblib_bytecode[];
-  mrbc_run_mrblib(mrblib_bytecode);
+  extern const uint8_t myclass_bytecode[];
+  mrbc_run_mrblib(myclass_bytecode);
 
   //master
   vTaskDelay(1000 / portTICK_RATE_MS);
