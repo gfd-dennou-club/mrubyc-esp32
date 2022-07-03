@@ -1,12 +1,7 @@
 #include <stdio.h>
 
-#include "esp_system.h"
 #include "esp_log.h"
-#include "esp_spi_flash.h"
-#include "esp_vfs.h"
 #include "esp_spiffs.h"
-#include "nvs_flash.h"
-#include <ctype.h>
 #include "mrubyc.h"
 
 //*********************************************
@@ -71,8 +66,6 @@ uint8_t * load_mrb_file(const char *filename)
 
 
 void app_main(void) {
-
-  nvs_flash_init();
 
   mrbc_init(memory_pool, MEMORY_SIZE);
 
