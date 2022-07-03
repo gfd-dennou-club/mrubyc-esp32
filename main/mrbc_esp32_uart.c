@@ -1,14 +1,10 @@
 /*! @file
   @brief
   mruby/c UART class for ESP32
-  本クラスはインスタンスを生成せず利用する
 */
 
 #include "mrbc_esp32_uart.h"
 #include "driver/uart.h"
-#include "driver/gpio.h"
-#include <string.h>
-#include <stdio.h>
 
 #define BUF_SIZE (1024)
 

@@ -4,12 +4,9 @@
 */
 
 #include "mrbc_esp32_spi.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
 #include "driver/spi_master.h"
-#include "esp_log.h"
 
-static char* tag = "main";
+static char* tag = "mrbc_esp32_spi";
 #define DMA_CHAN    2
 
 spi_device_handle_t spidev;

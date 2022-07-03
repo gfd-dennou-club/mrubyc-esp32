@@ -1,12 +1,7 @@
 #include <stdio.h>
 
-#include "esp_system.h"
 #include "esp_log.h"
-#include "esp_spi_flash.h"
-#include "esp_vfs.h"
 #include "esp_spiffs.h"
-#include "nvs_flash.h"
-#include <ctype.h>
 #include "mrubyc.h"
 
 //*********************************************
@@ -72,8 +67,6 @@ uint8_t * load_mrb_file(const char *filename)
 
 void app_main(void) {
 
-  nvs_flash_init();
-
   mrbc_init(memory_pool, MEMORY_SIZE);
 
   printf("start GPIO (C)\n");
@@ -102,8 +95,8 @@ void app_main(void) {
 //-----------------------------------------------------------
     
   // Ruby 側のクラス・メソッド定義
-  extern const uint8_t mrblib_bytecode[];
-  mrbc_run_mrblib(mrblib_bytecode);
+  extern const uint8_t myclass_bytecode[];
+  mrbc_run_mrblib(myclass_bytecode);
 
   //master
   vTaskDelay(1000 / portTICK_RATE_MS);

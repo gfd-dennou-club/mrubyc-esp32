@@ -5,7 +5,6 @@
 */
 
 #include "mrbc_esp32_sleep.h"
-
 #include "esp_sleep.h"
 
 static struct RClass* mrbc_class_esp32_sleep;

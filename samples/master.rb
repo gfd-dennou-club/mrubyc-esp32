@@ -1,20 +1,39 @@
 # coding: utf-8
 
 ###
-### Hello World
+### Hello World (with slave)
 ###
 
 $msg = "ESP32"
 while true
-  puts "hello world from #{$msg}"
+  puts "hello world from #{$msg} (master)"
   sleep 1
 end
 
 
 ###
+### GPIO PIN or SWITCH (with slave)
+###
+=begin
+$led1 = GPIO.new( 13, GPIO::OUT )
+$led2 = GPIO.new( 12, GPIO::OUT )
+$sw1  = GPIO.new( 34, GPIO::IN, GPIO::PULL_UP )
+$sw2  = GPIO.new( 35, GPIO::IN, GPIO::PULL_UP )
+
+$sw1.intr( GPIO::INTR_ANYEDGE )
+$sw2.intr( GPIO::INTR_POSEDGE )
+
+num = 0
+while true
+  $led1.write( num % 2 )
+  $led2.write( num % 2 )
+  sleep 10
+  num += 1
+end
+=end
+###
 ### GPIO PIN or SWITCH
 ###
-
 =begin
 led1 = GPIO.new( 13, GPIO::OUT )
 sw1  = GPIO.new( 34, GPIO::IN, GPIO::PULL_UP )
@@ -30,7 +49,18 @@ end
 =end
 
 =begin
-led1 = GPIO.new( 12, GPIO::OUT )
+led1 = GPIO.new( 13, GPIO::OUT )
+while true
+  led1.write(1)
+  sleep 1
+
+  led1.write(0)
+  sleep 1
+end
+=end
+
+=begin
+led1 = Pin.new( 12, Pin::OUT )
 while true
   led1.on
   sleep 1
@@ -42,14 +72,29 @@ end
 
 =begin
 led1 = GPIO.new( 13, GPIO::OUT )
-while true
-  led1.write(1)
-  sleep 1
+sw1  = GPIO.new( 34, GPIO::IN, GPIO::PULL_UP )
+sw2  = GPIO.new( 35, GPIO::IN, GPIO::PULL_UP )
 
-  led1.write(0)
+while true
+
+  # スイッチ１の値に応じてLED1の出力を切り替える
+  if (sw1.read == 1)
+    led1.write(1)
+  else
+    led1.write(0)
+  end
+
+  # スイッチ２がONであれば、LED1をホールドモード(解除されるまで対象の値が動かない)にする
+  # OFFであれば、ホールドモードを解除する
+  if(sw2.read == 1)
+    led1.setpullmode(GPIO::PULL_HOLD)
+  else
+    led1.setpullmode(nil)
+  end
   sleep 1
 end
 =end
+
 
 ###
 ### PWM
@@ -106,7 +151,6 @@ end
 ###
 ### UART
 ### 
-
 =begin
 # GPS初期化 txPin = 17, rxPin = 16 のため uart_num = 2 とする
 gps = UART.new(2, 9600)
@@ -152,7 +196,6 @@ end
 ###
 ### I2C
 ###
-
 =begin
 @lcd_address = 0x3e
 @rtc_address = 0x32
@@ -274,11 +317,9 @@ while true
 end
 =end
 
-
 ###
 ### WLAN
 ###
-
 =begin
 wlan = WLAN.new('STA')
 wlan.active(true)

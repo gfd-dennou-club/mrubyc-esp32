@@ -3,11 +3,7 @@
   mruby/c GPIO functions for ESP32
 */
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
 #include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
 #include "freertos/queue.h"
 #include "driver/gpio.h"
 #include "mrbc_esp32_gpio.h"
@@ -16,7 +12,6 @@
 
 #define INTR_NUM 2
 
-static int isr_flag;
 static int isr_state[INTR_NUM];
 static int ISR_NOT_STARTED_FLAG = 1;
 
