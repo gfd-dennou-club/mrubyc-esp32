@@ -3,8 +3,9 @@
 #
 # (Uses default behaviour of compiling all source files in directory, adding 'include' to include path.)
 
-COMPONENT_DEPENDS := mrubyc
+COMPONENT_DEPENDS := mrubyc-3.1
 #COMPONENT_EXTRA_CLEAN = SRCFILES
+CFLAGS = -mlongcalls -DMRBC_USE_HAL_ESP32
 
 MRBC     = mrbc
 

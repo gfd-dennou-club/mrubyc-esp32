@@ -25,7 +25,7 @@ class ADC
       "GPIO25" => 8, "GPIO26" => 9
     }
 
-    @channel = ADC::CHANNEL_ALL["GPIO#{pin}"]
+    @channel = CHANNEL_ALL["GPIO#{pin}"]
     @atten = atten
     @width = width       
     @unit  = 1
