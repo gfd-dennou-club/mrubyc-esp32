@@ -10,6 +10,7 @@
 #include "esp_wifi.h"
 #include "esp_wpa2.h"
 #include "esp_log.h"
+#include "nvs_flash.h"
 
 static char* TAG = "WiFi";
 
@@ -60,6 +61,15 @@ static void event_handler(void* ctx, esp_event_base_t event_base, int32_t event_
 static void
 mrbc_esp32_wifi_init(mrb_vm* vm, mrb_value* v, int argc)
 {
+  // NVS (Non-volatile storage) を初期化する。
+  // NVSの初期化に失敗した場合は、NVSを削除した後、もう一度初期化する。
+  esp_err_t nvs_init_result = nvs_flash_init();
+  if (nvs_init_result == ESP_ERR_NVS_NO_FREE_PAGES || nvs_init_result == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+    ESP_ERROR_CHECK(nvs_flash_erase());
+    nvs_init_result = nvs_flash_init();
+  }
+  ESP_ERROR_CHECK(nvs_init_result);
+
   s_wifi_event_group = xEventGroupCreate();
   
   ESP_ERROR_CHECK(esp_netif_init());
