@@ -7,37 +7,62 @@ class SNTP
     @time = sntp_init()
   end
 
+  # 数字の配列を戻す. RTC の入力として使うことを想定
+  def read()
+    return [(@time[0] + 1900) % 2000, @time[1], @time[2], @time[3], @time[4], @time[5], @time[6]]
+  end
+
+  # 数字の配列を戻す. RTC の入力として使うことを想定
+  def datetime
+    read()
+  end
+
+  # 文字列で日付を戻す
+  def str_date()
+    return sprintf("%02d-%02d-%02d", (@time[0] + 1900) % 2000, @time[1], @time[2]).to_s
+  end
+
+  # 文字列で時刻を戻す
+  def str_time()
+    return sprintf("%02d:%02d:%02d", @time[4], @time[5], @time[6]).to_s
+  end  
+
+  # 文字列で日時を戻す
+  def str_datetime()
+    return sprintf("%04d%02d%02d%02d%02d%02d", @time[0] + 1900, @time[1], @time[2], @time[4], @time[5], @time[6]).to_s
+  end
+
   # 時刻取得
   def year()
-    @time[0] + 1900
+    return @time[0].to_i + 1900
   end
 
   def year2()
-    (@time[0] + 1900) % 2000
+    return (@time[0].to_i + 1900) % 2000
   end
 
   def mon()
-    @time[1]
+    return @time[1].to_i
   end
 
   def mday()
-    @time[2]
+    return @time[2].to_i
   end
 
   def wday()
-    @time[3]
+    return @time[3].to_i
   end
 
   def hour()
-    @time[4]
+    return @time[4].to_i
   end
 
   def min()
-    @time[5]
+    return @time[5].to_i
   end
 
   def sec()
-    @time[6]
+    return @time[6].to_i
   end
 
 end
