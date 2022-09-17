@@ -12,6 +12,12 @@ else
 PORT0 = $(shell echo $(PORT))
 endif
 
+ifeq ("$(BAUD)","")
+BAUD0 = 921600
+else
+BAUD0 = $(shell echo $(BAUD))
+endif
+
 # include
 ifneq ("$(IDF_PATH)","")
 include $(IDF_PATH)/make/project.mk
