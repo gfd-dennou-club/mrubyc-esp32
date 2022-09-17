@@ -1,7 +1,12 @@
 menu "mrubyc-esp32 Configuration"
-    config USE_ESP32_FIRMWAREFLASH
+
+     config USE_ESP32_FIRMWAREFLASH
         bool "USE ESP32 Firmware Flash"
         default n
-        
+	
+    config USE_ESP32_WIFI
+        bool "USE ESP32 WIFI functions"
+        default y
+	
 endmenu
 

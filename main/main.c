@@ -12,9 +12,11 @@
 #include "mrbc_esp32_adc.h"
 #include "mrbc_esp32_uart.h"
 #include "mrbc_esp32_i2c.h"
+#ifdef CONFIG_USE_ESP32_WIFI
 #include "mrbc_esp32_wifi.h"
 #include "mrbc_esp32_sntp.h"
 #include "mrbc_esp32_http_client.h"
+#endif
 #include "mrbc_esp32_sleep.h"
 #include "mrbc_esp32_spi.h"
 
@@ -79,10 +81,12 @@ void app_main(void) {
   mrbc_esp32_i2c_gem_init(0);
   printf("start UART (C)\n");
   mrbc_esp32_uart_gem_init(0);
+#ifdef CONFIG_USE_ESP32_WIFI
   printf("start WiFi (C) \n");
   mrbc_esp32_wifi_gem_init(0);
   mrbc_esp32_sntp_gem_init(0);
   mrbc_esp32_httpclient_gem_init(0);
+#endif  
   printf("start SLEEP (C) \n");
   mrbc_esp32_sleep_gem_init(0);
   printf("start SPI (C) \n");
