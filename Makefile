@@ -24,7 +24,7 @@ include $(IDF_PATH)/make/project.mk
 endif
 
 # baud rate
-ifneq ("$(BAUD)","")
+ifeq ("$(BAUD)","")
 BAUD0 = 115200
 else
 BAUD0 = $(shell echo $(BAUD))
