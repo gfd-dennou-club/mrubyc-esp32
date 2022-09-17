@@ -13,7 +13,7 @@ PORT0 = $(shell echo $(PORT))
 endif
 
 ifeq ("$(BAUD)","")
-BAUD0 = 921600
+BAUD0 = 115200
 else
 BAUD0 = $(shell echo $(BAUD))
 endif
