@@ -60,11 +60,11 @@ class I2C
     write(i2c_adrs_7, params) unless params.empty?
     a = self.__read(i2c_adrs_7, len)
     a.join(',').to_s
-#    s = ""
-#    a.length.times do |n|
-#      s << a[n].chr
-#    end
-#    s
+    s = ""
+    a.length.times do |n|
+      s << a[n].chr
+    end
+    return s
   end
 
   # 読み込み．出力は int の配列
