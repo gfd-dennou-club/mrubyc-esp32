@@ -15,6 +15,16 @@ struct tm timeinfo = { 0 };
 static void
 mrbc_esp32_sntp_init(mrb_vm* vm, mrb_value* v, int argc)
 {
+  // STNP 初期化
+  ESP_LOGI(tag, "Initializing SNTP");
+  sntp_setoperatingmode(SNTP_OPMODE_POLL);
+  sntp_setservername(0, "ntp.nict.jp");
+  //  sntp_init();
+}
+
+static void
+mrbc_esp32_sntp_set(mrb_vm* vm, mrb_value* v, int argc)
+{
   mrbc_value result;
   int retry  = 0;
   const int retry_count = 10;
@@ -24,12 +34,9 @@ mrbc_esp32_sntp_init(mrb_vm* vm, mrb_value* v, int argc)
   // Array インスタンスを生成
   result = mrbc_array_new(vm, len);
 
-  // STNP 初期化
-  ESP_LOGI(tag, "Initializing SNTP");
-  sntp_setoperatingmode(SNTP_OPMODE_POLL);
-  sntp_setservername(0, "ntp.nict.jp");
+  // set time
   sntp_init();
-
+  
   // wait for time to be set
   while (sntp_get_sync_status() == SNTP_SYNC_STATUS_RESET && ++retry < retry_count) {
     ESP_LOGI(tag, "Waiting for system time to be set... (%d/%d)", retry, retry_count);
@@ -109,6 +116,7 @@ void
 mrbc_esp32_sntp_gem_init(struct VM* vm)
 {
   mrbc_define_method(0, mrbc_class_object, "sntp_init",  mrbc_esp32_sntp_init);
+  mrbc_define_method(0, mrbc_class_object, "sntp_set",  mrbc_esp32_sntp_set);
   /*
   mrbc_define_method(0, mrbc_class_object, "sntp_year",  mrbc_esp32_sntp_year);
   mrbc_define_method(0, mrbc_class_object, "sntp_mon",   mrbc_esp32_sntp_mon);

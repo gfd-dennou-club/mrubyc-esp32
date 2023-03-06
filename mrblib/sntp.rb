@@ -4,7 +4,13 @@ class SNTP
     
   # 初期化
   def initialize()
-    @time = sntp_init()
+    sntp_init()
+    @time = sntp_set()
+  end
+
+  # 取得 (再初期化)
+  def set()
+    @time = sntp_set()
   end
 
   # 数字の配列を戻す. RTC の入力として使うことを想定
