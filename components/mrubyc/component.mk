@@ -1,3 +1,3 @@
-CFLAGS = -mlongcalls
+CFLAGS = -mlongcalls -DMRBC_USE_HAL_ESP32
 COMPONENT_ADD_INCLUDEDIRS := src
-COMPONENT_SRCDIRS := src src/hal
+COMPONENT_SRCDIRS := src
