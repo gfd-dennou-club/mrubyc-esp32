@@ -97,7 +97,7 @@ uint8_t init_spiffs(){
     } else {
       ESP_LOGE(TAG, "Failed to initialize SPIFFS (%s)", esp_err_to_name(ret));
     }
-    return;
+    return 1;
   }
   size_t total = 0, used = 0;
   ret = esp_spiffs_info(conf.partition_label, &total, &used);
@@ -126,22 +126,26 @@ uint8_t init_uart(){
 
 void app_main(void) {
 
-  init_spiffs();
-  init_uart();
-  
+  //************************************
+  // 初期化
+  //************************************
+
+  //変数初期化
   uint8_t* data = (uint8_t*) malloc(BUF_SIZE);
   uint8_t wait = 0;
   uint8_t flag_cmd_mode = 0;
   uint8_t flag_write_mode = 1;
   char buffer[BUF_SIZE];
-  char cmd_reset[]   = "reset";
-  char cmd_execute[] = "execute";
-  char cmd_write[]   = "write";
-  char cmd_showprog[]= "showprog";
-  char cmd_clear[]   = "clear";
-  char cmd_help[]    = "help";
-  char cmd_version[] = "version";
 
+  // SPIFFS 初期化
+  init_spiffs();
+
+  // UART0 初期化
+  init_uart();
+
+  //************************************
+  // mrbcwrite モード開始
+  //************************************
   ESP_LOGI(TAG, "");  
   ESP_LOGI(TAG, "Please push Enter key x 2 to mrbwite mode");  
   printf("\n");
@@ -181,24 +185,24 @@ void app_main(void) {
       }else{
 
 	//reset
-	if (strncmp(&buffer, &cmd_reset, 5) == 0) {
+	if (strncmp(buffer, "reset", 5) == 0) {
 	  printf("+OK reset \n");
 	  vTaskDelay(2000 / portTICK_PERIOD_MS);
 	  esp_restart();
 
 	//execute	  
-	} else if (strncmp(&buffer, &cmd_execute, 7) == 0) {
+	} else if (strncmp(buffer, "execute", 7) == 0) {
 	  printf("+OK execute \n");
 	  vTaskDelay(2000 / portTICK_RATE_MS);
 	  break; //ループから抜ける
 	  
 	//write	  
-	} else if (strncmp(&buffer, &cmd_write, 5) == 0) {
+	} else if (strncmp(buffer, "write", 5) == 0) {
 	  printf("+OK write bytecode \n");	  
 	  flag_write_mode = 1;  //書き込みフラグを立てる
 
 	//clear	  
-	} else if (strncmp(buffer, cmd_clear, 5) == 0) {
+	} else if (strncmp(buffer, "clear", 5) == 0) {
 	  printf("+OK clear \n");
 
 	  //ファイルを消す
@@ -209,7 +213,7 @@ void app_main(void) {
 	  }
 	  
         //help	  
-	} else if (strncmp(buffer, cmd_help, 4) == 0) {
+	} else if (strncmp(buffer, "help", 4) == 0) {
 	  printf("+OK help \n");
 	  printf("  version \n");
 	  printf("  write \n");
@@ -218,10 +222,10 @@ void app_main(void) {
 	  printf("  reset \n");
 	  printf("  execute \n");
 
-	} else if (strncmp(buffer, cmd_version, 6) == 0) {
+	} else if (strncmp(buffer, "version", 6) == 0) {
 	  printf("+OK mruby/c 3.1 \n");
 	  
-	} else if (strncmp(&buffer, &cmd_showprog, 8) == 0) {
+	} else if (strncmp(buffer, "showprog", 8) == 0) {
 	  printf("+OK show program \n");
 
 	  //読み込み
@@ -254,9 +258,9 @@ void app_main(void) {
 
   
   
-  //
+  //***************************************
   // Ruby 
-  //
+  //***************************************
   mrbc_init(memory_pool, MEMORY_SIZE);
 
   printf("start GPIO (C)\n");
