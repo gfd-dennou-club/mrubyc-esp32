@@ -124,6 +124,11 @@ uint8_t init_uart(){
 }  
 
 
+//*******************************************
+// メインプログラム
+//
+//*******************************************
+
 void app_main(void) {
 
   //************************************
@@ -136,7 +141,8 @@ void app_main(void) {
   uint8_t flag_cmd_mode = 0;
   uint8_t flag_write_mode = 1;
   char buffer[BUF_SIZE];
-
+  struct stat st;
+  
   // SPIFFS 初期化
   init_spiffs();
 
@@ -206,10 +212,13 @@ void app_main(void) {
 	  printf("+OK clear \n");
 
 	  //ファイルを消す
-	  struct stat st;
 	  if (stat("/spiffs/master.mrbc", &st) == 0) {
 	    unlink("/spiffs/master.mrbc");
 	    printf("Delete master.mrbc \n");
+	  }
+	  if (stat("/spiffs/slave.mrbc", &st) == 0) {
+	    unlink("/spiffs/slave.mrbc");
+	    printf("Delete slave.mrbc \n");
 	  }
 	  
         //help	  
@@ -234,8 +243,11 @@ void app_main(void) {
 	} else if (flag_write_mode == 1){
 
 	  // バイナリファイルを作成して書き込み
-	  save_spiffs_file("/spiffs/master.mrbc", len, data);
-
+	  if (stat("/spiffs/master.mrbc", &st) == 0) {
+	    save_spiffs_file("/spiffs/slave.mrbc", len, data);
+	  }else{
+	    save_spiffs_file("/spiffs/master.mrbc", len, data);
+	  }
 	  printf("+DONE write bytecode \n");
 	  flag_write_mode = 0; //書き込みモード終了
 	}	 	
@@ -301,8 +313,10 @@ void app_main(void) {
   uint8_t *master = load_spiffs_file("/spiffs/master.mrbc");
   mrbc_create_task(master, 0);
 
-  uint8_t *slave = load_spiffs_file("/spiffs/slave.mrbc");
-  mrbc_create_task( slave, 0 );
+  if (stat("/spiffs/slave.mrbc", &st) == 0) {
+    uint8_t *slave = load_spiffs_file("/spiffs/slave.mrbc");
+    mrbc_create_task( slave, 0 );
+  }
 #endif
 
   mrbc_run();
