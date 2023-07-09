@@ -267,7 +267,7 @@ void app_main(void) {
   }
   //書き込みモード終了
   ESP_LOGI(TAG, "End mrbwrite mode");
-
+  uart_driver_delete(UART_NUM_0); //UART 通信終了
   
   
   //***************************************
