@@ -31,7 +31,8 @@ BAUD0 = $(shell echo $(BAUD))
 endif
 
 # command
-MRBC     = /usr/local/mrubyc-3.2/bin/mrbc
+#MRBC     = /usr/local/mrubyc-3.2/bin/mrbc
+MRBC     = mrbc
 MAKE     = make
 RM       = rm
 ESPTOOL  = esptool.py
