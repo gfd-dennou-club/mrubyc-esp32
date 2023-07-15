@@ -159,6 +159,7 @@ extern struct RClass mrbc_class_ZeroDivisionError;
 
 /***** Function prototypes **************************************************/
 mrbc_class *mrbc_define_class(struct VM *vm, const char *name, mrbc_class *super);
+mrbc_class *mrbc_define_class_under(struct VM *vm, const mrbc_class *outer, const char *name, mrbc_class *super);
 void mrbc_define_method(struct VM *vm, mrbc_class *cls, const char *name, mrbc_func_t cfunc);
 mrbc_value mrbc_instance_new(struct VM *vm, mrbc_class *cls, int size);
 void mrbc_instance_delete(mrbc_value *v);

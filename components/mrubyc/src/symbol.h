@@ -3,8 +3,8 @@
   mruby/c Symbol class
 
   <pre>
-  Copyright (C) 2015-2021 Kyushu Institute of Technology.
-  Copyright (C) 2015-2021 Shimane IT Open-Innovation Center.
+  Copyright (C) 2015-2023 Kyushu Institute of Technology.
+  Copyright (C) 2015-2023 Shimane IT Open-Innovation Center.
 
   This file is distributed under BSD 3-Clause License.
 
@@ -33,6 +33,7 @@ mrbc_sym mrbc_str_to_symid(const char *str);
 const char *mrbc_symid_to_str(mrbc_sym sym_id);
 mrbc_sym mrbc_search_symid(const char *str);
 mrbc_value mrbc_symbol_new(struct VM *vm, const char *str);
+void mrbc_debug_dump_symbol(void);
 void mrbc_symbol_statistics(int *total_used);
 
 

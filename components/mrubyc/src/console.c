@@ -36,6 +36,7 @@
 #include "c_array.h"
 #include "c_hash.h"
 #include "c_range.h"
+#include "global.h"
 
 
 /***** Constant values ******************************************************/
@@ -127,6 +128,29 @@ void mrbc_putchar(char c)
 #else
     hal_write(1, &c, 1);
 #endif
+}
+
+
+//================================================================
+/*! display symbol name with nested.
+
+  @param  sym_id	symbol ID to print.
+*/
+void mrbc_print_nested_symbol(mrbc_sym sym_id)
+{
+  // normal case
+  if( !mrbc_is_nested_symid(sym_id) ) {
+    mrbc_print( mrbc_symid_to_str(sym_id) );
+    return;
+  }
+
+  // nested case
+  mrbc_sym id1, id2;
+  mrbc_separate_nested_symid( sym_id, &id1, &id2 );
+
+  mrbc_print_nested_symbol( id1 );
+  mrbc_print("::");
+  mrbc_print_nested_symbol( id2 );
 }
 
 
@@ -321,14 +345,19 @@ void mrbc_p(const mrbc_value *v)
  */
 int mrbc_p_sub(const mrbc_value *v)
 {
-  switch( mrbc_type(*v) ){
+  if( !v ) {
+    mrbc_print("(null)");	// wrong things are happen. but it give me a clue.
+    return 0;
+  }
+
+  switch( mrbc_type(*v) ) {
   case MRBC_TT_NIL:
     mrbc_print("nil");
     break;
 
   case MRBC_TT_SYMBOL:{
     const char *s = mrbc_symbol_cstr( v );
-    char *fmt = strchr(s, ':') ? "\":%s\"" : ":%s";
+    const char *fmt = strchr(s, ':') ? "\":%s\"" : ":%s";
     mrbc_printf(fmt, s);
   } break;
 
@@ -363,8 +392,8 @@ int mrbc_p_sub(const mrbc_value *v)
 
 #if 0
   // display reference counter
-  if( mrbc_type(*v) >= MRBC_TT_OBJECT ) {
-    mrbc_printf("(%d)", v->instance->ref_count);
+  if( mrbc_type(*v) > MRBC_TT_INC_DEC_THRESHOLD ) {
+    mrbc_printf("(%d)", v->obj->ref_count);
   }
 #endif
 
@@ -406,8 +435,8 @@ int mrbc_print_sub(const mrbc_value *v)
 {
   int ret = 0;
 
-  switch( mrbc_type(*v) ){
-  case MRBC_TT_EMPTY:	mrbc_print("(empty)");	break;
+  switch( mrbc_type(*v) ) {
+  case MRBC_TT_EMPTY:	mrbc_print("(empty)");		break;
   case MRBC_TT_NIL:					break;
   case MRBC_TT_FALSE:	mrbc_print("false");		break;
   case MRBC_TT_TRUE:	mrbc_print("true");		break;
@@ -415,17 +444,13 @@ int mrbc_print_sub(const mrbc_value *v)
 #if MRBC_USE_FLOAT
   case MRBC_TT_FLOAT:	mrbc_printf("%g", v->d);	break;
 #endif
-  case MRBC_TT_SYMBOL:
-    mrbc_print(mrbc_symbol_cstr(v));
-    break;
-
-  case MRBC_TT_CLASS:
-    mrbc_print(mrbc_symid_to_str(v->cls->sym_id));
-    break;
+  case MRBC_TT_SYMBOL:  mrbc_print(mrbc_symbol_cstr(v));		break;
+  case MRBC_TT_CLASS:	mrbc_print_nested_symbol( v->cls->sym_id );	break;
 
   case MRBC_TT_OBJECT:
-    mrbc_printf("#<%s:%08x>",
-	mrbc_symid_to_str( find_class_by_object(v)->sym_id ), v->instance );
+    mrbc_printf("#<");
+    mrbc_print_nested_symbol( find_class_by_object(v)->sym_id );
+    mrbc_printf(":%08x>", v->instance );
     break;
 
   case MRBC_TT_PROC:

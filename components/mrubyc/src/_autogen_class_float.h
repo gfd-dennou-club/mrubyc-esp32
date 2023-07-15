@@ -9,6 +9,7 @@ static const mrbc_sym method_symbols_Float[] = {
   MRBC_SYM(PLUS_AT),
   MRBC_SYM(MINUS_AT),
   MRBC_SYM(abs),
+  MRBC_SYM(clamp),
 #if MRBC_USE_STRING
   MRBC_SYM(inspect),
 #endif
@@ -26,13 +27,14 @@ static const mrbc_func_t method_functions_Float[] = {
   c_float_positive,
   c_float_negative,
   c_float_abs,
+  c_numeric_clamp,
 #if MRBC_USE_STRING
-  c_float_to_s,
+  c_float_inspect,
 #endif
   c_ineffect,
   c_float_to_i,
 #if MRBC_USE_STRING
-  c_float_to_s,
+  c_float_inspect,
 #endif
 };
 

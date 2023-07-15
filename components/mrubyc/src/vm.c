@@ -3,8 +3,8 @@
   mruby bytecode executor.
 
   <pre>
-  Copyright (C) 2015-2022 Kyushu Institute of Technology.
-  Copyright (C) 2015-2022 Shimane IT Open-Innovation Center.
+  Copyright (C) 2015-2023 Kyushu Institute of Technology.
+  Copyright (C) 2015-2023 Shimane IT Open-Innovation Center.
 
   This file is distributed under BSD 3-Clause License.
 
@@ -65,8 +65,6 @@ static uint16_t free_vm_bitmap[MAX_VM_COUNT / 16 + 1];
 */
 static void send_by_name( struct VM *vm, mrbc_sym sym_id, int a, int c )
 {
-  // Does not support to keyword arguments.
-  // thus, reorder arguments to mruby2 series compatible.
   int narg = c & 0x0f;
   int karg = (c >> 4) & 0x0f;
   mrbc_value *regs = vm->cur_regs;
@@ -89,18 +87,20 @@ static void send_by_name( struct VM *vm, mrbc_sym sym_id, int a, int c )
 
   // Convert keyword argument to hash.
   if( karg ) {
-    mrbc_value h = mrbc_hash_new( vm, karg );
-    if( !h.hash ) return;	// ENOMEM
-
-    mrbc_value *r1 = recv + narg + 1;
-    memcpy( h.hash->data, r1, sizeof(mrbc_value) * karg * 2 );
-    h.hash->n_stored = karg * 2;
-
-    mrbc_value block = r1[karg * 2];
-    memset( r1 + 2, 0, sizeof(mrbc_value) * (karg * 2 - 1) );
-    *r1++ = h;
-    *r1 = block;
     narg++;
+    if( karg != CALL_MAXARGS ) {
+      mrbc_value h = mrbc_hash_new( vm, karg );
+      if( !h.hash ) return;	// ENOMEM
+
+      mrbc_value *r1 = recv + narg;
+      memcpy( h.hash->data, r1, sizeof(mrbc_value) * karg * 2 );
+      h.hash->n_stored = karg * 2;
+
+      mrbc_value block = r1[karg * 2];
+      memset( r1 + 2, 0, sizeof(mrbc_value) * (karg * 2 - 1) );
+      *r1++ = h;
+      *r1 = block;
+    }
   }
 
   // is not have block
@@ -246,6 +246,7 @@ mrbc_callinfo * mrbc_push_callinfo( struct VM *vm, mrbc_sym method_id, int reg_o
   callinfo->method_id = method_id;
   callinfo->reg_offset = reg_offset;
   callinfo->n_args = n_args;
+  callinfo->kd_reg_offset = 0;
   callinfo->is_called_super = 0;
 
   callinfo->prev = vm->callinfo_tail;
@@ -282,21 +283,50 @@ void mrbc_pop_callinfo( struct VM *vm )
 
 
 //================================================================
+/*! Create (allocate) VM structure.
+
+  @param  regs_size	num of registor.
+  @return		Pointer to mrbc_vm.
+  @retval NULL		error.
+
+<b>Code example</b>
+@code
+  mrbc_vm *vm;
+  vm = mrbc_vm_new( MAX_REGS_SIZE );
+  mrbc_vm_open( vm );
+  mrbc_load_mrb( vm, byte_code );
+  mrbc_vm_begin( vm );
+  mrbc_vm_run( vm );
+  mrbc_vm_end( vm );
+  mrbc_vm_close( vm );
+@endcode
+*/
+mrbc_vm * mrbc_vm_new( int regs_size )
+{
+  mrbc_vm *vm = mrbc_raw_alloc(sizeof(mrbc_vm) + sizeof(mrbc_value) * regs_size);
+  if( !vm ) return NULL;
+
+  memset(vm, 0, sizeof(mrbc_vm));	// caution: assume NULL is zero.
+#if defined(MRBC_DEBUG)
+  memcpy(vm->type, "VM", 2);
+#endif
+  vm->flag_need_memfree = 1;
+  vm->regs_size = regs_size;
+
+  return vm;
+}
+
+
+//================================================================
 /*! Open the VM.
 
-  @param vm_arg	Pointer to mrbc_vm or NULL.
-  @return	Pointer to mrbc_vm.
-  @retval NULL	error.
+  @param vm	Pointer to VM or NULL.
+  @return	Pointer to VM, or NULL is error.
 */
-mrbc_vm *mrbc_vm_open( struct VM *vm_arg )
+mrbc_vm * mrbc_vm_open( struct VM *vm )
 {
-  mrbc_vm *vm = vm_arg;
-
-  if( vm == NULL ) {
-    // allocate memory.
-    vm = mrbc_raw_alloc( sizeof(mrbc_vm) );
-    if( vm == NULL ) return NULL;
-  }
+  if( !vm ) vm = mrbc_vm_new( MAX_REGS_SIZE );
+  if( !vm ) return NULL;
 
   // allocate vm id.
   int vm_id;
@@ -310,19 +340,11 @@ mrbc_vm *mrbc_vm_open( struct VM *vm_arg )
   }
 
   if( vm_id == MAX_VM_COUNT ) {
-    if( vm_arg == NULL ) mrbc_raw_free(vm);
+    if( vm->flag_need_memfree ) mrbc_raw_free(vm);
     return NULL;
   }
-  vm_id++;
 
-  // initialize attributes.
-  memset(vm, 0, sizeof(mrbc_vm));	// caution: assume NULL is zero.
-#if defined(MRBC_DEBUG)
-  memcpy(vm->type, "VM", 2);
-#endif
-  if( vm_arg == NULL ) vm->flag_need_memfree = 1;
-  vm->vm_id = vm_id;
-  vm->regs_size = MAX_REGS_SIZE;
+  vm->vm_id = ++vm_id;
 
   return vm;
 }
@@ -692,60 +714,21 @@ static inline void op_getconst( mrbc_vm *vm, mrbc_value *regs EXT )
   mrbc_class *cls = NULL;
   mrbc_value *v;
 
-#define _GET_CLASS_CONST \
-    v = mrbc_get_class_const(cls, sym_id); \
-    if( v != NULL ) goto DONE;
-
-  if( vm->callinfo_tail ) {
-    // class environment
-    if( vm->target_class != vm->callinfo_tail->target_class ) {
-      // case 1: Normal class constant
-      cls = vm->target_class;
-      _GET_CLASS_CONST;
-
-      // case 2: Nested class constant
-      if( vm->callinfo_tail->target_class != mrbc_class_object ) {
-        cls = vm->callinfo_tail->target_class;
-        _GET_CLASS_CONST;
-        mrbc_callinfo *tmp_ci = vm->callinfo_tail;
-        while( tmp_ci->prev ) {
-          cls = tmp_ci->prev->target_class;
-          _GET_CLASS_CONST;
-          tmp_ci = tmp_ci->prev;
-        }
-      }
-
-      // case 3: Subclass constant
-      // in order to be same with mruby's behavior (rather than CRuby)
-      // We place it after `mrbc_get_const`
-    }
+  if( vm->target_class->sym_id != MRBC_SYM(Object) ) {
+    cls = vm->target_class;
+  } else if( vm->callinfo_tail ) {
+    cls = vm->callinfo_tail->own_class;
   }
 
-  if( vm->callinfo_tail ) cls = vm->callinfo_tail->own_class;
+  // search back through super classes.
   while( cls != NULL ) {
     v = mrbc_get_class_const(cls, sym_id);
     if( v != NULL ) goto DONE;
     cls = cls->super;
   }
 
+  // is top level constant definition?
   v = mrbc_get_const(sym_id);
-  if( v != NULL ) goto DONE;
-
-  // case 3: Subclass constant
-  if( vm->callinfo_tail ) {
-    // class environment
-    if( vm->target_class != vm->callinfo_tail->target_class ) {
-      // To find super class
-      cls = vm->target_class->super;
-      while( cls != NULL ) {
-        _GET_CLASS_CONST;
-        cls = cls->super;
-      }
-    }
-  }
-
-#undef _GET_CLASS_CONST
-
   if( v == NULL ) {
     mrbc_raisef( vm, MRBC_CLASS(NameError),
 		 "uninitialized constant %s", mrbc_symid_to_str(sym_id));
@@ -1407,14 +1390,15 @@ static inline void op_enter( mrbc_vm *vm, mrbc_value *regs EXT )
     return;
   }
 
+  // Check m2 parameter.
+  if( a & FLAG_M2 ) {
+    mrbc_raise( vm, MRBC_CLASS(NotImplementedError), "not support m2 argument.");
+    return;
+  }
+
   int m1 = (a >> 18) & 0x1f;	// num of required parameters 1
   int o  = (a >> 13) & 0x1f;	// num of optional parameters
   int argc = vm->callinfo_tail->n_args;
-
-  if( a & (FLAG_M2|FLAG_KW) ) {	// check m2 and k parameter.
-    mrbc_raise( vm, MRBC_CLASS(NotImplementedError), "not support m2 or keyword argument.");
-    return;
-  }
 
   if( argc < m1 && mrbc_type(regs[0]) != MRBC_TT_PROC ) {
     mrbc_raise( vm, MRBC_CLASS(ArgumentError), "wrong number of arguments.");
@@ -1447,10 +1431,10 @@ static inline void op_enter( mrbc_vm *vm, mrbc_value *regs EXT )
     mrbc_array_delete_handle( &argary );
   }
 
-  // dictionary or rest parameter exists.
-  if( a & (FLAG_DICT|FLAG_REST) ) {
+  // dictionary, keyword or rest parameter exists.
+  if( a & (FLAG_DICT|FLAG_KW|FLAG_REST) ) {
     mrbc_value dict;
-    if( a & FLAG_DICT ) {
+    if( a & (FLAG_DICT|FLAG_KW) ) {
       if( (argc - m1) > 0 && mrbc_type(regs[argc]) == MRBC_TT_HASH ) {
 	dict = regs[argc];
 	regs[argc--].tt = MRBC_TT_EMPTY;
@@ -1485,9 +1469,10 @@ static inline void op_enter( mrbc_vm *vm, mrbc_value *regs EXT )
       mrbc_decref(&regs[++i]);
       regs[i] = rest;
     }
-    if( a & FLAG_DICT ) {
+    if( a & (FLAG_DICT|FLAG_KW) ) {
       mrbc_decref(&regs[++i]);
       regs[i] = dict;
+      vm->callinfo_tail->kd_reg_offset = i;
     }
     mrbc_decref(&regs[i+1]);
     regs[i+1] = proc;
@@ -1525,6 +1510,69 @@ static inline void op_enter( mrbc_vm *vm, mrbc_value *regs EXT )
 #undef FLAG_KW
 #undef FLAG_DICT
 #undef FLAG_BLOCK
+}
+
+
+//================================================================
+/*! op_key_p
+
+  R[a] = kdict.key?(Syms[b])
+*/
+static inline void op_key_p( mrbc_vm *vm, mrbc_value *regs EXT )
+{
+  FETCH_BB();
+
+  mrbc_value *kdict = &regs[vm->callinfo_tail->kd_reg_offset];
+  mrbc_sym sym_id = mrbc_irep_symbol_id( vm->cur_irep, b );
+  mrbc_value *v = mrbc_hash_search_by_id( kdict, sym_id );
+
+  mrbc_decref(&regs[a]);
+  mrbc_set_bool(&regs[a], v);
+}
+
+
+//================================================================
+/*! op_keyend
+
+  raise unless kdict.empty?
+*/
+static inline void op_keyend( mrbc_vm *vm, mrbc_value *regs EXT )
+{
+  FETCH_Z();
+
+  mrbc_value *kdict = &regs[vm->callinfo_tail->kd_reg_offset];
+
+  if( mrbc_hash_size(kdict) != 0 ) {
+    mrbc_hash_iterator ite = mrbc_hash_iterator_new(kdict);
+    mrbc_value *kv = mrbc_hash_i_next(&ite);
+
+    mrbc_raisef(vm, MRBC_CLASS(ArgumentError), "unknown keyword: %s",
+		mrbc_symid_to_str(kv->i));
+  }
+}
+
+
+//================================================================
+/*! op_karg
+
+  R[a] = kdict[Syms[b]]; kdict.delete(Syms[b])
+*/
+static inline void op_karg( mrbc_vm *vm, mrbc_value *regs EXT )
+{
+  FETCH_BB();
+
+  mrbc_value *kdict = &regs[vm->callinfo_tail->kd_reg_offset];
+  mrbc_sym sym_id = mrbc_irep_symbol_id( vm->cur_irep, b );
+  mrbc_value v = mrbc_hash_remove_by_id( kdict, sym_id );
+
+  if( v.tt == MRBC_TT_EMPTY ) {
+    mrbc_raisef(vm, MRBC_CLASS(ArgumentError), "missing keywords: %s",
+		mrbc_symid_to_str(sym_id));
+    return;
+  }
+
+  mrbc_decref(&regs[a]);
+  regs[a] = v;
 }
 
 
@@ -1946,7 +1994,11 @@ static inline void op_eq( mrbc_vm *vm, mrbc_value *regs EXT )
 {
   FETCH_B();
 
-  // TODO: case OBJECT == OBJECT is not supported.
+  if (regs[a].tt == MRBC_TT_OBJECT) {
+    send_by_name(vm, MRBC_SYM(EQ_EQ), a, 1);
+    return;
+  }
+
   int result = mrbc_compare(&regs[a], &regs[a+1]);
 
   mrbc_decref(&regs[a]);
@@ -1963,7 +2015,11 @@ static inline void op_lt( mrbc_vm *vm, mrbc_value *regs EXT )
 {
   FETCH_B();
 
-  // TODO: case OBJECT < OBJECT is not supported.
+  if (regs[a].tt == MRBC_TT_OBJECT) {
+    send_by_name(vm, MRBC_SYM(LT), a, 1);
+    return;
+  }
+
   int result = mrbc_compare(&regs[a], &regs[a+1]);
 
   mrbc_decref(&regs[a]);
@@ -1980,7 +2036,11 @@ static inline void op_le( mrbc_vm *vm, mrbc_value *regs EXT )
 {
   FETCH_B();
 
-  // TODO: case OBJECT <= OBJECT is not supported.
+  if (regs[a].tt == MRBC_TT_OBJECT) {
+    send_by_name(vm, MRBC_SYM(LT_EQ), a, 1);
+    return;
+  }
+
   int result = mrbc_compare(&regs[a], &regs[a+1]);
 
   mrbc_decref(&regs[a]);
@@ -1997,7 +2057,11 @@ static inline void op_gt( mrbc_vm *vm, mrbc_value *regs EXT )
 {
   FETCH_B();
 
-  // TODO: case OBJECT > OBJECT is not supported.
+  if (regs[a].tt == MRBC_TT_OBJECT) {
+    send_by_name(vm, MRBC_SYM(GT), a, 1);
+    return;
+  }
+
   int result = mrbc_compare(&regs[a], &regs[a+1]);
 
   mrbc_decref(&regs[a]);
@@ -2014,7 +2078,11 @@ static inline void op_ge( mrbc_vm *vm, mrbc_value *regs EXT )
 {
   FETCH_B();
 
-  // TODO: case OBJECT >= OBJECT is not supported.
+  if (regs[a].tt == MRBC_TT_OBJECT) {
+    send_by_name(vm, MRBC_SYM(GT_EQ), a, 1);
+    return;
+  }
+
   int result = mrbc_compare(&regs[a], &regs[a+1]);
 
   mrbc_decref(&regs[a]);
@@ -2355,6 +2423,26 @@ static inline void op_hashadd( mrbc_vm *vm, mrbc_value *regs EXT )
 
 
 //================================================================
+/*! OP_HASHCAT
+
+  R[a] = hash_cat(R[a],R[a+1])
+*/
+static inline void op_hashcat( mrbc_vm *vm, mrbc_value *regs EXT )
+{
+  FETCH_B();
+
+  mrbc_hash_iterator ite = mrbc_hash_iterator_new(&regs[a+1]);
+
+  while( mrbc_hash_i_has_next(&ite) ) {
+    mrbc_value *kv = mrbc_hash_i_next(&ite);
+    mrbc_hash_set( &regs[a], &kv[0], &kv[1] );
+    mrbc_incref( &kv[0] );
+    mrbc_incref( &kv[1] );
+  }
+}
+
+
+//================================================================
 /*! OP_BLOCK, OP_METHOD
 
   R[a] = lambda(Irep[b],L_BLOCK)
@@ -2404,6 +2492,21 @@ static inline void op_range_exc( mrbc_vm *vm, mrbc_value *regs EXT )
 
 
 //================================================================
+/*! OP_OCLASS
+
+  R[a] = ::Object
+*/
+static inline void op_oclass( mrbc_vm *vm, mrbc_value *regs EXT )
+{
+  FETCH_B();
+
+  mrbc_decref(&regs[a]);
+  regs[a].tt = MRBC_TT_CLASS;
+  regs[a].cls = mrbc_class_object;
+}
+
+
+//================================================================
 /*! OP_CLASS
 
   R[a] = newclass(R[a],Syms[b],R[a+1])
@@ -2414,6 +2517,8 @@ static inline void op_class( mrbc_vm *vm, mrbc_value *regs EXT )
 
   const char *class_name = mrbc_irep_symbol_cstr(vm->cur_irep, b);
   mrbc_class *super = (regs[a+1].tt == MRBC_TT_CLASS) ? regs[a+1].cls : 0;
+
+  // check unsupported pattern.
   if( super ) {
     int i;
     for( i = 1; i < MRBC_TT_MAXVAL; i++ ) {
@@ -2424,8 +2529,9 @@ static inline void op_class( mrbc_vm *vm, mrbc_value *regs EXT )
     }
   }
 
+  // define a new class (or get an already defined class)
   mrbc_class *cls = mrbc_define_class(vm, class_name, super);
-  if( !cls ) return;		// ENOMEM
+  if( !cls ) return;
 
   // (note)
   //  regs[a] was set to NIL by compiler. So, no need to release regs[a].
@@ -2688,9 +2794,9 @@ int mrbc_vm_run( struct VM *vm )
     case OP_SUPER:      op_super      (vm, regs EXT); break;
     case OP_ARGARY:     op_argary     (vm, regs EXT); break;
     case OP_ENTER:      op_enter      (vm, regs EXT); break;
-    case OP_KEY_P:      op_unsupported(vm, regs EXT); break; // not implemented.
-    case OP_KEYEND:     op_unsupported(vm, regs EXT); break; // not implemented.
-    case OP_KARG:       op_unsupported(vm, regs EXT); break; // not implemented.
+    case OP_KEY_P:      op_key_p      (vm, regs EXT); break;
+    case OP_KEYEND:     op_keyend     (vm, regs EXT); break;
+    case OP_KARG:       op_karg       (vm, regs EXT); break;
     case OP_RETURN:     op_return     (vm, regs EXT); break;
     case OP_RETURN_BLK: op_return_blk (vm, regs EXT); break;
     case OP_BREAK:      op_break      (vm, regs EXT); break;
@@ -2720,13 +2826,13 @@ int mrbc_vm_run( struct VM *vm )
     case OP_STRCAT:     op_strcat     (vm, regs EXT); break;
     case OP_HASH:       op_hash       (vm, regs EXT); break;
     case OP_HASHADD:    op_hashadd    (vm, regs EXT); break;
-    case OP_HASHCAT:    op_unsupported(vm, regs EXT); break; // not implemented.
+    case OP_HASHCAT:    op_hashcat    (vm, regs EXT); break;
     case OP_LAMBDA:     op_unsupported(vm, regs EXT); break; // not implemented.
     case OP_BLOCK:      // fall through
     case OP_METHOD:     op_method     (vm, regs EXT); break;
     case OP_RANGE_INC:  op_range_inc  (vm, regs EXT); break;
     case OP_RANGE_EXC:  op_range_exc  (vm, regs EXT); break;
-    case OP_OCLASS:     op_unsupported(vm, regs EXT); break; // not implemented.
+    case OP_OCLASS:     op_oclass     (vm, regs EXT); break;
     case OP_CLASS:      op_class      (vm, regs EXT); break;
     case OP_MODULE:     op_unsupported(vm, regs EXT); break; // not implemented.
     case OP_EXEC:       op_exec       (vm, regs EXT); break;

@@ -165,13 +165,23 @@ static void c_sleep(mrbc_vm *vm, mrbc_value v[], int argc)
 
   switch( mrbc_type(v[1]) ) {
   case MRBC_TT_INTEGER:
-    mrbc_sleep_ms(tcb, mrbc_integer(v[1]) * 1000);
+  {
+    mrbc_int_t sec;
+    sec = mrbc_integer(v[1]);
+    SET_INT_RETURN(sec);
+    mrbc_sleep_ms(tcb, sec * 1000);
     break;
+  }
 
 #if MRBC_USE_FLOAT
   case MRBC_TT_FLOAT:
-    mrbc_sleep_ms(tcb, (mrbc_int_t)(mrbc_float(v[1]) * 1000));
+  {
+    mrbc_float_t sec;
+    sec = mrbc_float(v[1]);
+    SET_INT_RETURN(sec);
+    mrbc_sleep_ms(tcb, (mrbc_int_t)(sec * 1000));
     break;
+  }
 #endif
 
   default:
@@ -188,7 +198,9 @@ static void c_sleep_ms(mrbc_vm *vm, mrbc_value v[], int argc)
 {
   mrbc_tcb *tcb = VM2TCB(vm);
 
-  mrbc_sleep_ms(tcb, mrbc_integer(v[1]));
+  mrbc_int_t sec = mrbc_integer(v[1]);
+  SET_INT_RETURN(sec);
+  mrbc_sleep_ms(tcb, sec);
 }
 
 
@@ -427,37 +439,56 @@ void mrbc_cleanup(void)
 
 
 //================================================================
-/*! dinamic initializer of mrbc_tcb
+/*! create (allocate) TCB.
 
+  @param  regs_size	num of allocated registers.
+  @param  task_state	task initial state.
+  @param  priority	task priority.
+  @return pointer to TCB or NULL.
+
+<b>Code example</b>
+@code
+  //  If you want specify default value, see below.
+  //    regs_size:  MAX_REGS_SIZE (in vm_config.h)
+  //    task_state: MRBC_TASK_DEFAULT_STATE
+  //    priority:   MRBC_TASK_DEFAULT_PRIORITY
+  mrbc_tcb *tcb;
+  tcb = mrbc_tcb_new( MAX_REGS_SIZE, MRBC_TASK_DEFAULT_STATE, MRBC_TASK_DEFAULT_PRIORITY );
+  mrbc_create_task( byte_code, tcb );
+@endcode
 */
-void mrbc_init_tcb(mrbc_tcb *tcb)
+mrbc_tcb * mrbc_tcb_new( int regs_size, enum MrbcTaskState task_state, int priority )
 {
+  mrbc_tcb *tcb;
+
+  tcb = mrbc_raw_alloc( sizeof(mrbc_tcb) + sizeof(mrbc_value) * regs_size );
+  if( !tcb ) return NULL;	// ENOMEM
+
   memset(tcb, 0, sizeof(mrbc_tcb));
-  tcb->priority = 128;
-  tcb->priority_preemption = 128;
-  tcb->state = TASKSTATE_READY;
+#if defined(MRBC_DEBUG)
+  memcpy( tcb->type, "TCB", 4 );
+#endif
+  tcb->priority = priority;
+  tcb->state = task_state;
+  tcb->vm.regs_size = regs_size;
+
+  return tcb;
 }
 
 
 //================================================================
 /*! specify running VM code.
 
-  @param        vm_code pointer of VM byte code.
-  @param        tcb	Task control block with parameter, or NULL.
-  @retval       Pointer of mrbc_tcb.
-  @retval       NULL is error.
-
+  @param  byte_code	pointer to VM byte code.
+  @param  tcb		Task control block with parameter, or NULL.
+  @return Pointer to mrbc_tcb or NULL.
 */
-mrbc_tcb* mrbc_create_task(const uint8_t *vm_code, mrbc_tcb *tcb)
+mrbc_tcb * mrbc_create_task(const void *byte_code, mrbc_tcb *tcb)
 {
-  // allocate Task Control Block
-  if( tcb == NULL ) {
-    tcb = mrbc_raw_alloc( sizeof(mrbc_tcb) );
-    if( tcb == NULL ) return NULL;	// ENOMEM
+  if( !tcb ) tcb = mrbc_tcb_new( MAX_REGS_SIZE, MRBC_TASK_DEFAULT_STATE, MRBC_TASK_DEFAULT_PRIORITY );
+  if( !tcb ) return NULL;	// ENOMEM
 
-    mrbc_init_tcb( tcb );
-  }
-  tcb->timeslice           = MRBC_TIMESLICE_TICK_COUNT;
+  tcb->timeslice = MRBC_TIMESLICE_TICK_COUNT;
   tcb->priority_preemption = tcb->priority;
 
   // assign VM ID
@@ -466,7 +497,7 @@ mrbc_tcb* mrbc_create_task(const uint8_t *vm_code, mrbc_tcb *tcb)
     return NULL;
   }
 
-  if( mrbc_load_mrb(&tcb->vm, vm_code) != 0 ) {
+  if( mrbc_load_mrb(&tcb->vm, byte_code) != 0 ) {
     mrbc_print_vm_exception( &tcb->vm );
     mrbc_vm_close( &tcb->vm );
     return NULL;

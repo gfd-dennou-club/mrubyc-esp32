@@ -3,8 +3,8 @@
   mruby/c String class
 
   <pre>
-  Copyright (C) 2015-2022 Kyushu Institute of Technology.
-  Copyright (C) 2015-2022 Shimane IT Open-Innovation Center.
+  Copyright (C) 2015-2023 Kyushu Institute of Technology.
+  Copyright (C) 2015-2023 Shimane IT Open-Innovation Center.
 
   This file is distributed under BSD 3-Clause License.
 
@@ -489,6 +489,18 @@ static void c_string_to_f(struct VM *vm, mrbc_value v[], int argc)
 
 
 //================================================================
+/*! (method) to_s
+*/
+static void c_string_to_s(struct VM *vm, mrbc_value v[], int argc)
+{
+  if( v[0].tt == MRBC_TT_CLASS ) {
+    v[0] = mrbc_string_new_cstr(vm, mrbc_symid_to_str( v[0].cls->sym_id ));
+    return;
+  }
+}
+
+
+//================================================================
 /*! (method) <<
 */
 static void c_string_append(struct VM *vm, mrbc_value v[], int argc)
@@ -545,8 +557,8 @@ static void c_string_slice(struct VM *vm, mrbc_value v[], int argc)
 */
 static void c_string_insert(struct VM *vm, mrbc_value v[], int argc)
 {
-  int nth;
-  int len;
+  mrbc_int_t nth;
+  mrbc_int_t len;
   const mrbc_value *val;
 
   /*
@@ -572,26 +584,34 @@ static void c_string_insert(struct VM *vm, mrbc_value v[], int argc)
     other cases
   */
   else {
-    mrbc_raise( vm, MRBC_CLASS(TypeError), "Not supprted." );
+    mrbc_raise( vm, MRBC_CLASS(TypeError), "Not supported." );
     return;
   }
 
   int len1 = v->string->size;
   int len2 = val->string->size;
-  if( nth < 0 ) nth = len1 + nth;               // adjust to positive number.
+  if( nth < 0 ) nth = len1 + nth;		// adjust to positive number.
   if( len > len1 - nth ) len = len1 - nth;
   if( nth < 0 || nth > len1 || len < 0) {
     mrbc_raisef( vm, MRBC_CLASS(IndexError), "index %d out of string", nth );
     return;
   }
 
-  uint8_t *str = mrbc_realloc(vm, mrbc_string_cstr(v), len1 + len2 - len + 1);
-  if( !str ) return;
+  int len3 = len1 + len2 - len;			// final length.
+  uint8_t *str = v->string->data;
+  if( len1 < len3 ) {
+    str = mrbc_realloc(vm, str, len3+1);	// expand
+    if( !str ) return;
+  }
 
   memmove( str + nth + len2, str + nth + len, len1 - nth - len + 1 );
   memcpy( str + nth, mrbc_string_cstr(val), len2 );
-  v->string->size = len1 + len2 - len;
 
+  if( len1 > len3 ) {
+    str = mrbc_realloc(vm, str, len3+1);	// shrink
+  }
+
+  v->string->size = len1 + len2 - len;
   v->string->data = str;
 }
 
@@ -733,6 +753,11 @@ static void c_string_inspect(struct VM *vm, mrbc_value v[], int argc)
 static void c_string_ord(struct VM *vm, mrbc_value v[], int argc)
 {
   int i = ((uint8_t *)mrbc_string_cstr(v))[0];
+
+  if (i == 0) {
+    mrbc_raise(vm, MRBC_CLASS(ArgumentError), "empty string");
+    return;
+  }
 
   SET_INT_RETURN( i );
 }
@@ -1235,6 +1260,25 @@ static void c_string_include(struct VM *vm, mrbc_value v[], int argc)
 }
 
 
+//================================================================
+/*! (method) bytes
+*/
+static void c_string_bytes(struct VM *vm, mrbc_value v[], int argc)
+{
+  /*
+   * Note: This String#bytes doesn't support taking a block parameter.
+   *       Use String#each_byte instead.
+   */
+  int len = mrbc_string_size(&v[0]);
+  mrbc_value ret = mrbc_array_new(vm, len);
+  int i;
+  for (i = 0; i < len; i++) {
+    mrbc_array_set(&ret, i, &mrbc_integer_value(v[0].string->data[i]));
+  }
+  SET_RETURN(ret);
+}
+
+
 /* MRBC_AUTOGEN_METHOD_TABLE
 
   CLASS("String")
@@ -1246,7 +1290,7 @@ static void c_string_include(struct VM *vm, mrbc_value v[], int argc)
   METHOD( "size",	c_string_size )
   METHOD( "length",	c_string_size )
   METHOD( "to_i",	c_string_to_i )
-  METHOD( "to_s",	c_ineffect )
+  METHOD( "to_s",	c_string_to_s )
   METHOD( "<<",		c_string_append )
   METHOD( "[]",		c_string_slice )
   METHOD( "[]=",	c_string_insert )
@@ -1275,6 +1319,7 @@ static void c_string_include(struct VM *vm, mrbc_value v[], int argc)
   METHOD( "start_with?", c_string_start_with )
   METHOD( "end_with?",	c_string_end_with )
   METHOD( "include?",	c_string_include )
+  METHOD( "bytes",	c_string_bytes )
 
 #if MRBC_USE_FLOAT
   METHOD( "to_f",	c_string_to_f )

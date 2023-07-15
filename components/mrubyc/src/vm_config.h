@@ -1,6 +1,6 @@
 /*! @file
   @brief
-  Global configration of mruby/c VM's
+  Global configuration of mruby/c VM's
 
   <pre>
   Copyright (C) 2015-2022 Kyushu Institute of Technology.
@@ -27,7 +27,7 @@
 
 // maximum number of symbols
 #if !defined(MAX_SYMBOLS_COUNT)
-#define MAX_SYMBOLS_COUNT 600
+#define MAX_SYMBOLS_COUNT 255
 #endif
 
 
@@ -47,7 +47,7 @@
 
 // Use math. Support Math class.
 #if !defined(MRBC_USE_MATH)
-#define MRBC_USE_MATH 1
+#define MRBC_USE_MATH 0
 #endif
 /* (NOTE)
    maybe you need
