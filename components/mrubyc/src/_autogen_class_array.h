@@ -3,6 +3,7 @@
 
 /*===== Array class =====*/
 static const mrbc_sym method_symbols_Array[] = {
+  MRBC_SYM(AND),
   MRBC_SYM(PLUS),
   MRBC_SYM(LT_LT),
   MRBC_SYM(BL_BR),
@@ -15,7 +16,6 @@ static const mrbc_sym method_symbols_Array[] = {
   MRBC_SYM(empty_Q),
   MRBC_SYM(first),
   MRBC_SYM(include_Q),
-  MRBC_SYM(index),
 #if MRBC_USE_STRING
   MRBC_SYM(inspect),
 #endif
@@ -36,9 +36,11 @@ static const mrbc_sym method_symbols_Array[] = {
   MRBC_SYM(to_s),
 #endif
   MRBC_SYM(unshift),
+  MRBC_SYM(OR),
 };
 
 static const mrbc_func_t method_functions_Array[] = {
+  c_array_and,
   c_array_add,
   c_array_push,
   c_array_get,
@@ -51,7 +53,6 @@ static const mrbc_func_t method_functions_Array[] = {
   c_array_empty,
   c_array_first,
   c_array_include,
-  c_array_index,
 #if MRBC_USE_STRING
   c_array_inspect,
 #endif
@@ -72,6 +73,7 @@ static const mrbc_func_t method_functions_Array[] = {
   c_array_inspect,
 #endif
   c_array_unshift,
+  c_array_or,
 };
 
 struct RBuiltinClass mrbc_class_Array = {

@@ -22,6 +22,7 @@
 /***** Local headers ********************************************************/
 #include "alloc.h"
 #include "value.h"
+#include "symbol.h"
 #include "class.h"
 #include "c_string.h"
 #include "c_array.h"
@@ -67,6 +68,7 @@
     mrbc_array_minmax
     mrbc_array_dup
     mrbc_array_divide
+    mrbc_array_include
 */
 
 
@@ -502,7 +504,7 @@ mrbc_value mrbc_array_dup(struct VM *vm, const mrbc_value *ary)
 
   @param  vm	pointer to VM.
   @param  src	source
-  @oaram  pos	divide position
+  @param  pos	divide position
   @return	divided array
   @note
     src = [0,1,2,3]
@@ -527,6 +529,23 @@ mrbc_value mrbc_array_divide(struct VM *vm, mrbc_value *src, int pos)
   ha_r->n_stored = new_size;
 
   return ret;
+}
+
+//================================================================
+/*! check inclusion
+
+  @param  ary     source
+  @param  val     object if it is included
+  @return         0 if not included. 1 or greater if included
+*/
+int mrbc_array_include(const mrbc_value *ary, const mrbc_value *val)
+{
+  int n = ary->array->n_stored;
+  int i;
+  for (i = 0; i < n; i++) {
+    if (mrbc_compare(&ary->array->data[i], val) == 0) break;
+  }
+  return (n - i);
 }
 
 
@@ -806,35 +825,62 @@ static void c_array_size(struct VM *vm, mrbc_value v[], int argc)
 
 
 //================================================================
-/*! (method) index
-*/
-static void c_array_index(struct VM *vm, mrbc_value v[], int argc)
-{
-  mrbc_value *value = &v[1];
-  mrbc_value *data = v->array->data;
-  int n = v->array->n_stored;
-  int i;
-
-  for( i = 0; i < n; i++ ) {
-    if( mrbc_compare(&data[i], value) == 0 ) break;
-  }
-
-  if( i < n ) {
-    SET_INT_RETURN(i);
-  } else {
-    SET_NIL_RETURN();
-  }
-}
-
-
-//================================================================
 /*! (method) include?
 */
 static void c_array_include(struct VM *vm, mrbc_value v[], int argc)
 {
-  c_array_index(vm, v, argc);
+  SET_BOOL_RETURN(0 < mrbc_array_include(&v[0], &v[1]));
+}
 
-  SET_BOOL_RETURN( mrbc_type(v[0]) == MRBC_TT_INTEGER );
+
+//================================================================
+/*! (method) &
+*/
+static void c_array_and(struct VM *vm, mrbc_value v[], int argc)
+{
+  if (v[1].tt != MRBC_TT_ARRAY) {
+    mrbc_raise( vm, MRBC_CLASS(TypeError), "no implicit conversion into Array");
+    return;
+  }
+  mrbc_value result = mrbc_array_new(vm, 0);
+  int i;
+  for (i = 0; i < v[0].array->n_stored; i++) {
+    mrbc_value *data = &v[0].array->data[i];
+    if (0 < mrbc_array_include(&v[1], data) && 0 == mrbc_array_include(&result, data))
+    {
+      mrbc_array_push(&result, data);
+    }
+  }
+  SET_RETURN(result);
+}
+
+
+//================================================================
+/*! (method) |
+*/
+static void c_array_or(struct VM *vm, mrbc_value v[], int argc)
+{
+  if (v[1].tt != MRBC_TT_ARRAY) {
+    mrbc_raise( vm, MRBC_CLASS(TypeError), "no implicit conversion into Array");
+    return;
+  }
+  mrbc_value result = mrbc_array_new(vm, 0);
+  int i;
+  for (i = 0; i < v[0].array->n_stored; i++) {
+    mrbc_value *data = &v[0].array->data[i];
+    if (0 == mrbc_array_include(&result, data))
+    {
+      mrbc_array_push(&result, data);
+    }
+  }
+  for (i = 0; i < v[1].array->n_stored; i++) {
+    mrbc_value *data = &v[1].array->data[i];
+    if (0 == mrbc_array_include(&result, data))
+    {
+      mrbc_array_push(&result, data);
+    }
+  }
+  SET_RETURN(result);
 }
 
 
@@ -1021,10 +1067,15 @@ static void c_array_minmax(struct VM *vm, mrbc_value v[], int argc)
 
 #if MRBC_USE_STRING
 //================================================================
-/*! (method) inspect
+/*! (method) inspect, to_s
 */
 static void c_array_inspect(struct VM *vm, mrbc_value v[], int argc)
 {
+  if( v[0].tt == MRBC_TT_CLASS ) {
+    v[0] = mrbc_string_new_cstr(vm, mrbc_symid_to_str( v[0].cls->sym_id ));
+    return;
+  }
+
   mrbc_value ret = mrbc_string_new_cstr(vm, "[");
   if( !ret.string ) goto RETURN_NIL;		// ENOMEM
 
@@ -1109,8 +1160,9 @@ static void c_array_join(struct VM *vm, mrbc_value v[], int argc)
   METHOD( "size",	c_array_size )
   METHOD( "length",	c_array_size )
   METHOD( "count",	c_array_size )
-  METHOD( "index",	c_array_index )
   METHOD( "include?",	c_array_include )
+  METHOD( "&",		c_array_and )
+  METHOD( "|",		c_array_or )
   METHOD( "first",	c_array_first )
   METHOD( "last",	c_array_last )
   METHOD( "push",	c_array_push )

@@ -3,8 +3,8 @@
   mruby/c Symbol class
 
   <pre>
-  Copyright (C) 2015-2022 Kyushu Institute of Technology.
-  Copyright (C) 2015-2022 Shimane IT Open-Innovation Center.
+  Copyright (C) 2015-2023 Kyushu Institute of Technology.
+  Copyright (C) 2015-2023 Shimane IT Open-Innovation Center.
 
   This file is distributed under BSD 3-Clause License.
 
@@ -344,6 +344,11 @@ static void c_symbol_inspect(struct VM *vm, mrbc_value v[], int argc)
 */
 static void c_symbol_to_s(struct VM *vm, mrbc_value v[], int argc)
 {
+  if( v[0].tt == MRBC_TT_CLASS ) {
+    v[0] = mrbc_string_new_cstr(vm, mrbc_symid_to_str( v[0].cls->sym_id ));
+    return;
+  }
+
   v[0] = mrbc_string_new_cstr(vm, mrbc_symid_to_str( mrbc_symbol(v[0]) ));
 }
 #endif
@@ -367,6 +372,23 @@ static void c_symbol_to_s(struct VM *vm, mrbc_value v[], int argc)
 
 
 #if defined(MRBC_DEBUG)
+//================================================================
+/*! debug dump all symbols.
+*/
+void mrbc_debug_dump_symbol(void)
+{
+  mrbc_print("<< Symbol table dump >>\n");
+
+  int i;
+  for( i = 0; i < sym_index_pos; i++ ) {
+    mrbc_sym sym_id = i + OFFSET_BUILTIN_SYMBOL;
+    mrbc_printf(" %04x:%s\n", sym_id, sym_index[i].cstr );
+  }
+
+  mrbc_print("\n");
+}
+
+
 //================================================================
 /* statistics
 

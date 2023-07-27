@@ -3,8 +3,8 @@
   mruby/c Hash class
 
   <pre>
-  Copyright (C) 2015-2022 Kyushu Institute of Technology.
-  Copyright (C) 2015-2022 Shimane IT Open-Innovation Center.
+  Copyright (C) 2015-2023 Kyushu Institute of Technology.
+  Copyright (C) 2015-2023 Shimane IT Open-Innovation Center.
 
   This file is distributed under BSD 3-Clause License.
 
@@ -67,9 +67,11 @@ typedef struct RHashIterator {
 mrbc_value mrbc_hash_new(struct VM *vm, int size);
 void mrbc_hash_delete(mrbc_value *hash);
 mrbc_value *mrbc_hash_search(const mrbc_value *hash, const mrbc_value *key);
+mrbc_value *mrbc_hash_search_by_id(const mrbc_value *hash, mrbc_sym sym_id);
 int mrbc_hash_set(mrbc_value *hash, mrbc_value *key, mrbc_value *val);
-mrbc_value mrbc_hash_get(mrbc_value *hash, mrbc_value *key);
-mrbc_value mrbc_hash_remove(mrbc_value *hash, mrbc_value *key);
+mrbc_value mrbc_hash_get(const mrbc_value *hash, const mrbc_value *key);
+mrbc_value mrbc_hash_remove(mrbc_value *hash, const mrbc_value *key);
+mrbc_value mrbc_hash_remove_by_id(mrbc_value *hash, mrbc_sym sym_id);
 void mrbc_hash_clear(mrbc_value *hash);
 int mrbc_hash_compare(const mrbc_value *v1, const mrbc_value *v2);
 mrbc_value mrbc_hash_dup(struct VM *vm, mrbc_value *src);

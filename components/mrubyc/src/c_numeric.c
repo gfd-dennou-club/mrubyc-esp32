@@ -3,8 +3,8 @@
   mruby/c Integer and Float class
 
   <pre>
-  Copyright (C) 2015-2021 Kyushu Institute of Technology.
-  Copyright (C) 2015-2021 Shimane IT Open-Innovation Center.
+  Copyright (C) 2015-2023 Kyushu Institute of Technology.
+  Copyright (C) 2015-2023 Shimane IT Open-Innovation Center.
 
   This file is distributed under BSD 3-Clause License.
 
@@ -25,6 +25,7 @@
 
 /***** Local headers ********************************************************/
 #include "value.h"
+#include "symbol.h"
 #include "error.h"
 #include "class.h"
 #include "c_string.h"
@@ -49,8 +50,8 @@ static void c_integer_bitref(struct VM *vm, mrbc_value v[], int argc)
   if( mrbc_integer(v[1]) < 0 ) {
     SET_INT_RETURN( 0 );
   } else {
-    mrbc_int_t mask = (argc == 1) ? 1 : (1 << mrbc_fixnum(v[2])) - 1;
-    SET_INT_RETURN( (mrbc_fixnum(v[0]) >> mrbc_fixnum(v[1])) & mask );
+    mrbc_int_t mask = (argc == 1) ? 1 : (1 << mrbc_integer(v[2])) - 1;
+    SET_INT_RETURN( (mrbc_integer(v[0]) >> mrbc_integer(v[1])) & mask );
   }
 }
 
@@ -194,6 +195,43 @@ static void c_integer_abs(struct VM *vm, mrbc_value v[], int argc)
 }
 
 
+//================================================================
+/*! (method) clamp
+ *
+ * Note: Does not support Range object as the argument
+ *       like `3.clamp(1..2) #=> 2`
+*/
+static void c_numeric_clamp(struct VM *vm, mrbc_value v[], int argc)
+{
+  if (argc != 2) {
+    mrbc_raise(vm, MRBC_CLASS(ArgumentError), "wrong number of arguments (expected 2)");
+    return;
+  }
+  mrbc_value min = v[1];
+  mrbc_value max = v[2];
+  if (
+    (mrbc_type(min) != MRBC_TT_INTEGER && mrbc_type(min) != MRBC_TT_FLOAT) ||
+    (mrbc_type(max) != MRBC_TT_INTEGER && mrbc_type(max) != MRBC_TT_FLOAT)
+  ){
+    mrbc_raise(vm, MRBC_CLASS(ArgumentError), "comparison failed");
+    return;
+  }
+  if (mrbc_compare(&max, &min) < 0) {
+    mrbc_raise(vm, MRBC_CLASS(ArgumentError), "min argument must be smaller than max argument");
+    return;
+  }
+  if (mrbc_compare(&v[0], &min) < 0) {
+    SET_RETURN(min);
+    return;
+  }
+  if (mrbc_compare(&max, &v[0]) < 0) {
+    SET_RETURN(max);
+    return;
+  }
+  SET_RETURN(v[0]); /* return self */
+}
+
+
 #if MRBC_USE_FLOAT
 //================================================================
 /*! (method) to_f
@@ -220,10 +258,15 @@ static void c_integer_chr(struct VM *vm, mrbc_value v[], int argc)
 
 
 //================================================================
-/*! (method) to_s
+/*! (method) inspect, to_s
 */
-static void c_integer_to_s(struct VM *vm, mrbc_value v[], int argc)
+static void c_integer_inspect(struct VM *vm, mrbc_value v[], int argc)
 {
+  if( v[0].tt == MRBC_TT_CLASS ) {
+    v[0] = mrbc_string_new_cstr(vm, mrbc_symid_to_str( v[0].cls->sym_id ));
+    return;
+  }
+
   int base = 10;
   if( argc ) {
     base = mrbc_integer(v[1]);
@@ -264,13 +307,14 @@ static void c_integer_to_s(struct VM *vm, mrbc_value v[], int argc)
   METHOD( ">>",		c_integer_rshift )
   METHOD( "abs",	c_integer_abs )
   METHOD( "to_i",	c_ineffect )
+  METHOD( "clamp",	c_numeric_clamp )
 #if MRBC_USE_FLOAT
   METHOD( "to_f",	c_integer_to_f )
 #endif
 #if MRBC_USE_STRING
   METHOD( "chr",	c_integer_chr )
-  METHOD( "inspect",	c_integer_to_s )
-  METHOD( "to_s",	c_integer_to_s )
+  METHOD( "inspect",	c_integer_inspect )
+  METHOD( "to_s",	c_integer_inspect )
 #endif
 */
 #include "_autogen_class_integer.h"
@@ -340,10 +384,15 @@ static void c_float_to_i(struct VM *vm, mrbc_value v[], int argc)
 
 #if MRBC_USE_STRING
 //================================================================
-/*! (method) to_s
+/*! (method) inspect, to_s
 */
-static void c_float_to_s(struct VM *vm, mrbc_value v[], int argc)
+static void c_float_inspect(struct VM *vm, mrbc_value v[], int argc)
 {
+  if( v[0].tt == MRBC_TT_CLASS ) {
+    v[0] = mrbc_string_new_cstr(vm, mrbc_symid_to_str( v[0].cls->sym_id ));
+    return;
+  }
+
   char buf[16];
 
   snprintf( buf, sizeof(buf), "%g", v->d );
@@ -366,9 +415,10 @@ static void c_float_to_s(struct VM *vm, mrbc_value v[], int argc)
   METHOD( "abs",	c_float_abs )
   METHOD( "to_i",	c_float_to_i )
   METHOD( "to_f",	c_ineffect )
+  METHOD( "clamp",	c_numeric_clamp )
 #if MRBC_USE_STRING
-  METHOD( "inspect",	c_float_to_s )
-  METHOD( "to_s",	c_float_to_s )
+  METHOD( "inspect",	c_float_inspect )
+  METHOD( "to_s",	c_float_inspect )
 #endif
 */
 #include "_autogen_class_float.h"

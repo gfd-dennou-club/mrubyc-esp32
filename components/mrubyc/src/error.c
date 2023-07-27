@@ -3,8 +3,8 @@
   exception classes
 
   <pre>
-  Copyright (C) 2015-2022 Kyushu Institute of Technology.
-  Copyright (C) 2015-2022 Shimane IT Open-Innovation Center.
+  Copyright (C) 2015-2023 Kyushu Institute of Technology.
+  Copyright (C) 2015-2023 Shimane IT Open-Innovation Center.
 
   This file is distributed under BSD 3-Clause License.
 
@@ -139,14 +139,18 @@ void mrbc_exception_delete(mrbc_value *value)
 /*! raise exception
 
   @param  vm		pointer to VM.
-  @param  exc_cls	pointer to Exception class.
-  @param  msg		message.
+  @param  exc_cls	pointer to Exception class or NULL.
+  @param  msg		message or NULL.
   @note	(usage) mrbc_raise(vm, MRBC_CLASS(TypeError), "message here.");
 */
 void mrbc_raise( struct VM *vm, struct RClass *exc_cls, const char *msg )
 {
   if( vm ) {
-    vm->exception = mrbc_exception_new( vm, exc_cls ? exc_cls : MRBC_CLASS(RuntimeError), msg, 0 );
+    struct RClass *cls = exc_cls ? exc_cls : MRBC_CLASS(RuntimeError);
+    const char msg_len = msg ? strlen(msg) : 0;
+
+    mrbc_decref(&vm->exception);
+    vm->exception = mrbc_exception_new( vm, cls, msg, msg_len );
     vm->flag_preemption = 2;
 
   } else {
@@ -173,6 +177,7 @@ void mrbc_raisef( struct VM *vm, struct RClass *exc_cls, const char *fstr, ... )
 
   if( buf ) {
     mrbc_vasprintf( &buf, MESSAGE_INI_LEN, fstr, ap );
+    mrbc_decref(&vm->exception);
     vm->exception = mrbc_exception_new_alloc( vm,
 			exc_cls ? exc_cls : MRBC_CLASS(RuntimeError),
 			buf, strlen(buf) );

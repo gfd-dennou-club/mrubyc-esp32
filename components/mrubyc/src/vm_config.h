@@ -1,6 +1,6 @@
 /*! @file
   @brief
-  Global configration of mruby/c VM's
+  Global configuration of mruby/c VM's
 
   <pre>
   Copyright (C) 2015-2022 Kyushu Institute of Technology.

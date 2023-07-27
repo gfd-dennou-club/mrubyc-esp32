@@ -3,8 +3,8 @@
   mruby/c value definitions
 
   <pre>
-  Copyright (C) 2015-2020 Kyushu Institute of Technology.
-  Copyright (C) 2015-2020 Shimane IT Open-Innovation Center.
+  Copyright (C) 2015-2023 Kyushu Institute of Technology.
+  Copyright (C) 2015-2023 Shimane IT Open-Innovation Center.
 
   This file is distributed under BSD 3-Clause License.
 
@@ -131,7 +131,7 @@ int mrbc_compare(const mrbc_value *v1, const mrbc_value *v2)
   case MRBC_TT_CLASS:
   case MRBC_TT_OBJECT:
   case MRBC_TT_PROC:
-    return -1 + (v1->proc == v2->proc) + (v1->proc > v2->proc)*2;
+    return (v1->cls > v2->cls) * 2 - (v1->cls != v2->cls);
 
   case MRBC_TT_ARRAY:
     return mrbc_array_compare( v1, v2 );
@@ -233,4 +233,27 @@ mrbc_int_t mrbc_atoi( const char *s, int base )
   if( sign ) ret = -ret;
 
   return ret;
+}
+
+
+//================================================================
+/*! string copy
+
+  @param  dest		destination buffer.
+  @param  destsize	buffer size.
+  @param  src		source.
+  @return int		number of bytes copied.
+*/
+int mrbc_strcpy( char *dest, int destsize, const char *src )
+{
+  int n = destsize;
+  if( n <= 0 ) return 0;
+
+  while( --n != 0 ) {
+    if( (*dest++ = *src++) == 0 ) goto RETURN;
+  }
+  *dest = 0;
+
+ RETURN:
+  return destsize - n - 1;
 }

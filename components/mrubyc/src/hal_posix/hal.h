@@ -31,8 +31,8 @@
 #define MRBC_TICK_UNIT_2_MS   2
 #define MRBC_TICK_UNIT_4_MS   4
 #define MRBC_TICK_UNIT_10_MS 10
-// Congiguring small value for MRBC_TICK_UNIT may cause a decline of timer
-// accracy depending on kernel constant HZ and USER_HZ.
+// Configuring small value for MRBC_TICK_UNIT may cause a decline of timer
+// accuracy depending on kernel constant HZ and USER_HZ.
 // For more information about it on `man 7 time`.
 #define MRBC_TICK_UNIT MRBC_TICK_UNIT_4_MS
 // Substantial timeslice value (millisecond) will be
