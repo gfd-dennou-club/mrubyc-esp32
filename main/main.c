@@ -35,13 +35,15 @@ static const char *TAG = "mrubyc-esp32";
 
 #define BUF_SIZE (1024)
 #define MEMORY_SIZE (1024*70)
-
+#define RD_BUF_SIZE (BUF_SIZE)
+static QueueHandle_t uart0_queue;
 static uint8_t memory_pool[MEMORY_SIZE];
 
-// SPIFFS でバイナリデータを読み込み
+// SPIFFS でバイナリデータを書き込み
 uint8_t * save_spiffs_file(const char *filename, int len, uint8_t *data)
 {
-  FILE* fp = fopen(filename, "wb");
+  //  FILE* fp = fopen(filename, "ab");
+  FILE* fp = fopen(filename, "ab");
   if (fp == NULL) {
     ESP_LOGE(TAG, "Failed to open file for writing (%s)\n", filename);
     return NULL;
@@ -118,10 +120,12 @@ uint8_t init_uart(){
     .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
     .source_clk = UART_SCLK_APB,
   };
-  uart_driver_install(UART_NUM_0, 2*1024, 0, 0, NULL, 0);
+  //uart_driver_install(UART_NUM_0, 2*1024, 0, 0, NULL, 0);
+  //uart_param_config(UART_NUM_0, &uart_config);
+  uart_driver_install(UART_NUM_0, BUF_SIZE * 2, BUF_SIZE * 2, 20, &uart0_queue, 0);
   uart_param_config(UART_NUM_0, &uart_config);
-  esp_vfs_dev_uart_use_driver(0);
 }  
+
 
 
 //*******************************************
@@ -140,9 +144,10 @@ void app_main(void) {
   uint8_t wait = 0;
   uint8_t flag_cmd_mode = 0;
   uint8_t flag_write_mode = 1;
+  uint8_t ifile = 0;
   char buffer[BUF_SIZE];
   struct stat st;
-  
+      
   // SPIFFS 初期化
   init_spiffs();
 
@@ -154,21 +159,21 @@ void app_main(void) {
   //************************************
   ESP_LOGI(TAG, "");  
   ESP_LOGI(TAG, "Please push Enter key x 2 to mrbwite mode");  
-  printf("\n");
-  
+  printf("\n\n");
+
   while (1) {
     //バイト数の取得
     int len = uart_read_bytes(UART_NUM_0, data, BUF_SIZE, 1000 / portTICK_RATE_MS);
-
+    
     //取得したバイト数が正か否かで場合分け
     if (len > 0) {
-
+      
       //表示
-      ESP_LOGI(TAG, "Read %d bytes", len);
-      ESP_LOG_BUFFER_HEXDUMP(TAG, data, len, ESP_LOG_INFO);
-
+      //ESP_LOGI(TAG, "Read %d bytes", len);
+      //ESP_LOG_BUFFER_HEXDUMP(TAG, data, len, ESP_LOG_INFO);
+      
       wait = 0;  //waiting の変数のクリア
-
+      
       //文字型に変換
       for (int i = 0; i < len; i++){
 	buffer[i] = data[i];
@@ -182,8 +187,8 @@ void app_main(void) {
 	//コマンドモードに入るためのフラグを立てる
 	if ( (data[0] == 0x0d && data[1] == 0x0d) ||
 	     (data[0] == 0x0d && data[2] == 0x0d && data[1] == 0x0a && data[3] == 0x0a ) ) {
-	  ESP_LOGI(TAG, "Entering Command Mode ...");
-	  printf("+OK mruby/c \n");
+	  //ESP_LOGI(TAG, "Entering Command Mode ...");
+	  printf("+OK mruby/c \n\n");
 	  flag_cmd_mode = 1;
 	}
 
@@ -192,64 +197,91 @@ void app_main(void) {
 
 	//reset
 	if (strncmp(buffer, "reset", 5) == 0) {
-	  printf("+OK reset \n");
+	  printf("+OK reset \n\n");
 	  vTaskDelay(2000 / portTICK_PERIOD_MS);
 	  esp_restart();
 
 	//execute	  
 	} else if (strncmp(buffer, "execute", 7) == 0) {
-	  printf("+OK execute \n");
+	  printf("+OK execute \n\n");
 	  vTaskDelay(2000 / portTICK_RATE_MS);
 	  break; //ループから抜ける
 	  
 	//write	  
 	} else if (strncmp(buffer, "write", 5) == 0) {
-	  printf("+OK write bytecode \n");	  
+	  printf("+OK write bytecode \n\n");	  
 	  flag_write_mode = 1;  //書き込みフラグを立てる
+
+	  // 書き込み先ファイルの決定.
+	  if (stat("/spiffs/master.mrbc", &st) != 0) {
+	    printf("+OK writting to master.mrbc \n\n");
+	    ifile = 1;
+	  }else if (stat("/spiffs/slave.mrbc", &st) != 0) {
+	    printf("+OK writting to slave.mrbc \n\n");
+	    ifile = 2;
+	  } else {
+	    ESP_LOGE(TAG, "Failed to determine file to write");
+	    ifile = 0;
+	    flag_write_mode = 0; //書き込みモード終了	      
+	  }
 
 	//clear	  
 	} else if (strncmp(buffer, "clear", 5) == 0) {
-	  printf("+OK clear \n");
+	  printf("+OK clear \n\n");
 
 	  //ファイルを消す
 	  if (stat("/spiffs/master.mrbc", &st) == 0) {
 	    unlink("/spiffs/master.mrbc");
-	    printf("Delete master.mrbc \n");
+	    printf("+OK Delete master.mrbc \n\n");
 	  }
 	  if (stat("/spiffs/slave.mrbc", &st) == 0) {
 	    unlink("/spiffs/slave.mrbc");
-	    printf("Delete slave.mrbc \n");
+	    printf("+OK Delete slave.mrbc \n\n");
 	  }
 	  
         //help	  
 	} else if (strncmp(buffer, "help", 4) == 0) {
-	  printf("+OK help \n");
-	  printf("  version \n");
-	  printf("  write \n");
+	  printf("+OK help   \n");
+	  printf("  version  \n");
+	  printf("  write    \n");
 	  printf("  showprog \n");
-	  printf("  clear \n");
-	  printf("  reset \n");
-	  printf("  execute \n");
+	  printf("  clear    \n");
+	  printf("  reset    \n");
+	  printf("  execute  \n");
 
+        //version
 	} else if (strncmp(buffer, "version", 6) == 0) {
-	  printf("+OK mruby/c 3.1 \n");
-	  
+	  printf("+OK mruby/c 3.1 \n\n");
+
+	//showprog
 	} else if (strncmp(buffer, "showprog", 8) == 0) {
-	  printf("+OK show program \n");
+	  printf("+OK show program \n\n");
 
 	  //読み込み
-	  load_spiffs_file("/spiffs/master.mrbc");
-
+	  if (stat("/spiffs/master.mrbc", &st) == 0) {
+	    printf("**** master.mrbc **** \n\n");
+	    load_spiffs_file("/spiffs/master.mrbc");
+	  }
+	  if (stat("/spiffs/slave.mrbc", &st) == 0) {	  
+	    printf("**** slave.mrbc **** \n\n");
+	    load_spiffs_file("/spiffs/slave.mrbc");
+	  }
+	  
+	// 書き込み
 	} else if (flag_write_mode == 1){
 
-	  // バイナリファイルを作成して書き込み
-	  if (stat("/spiffs/master.mrbc", &st) == 0) {
-	    save_spiffs_file("/spiffs/slave.mrbc", len, data);
-	  }else{
+	  //ファイル書き込み
+	  if (ifile == 1) {
 	    save_spiffs_file("/spiffs/master.mrbc", len, data);
+	  } else if (ifile == 2){
+	    save_spiffs_file("/spiffs/slave.mrbc", len, data);
 	  }
-	  printf("+DONE write bytecode \n");
-	  flag_write_mode = 0; //書き込みモード終了
+	  
+	  //書き込みを継続するか否か．バッファーサイズと読み込みバイト数で判断．
+	  if (len < BUF_SIZE ) { 
+	    printf("+DONE write bytecode \n\n");
+	    flag_write_mode = 0; //書き込みモード終了
+	  }
 	}	 	
       }
     }else{
@@ -260,14 +292,14 @@ void app_main(void) {
 	wait += 1; 
       }
       //閾値を越えたらタイムアウト
-      if (wait > 10){
+      if (wait > 2){
 	break; 
       }      
     }
   }
   //書き込みモード終了
   ESP_LOGI(TAG, "End mrbwrite mode");
-  uart_driver_delete(UART_NUM_0); //UART 通信終了
+
   
   
   //***************************************
