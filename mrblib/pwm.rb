@@ -6,81 +6,78 @@ class PWM
   # esp-idf/components/driver/include/driver/ledc.h 参照
   LEDC_TIMER_10_BIT = 10
   LEDC_HIGH_SPEED_MODE = 0
+  LEDC_LOW_SPEED_MODE = 1
   LEDC_DEFAULT_FREQUENCY = 440
   LEDC_DEFAULT_DUTY = 0
   
-  # 音階の指定
-  NOTE = {
-    "NOTE_C" => 0,
-    "NOTE_Cs" => 1,
-    "NOTE_D" => 2,
-    "NOTE_Eb" => 3,
-    "NOTE_E" => 4,
-    "NOTE_F" => 5,
-    "NOTE_Fs" => 6,
-    "NOTE_G" => 7,
-    "NOTE_Gs" => 8,
-    "NOTE_A" => 9,
-    "NOTE_Bb" => 10,
-    "NOTE_B" => 11
-  }
-
   # 初期化
-  def initialize(pin, ch=0, freq = PWM::LEDC_DEFAULT_FREQUENCY, duty = PWM::LEDC_DEFAULT_DUTY)
-    if pin.kind_of?(Fixnum)
-      @pin = pin
-    elsif pin.kind_of?(Pin)
-      @pin = pin.pin
+  def initialize( pin, ch = 0, num = -1)
+
+    @pin = pin
+    @rslv = PWM::LEDC_TIMER_10_BIT
+    @ch   = ch
+    @freq = PWM::LEDC_DEFAULT_FREQUENCY
+    @duty = LEDC_DEFAULT_DUTY 
+
+    @num = num
+    if num == -1
+      @num  = ch       
     end
-
-    @ch = ch
-    @freq = freq
-    @duty = duty
-
+    
+    if num < 2
+      @sp = PWM::LEDC_HIGH_SPEED_MODE 
+    else
+      @sp = PWM::LEDC_LOW_SPEED_MODE 
+    end
     
     # タイマーの初期化
     ledc_timer_config(
-      PWM::LEDC_TIMER_10_BIT,
-      PWM::LEDC_DEFAULT_FREQUENCY,
-      PWM::LEDC_HIGH_SPEED_MODE
+      @rslv,
+      @freq,
+      @sp,
+      @num
     )
-    
     # PWM の初期化
     ledc_channel_config(
       @ch,
       @pin, 
-      PWM::LEDC_HIGH_SPEED_MODE
+      @sp,
+      @num
     )
+    
+    puts "**** #{@ch} ****"
+    puts " #{@rslv}, #{@freq}, #{@sp}, #{@num} "
+    puts "***************"
+
   end
 
   # デューティー比の設定
   def duty( duty )
     @duty = duty
-    ledc_timer_config(
-      PWM::LEDC_TIMER_10_BIT,
-      @freq,
-      PWM::LEDC_HIGH_SPEED_MODE
-    )
-    ledc_set_duty(PWM::LEDC_HIGH_SPEED_MODE, @ch, @duty)
-    ledc_update_duty(PWM::LEDC_HIGH_SPEED_MODE, @ch)
-
-    puts "Frequency is already set : #{@freq}"
+    ledc_set_duty_and_update(@sp, @ch, @duty)
+#    @duty = duty
+#    ledc_set_duty(@sp, @ch, @duty)
+#    ledc_update_duty(@sp, @ch)
+#    puts "Frequency is already set : #{@freq}"
     puts "Set Duty : #{@duty}"
+
+    puts "**** #{@ch} ****"
+    puts " #{@rslv}, #{@freq}, #{@sp}, #{@num} "
+    puts "***************"
+
   end
 
   # 周波数の設定
   def frequency( freq )
     @freq = freq
-    ledc_timer_config(
-      PWM::LEDC_TIMER_10_BIT,
-      @freq,
-      PWM::LEDC_HIGH_SPEED_MODE
-    )
-    ledc_set_duty(PWM::LEDC_HIGH_SPEED_MODE, @ch, @duty)
-    ledc_update_duty(PWM::LEDC_HIGH_SPEED_MODE, @ch)
+    ledc_set_freq(@sp, @num, @freq)
 
     puts "Set Frequency : #{freq}"
-    puts "Duty is already set: #{@duty}"
+
+    puts "**** #{@ch} ****"
+    puts " #{@rslv}, #{@freq}, #{@sp}, #{@num} "
+    puts "***************"
+
   end
 
   # 周波数の設定
@@ -96,17 +93,14 @@ class PWM
   end
 
   # PWMを無効化
-  def deinit()
-    ledc_stop(PWM::LEDC_HIGH_SPEED_MODE, @ch, 0)
+  def deinit(  )
+    ledc_stop(@sp, @ch)
     puts "Stop PWM"
+
+    puts "**** #{@ch} ****"
+    puts " #{@rslv}, #{@freq}, #{@sp}, #{@num} "
+    puts "***************"
+
   end
 
-  # 音階とオクターブを指定して周波数を設定
-  def ledc_write_note(note, octave)
-    if(0 > octave && octave <= 8)
-      deinit
-    else
-      freq(((27.5 * (2**((PWM::NOTE[note] + 12 * octave)/12.0))) + 0.5).to_i)
-    end
-  end
 end
