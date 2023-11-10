@@ -55,10 +55,6 @@ class PWM
   def duty( duty )
     @duty = duty
     ledc_set_duty_and_update(@sp, @ch, @duty)
-#    @duty = duty
-#    ledc_set_duty(@sp, @ch, @duty)
-#    ledc_update_duty(@sp, @ch)
-#    puts "Frequency is already set : #{@freq}"
     puts "Set Duty : #{@duty}"
 
     puts "**** #{@ch} ****"
@@ -97,10 +93,5 @@ class PWM
     ledc_stop(@sp, @ch)
     puts "Stop PWM"
 
-    puts "**** #{@ch} ****"
-    puts " #{@rslv}, #{@freq}, #{@sp}, #{@num} "
-    puts "***************"
-
   end
-
 end

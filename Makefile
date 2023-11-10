@@ -64,8 +64,8 @@ spiffs:
 	$(MRBC) -o ./spiffs/mrbc/slave.mrbc -E ./src/slave.rb
 	@echo $(MKSPIFFS) -c ./spiffs/mrbc -p 256 -b 4096 -s $(SPIFFS_DATA_TABLE_SIZE) ./spiffs/mrbc.spiffs.bin
 	$(MKSPIFFS) -c ./spiffs/mrbc -p 256 -b 4096 -s $(SPIFFS_DATA_TABLE_SIZE) ./spiffs/mrbc.spiffs.bin
-	@echo $(ESPTOOL) --chip esp32 --baud $(BAUD0) --port $(PORT0) --before default_reset --after hard_reset write_flash -z --flash_mode qio --flash_freq 80m --flash_size detect $(SPIFFS_DATA_OFFSET) ./spiffs/mrbc.spiffs.bin
-	$(ESPTOOL) --chip esp32 --baud $(BAUD0) --port $(PORT0) --before default_reset --after hard_reset write_flash -z --flash_mode qio --flash_freq 80m --flash_size detect $(SPIFFS_DATA_OFFSET) ./spiffs/mrbc.spiffs.bin
+	@echo $(ESPTOOL) --chip esp32 --baud $(BAUD0) --port $(PORT0) --before default_reset --after hard_reset write_flash -z --flash_mode dio --flash_freq 40m --flash_size detect $(SPIFFS_DATA_OFFSET) ./spiffs/mrbc.spiffs.bin
+	$(ESPTOOL) --chip esp32 --baud $(BAUD0) --port $(PORT0) --before default_reset --after hard_reset write_flash -z --flash_mode dio --flash_freq 40m --flash_size detect $(SPIFFS_DATA_OFFSET) ./spiffs/mrbc.spiffs.bin
 
 spiffs-clean:
 	@echo $(RM) ./spiffs/mrbc.spiffs.bin
