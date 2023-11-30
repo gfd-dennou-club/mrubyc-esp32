@@ -40,7 +40,8 @@ class PWM
     # PWM の初期化
     ledc_channel_config(
       @ch,
-      @pin, 
+      @pin,
+      @duty,
       @sp,
       @num
     )

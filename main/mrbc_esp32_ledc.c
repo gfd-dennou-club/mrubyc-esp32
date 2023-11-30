@@ -43,12 +43,13 @@ mrbc_esp32_ledc_channel_config(mrb_vm* vm, mrb_value* v, int argc)
 {
   int ch    = GET_INT_ARG(1);
   int pin   = GET_INT_ARG(2);
-  int sp    = GET_INT_ARG(3);
-  int num   = GET_INT_ARG(4);
+  int duty  = GET_INT_ARG(3);
+  int sp    = GET_INT_ARG(4);
+  int num   = GET_INT_ARG(5);
  
   ledc_channel_config_t config = {
     .channel    = ch,
-    .duty       = 0,
+    .duty       = duty,
     .gpio_num   = pin,
     .speed_mode = sp,
     .hpoint     = 0,
