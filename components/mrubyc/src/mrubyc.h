@@ -3,8 +3,8 @@
   Include at once the necessary header files for user program.
 
   <pre>
-  Copyright (C) 2015-2020 Kyushu Institute of Technology.
-  Copyright (C) 2015-2020 Shimane IT Open-Innovation Center.
+  Copyright (C) 2015- Kyushu Institute of Technology.
+  Copyright (C) 2015- Shimane IT Open-Innovation Center.
 
   This file is distributed under BSD 3-Clause License.
 
@@ -15,7 +15,7 @@
 #define MRBC_SRC_MRUBYC_H_
 
 #include "vm_config.h"
-#include "hal_selector.h"
+#include "hal.h"
 
 #include "value.h"
 #include "vm.h"

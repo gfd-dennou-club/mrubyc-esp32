@@ -3,8 +3,8 @@
   Class related functions.
 
   <pre>
-  Copyright (C) 2015-2022 Kyushu Institute of Technology.
-  Copyright (C) 2015-2022 Shimane IT Open-Innovation Center.
+  Copyright (C) 2015- Kyushu Institute of Technology.
+  Copyright (C) 2015- Shimane IT Open-Innovation Center.
 
   This file is distributed under BSD 3-Clause License.
 
@@ -79,12 +79,6 @@ mrbc_class * const mrbc_class_tbl[MRBC_TT_MAXVAL+1] = {
 */
 mrbc_class * mrbc_define_class(struct VM *vm, const char *name, mrbc_class *super)
 {
-  // nested class?
-  if( vm && mrbc_type(vm->cur_regs[0]) == MRBC_TT_CLASS ) {
-    assert(vm->target_class == vm->cur_regs[0].cls );
-    return mrbc_define_class_under(vm, vm->target_class, name, super);
-  }
-
   mrbc_sym sym_id = mrbc_str_to_symid(name);
   if( sym_id < 0 ) {
     mrbc_raise(vm, MRBC_CLASS(Exception), "Overflow MAX_SYMBOLS_COUNT");
@@ -147,7 +141,10 @@ mrbc_class * mrbc_define_class_under(struct VM *vm, const mrbc_class *outer, con
   mrbc_class *cls = mrbc_raw_alloc_no_free( sizeof(mrbc_class) );
   if( !cls ) return cls;	// ENOMEM
 
-  cls->sym_id = sym_id;
+  char buf[sizeof(mrbc_sym)*4+1];
+  make_nested_symbol_s( buf, outer->sym_id, sym_id );
+
+  cls->sym_id = mrbc_symbol( mrbc_symbol_new( vm, buf ));
   cls->num_builtin_method = 0;
   cls->super = super ? super : mrbc_class_object;
   cls->method_link = 0;
@@ -155,8 +152,6 @@ mrbc_class * mrbc_define_class_under(struct VM *vm, const mrbc_class *outer, con
   cls->name = name;
 #endif
 
-  // register to global constant
-  // (note) override cls->sym_id in this function.
   mrbc_set_class_const( outer, sym_id,
 			&(mrbc_value){.tt = MRBC_TT_CLASS, .cls = cls});
 

@@ -3,8 +3,8 @@
   exception classes
 
   <pre>
-  Copyright (C) 2015-2023 Kyushu Institute of Technology.
-  Copyright (C) 2015-2023 Shimane IT Open-Innovation Center.
+  Copyright (C) 2015- Kyushu Institute of Technology.
+  Copyright (C) 2015- Shimane IT Open-Innovation Center.
 
   This file is distributed under BSD 3-Clause License.
 
@@ -37,7 +37,31 @@
 /***** Function prototypes **************************************************/
 /***** Local variables ******************************************************/
 /***** Global variables *****************************************************/
-/***** Functions ************************************************************/
+/***** Local functions ******************************************************/
+static mrbc_exception * sub_exception_new(struct VM *vm, struct RClass *exc_cls)
+{
+  // allocate memory for instance.
+  mrbc_exception *ex = mrbc_alloc( vm, sizeof(mrbc_exception) );
+  if( !ex ) return ex;		// ENOMEM
+
+  MRBC_INIT_OBJECT_HEADER( ex, "EX" );
+  ex->cls = exc_cls;
+  ex->method_id = 0;
+
+  mrbc_callinfo *callinfo = vm->callinfo_tail;
+  for( int i = 0; i < MRBC_EXCEPTION_CALL_NEST_LEVEL; i++ ) {
+    if( callinfo ) {
+      ex->call_nest[i] = callinfo->method_id;
+      callinfo = callinfo->prev;
+    } else {
+      ex->call_nest[i] = 0;
+    }
+  }
+
+  return ex;
+}
+
+/***** Global functions *****************************************************/
 //================================================================
 /*! constructor
 
@@ -49,14 +73,8 @@
 */
 mrbc_value mrbc_exception_new(struct VM *vm, struct RClass *exc_cls, const void *message, int len )
 {
-  // allocate memory.
-  mrbc_exception *ex = mrbc_alloc( vm, sizeof(mrbc_exception) );
-  if( !ex ) {		// ENOMEM
-    return mrbc_nil_value();
-  }
-
-  MRBC_INIT_OBJECT_HEADER( ex, "EX" );
-  ex->cls = exc_cls;
+  mrbc_exception *ex = sub_exception_new( vm, exc_cls );
+  if( !ex ) return mrbc_nil_value();
 
   // in case of no message.
   if( !message ) {
@@ -106,16 +124,11 @@ mrbc_value mrbc_exception_new(struct VM *vm, struct RClass *exc_cls, const void 
 */
 mrbc_value mrbc_exception_new_alloc(struct VM *vm, struct RClass *exc_cls, const void *message, int len )
 {
-  // allocate memory.
-  mrbc_exception *ex = mrbc_alloc( vm, sizeof(mrbc_exception) );
-  if( !ex ) {		// ENOMEM
-    return mrbc_nil_value();
-  }
+  mrbc_exception *ex = sub_exception_new( vm, exc_cls );
+  if( !ex ) return mrbc_nil_value();
 
-  MRBC_INIT_OBJECT_HEADER( ex, "EX" );
-  ex->cls = exc_cls;
-  ex->message = message;
   ex->message_size = len;
+  ex->message = message;
 
   return (mrbc_value){.tt = MRBC_TT_EXCEPTION, .exception = ex};
 }
@@ -185,7 +198,7 @@ void mrbc_raisef( struct VM *vm, struct RClass *exc_cls, const char *fstr, ... )
 
   } else {
     // VM == NULL or ENOMEM
-    mrbc_print("Exception: ");
+    mrbc_printf("Exception: ");
     mrbc_vprintf( fstr, ap );
     mrbc_printf(" (%s)\n", exc_cls ? mrbc_symid_to_str(exc_cls->sym_id) : "RuntimeError");
   }
@@ -223,8 +236,18 @@ void mrbc_print_vm_exception( const struct VM *vm )
   const mrbc_exception *exc = vm->exception.exception;
   const char *clsname = mrbc_symid_to_str(exc->cls->sym_id);
 
-  mrbc_printf("Exception(vm_id=%d): %s (%s)\n", vm->vm_id,
+  mrbc_printf("Exception(vm_id=%d):", vm->vm_id );
+  if( exc->method_id ) {
+    mrbc_printf(" in `%s':", mrbc_symid_to_str(exc->method_id) );
+  }
+  mrbc_printf(" %s (%s)\n",
 	      exc->message ? (const char *)exc->message : clsname, clsname );
+
+  for( int i = 0; i < MRBC_EXCEPTION_CALL_NEST_LEVEL; i++ ) {
+    if( !exc->call_nest[i] ) return;
+    mrbc_printf("\tin `%s'\n", mrbc_symid_to_str(exc->call_nest[i]));
+  }
+  mrbc_printf("\tin ...\n");
 }
 
 

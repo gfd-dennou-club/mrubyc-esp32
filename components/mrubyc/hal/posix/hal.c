@@ -4,8 +4,8 @@
         for POSIX
 
   <pre>
-  Copyright (C) 2016-2021 Kyushu Institute of Technology.
-  Copyright (C) 2016-2021 Shimane IT Open-Innovation Center.
+  Copyright (C) 2015- Kyushu Institute of Technology.
+  Copyright (C) 2015- Shimane IT Open-Innovation Center.
 
   This file is distributed under BSD 3-Clause License.
   </pre>
@@ -118,4 +118,23 @@ void hal_abort( const char *s )
     hal_write(1, s, strlen(s));
   }
   exit( 1 );
+}
+
+
+//================================================================
+/*!@brief
+  out of memory
+
+*/
+void mrbc_out_of_memory_posix( void )
+{
+  static const char msg[] = "Fatal error: Out of memory.\n";
+  hal_write(2, msg, sizeof(msg)-1);
+
+#if 0
+  void mrbc_alloc_print_memory_pool(void);
+  mrbc_alloc_print_memory_pool();
+#endif
+
+  hal_abort(0);
 }

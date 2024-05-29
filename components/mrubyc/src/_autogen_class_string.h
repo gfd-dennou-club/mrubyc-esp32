@@ -13,6 +13,8 @@ static const mrbc_sym method_symbols_String[] = {
   MRBC_SYM(chomp),
   MRBC_SYM(chomp_E),
   MRBC_SYM(clear),
+  MRBC_SYM(downcase),
+  MRBC_SYM(downcase_E),
   MRBC_SYM(dup),
   MRBC_SYM(empty_Q),
   MRBC_SYM(end_with_Q),
@@ -42,6 +44,8 @@ static const mrbc_sym method_symbols_String[] = {
   MRBC_SYM(to_sym),
   MRBC_SYM(tr),
   MRBC_SYM(tr_E),
+  MRBC_SYM(upcase),
+  MRBC_SYM(upcase_E),
 };
 
 static const mrbc_func_t method_functions_String[] = {
@@ -55,6 +59,8 @@ static const mrbc_func_t method_functions_String[] = {
   c_string_chomp,
   c_string_chomp_self,
   c_string_clear,
+  c_string_downcase,
+  c_string_downcase_self,
   c_string_dup,
   c_string_empty,
   c_string_end_with,
@@ -84,6 +90,8 @@ static const mrbc_func_t method_functions_String[] = {
   c_string_to_sym,
   c_string_tr,
   c_string_tr_self,
+  c_string_upcase,
+  c_string_upcase_self,
 };
 
 struct RBuiltinClass mrbc_class_String = {

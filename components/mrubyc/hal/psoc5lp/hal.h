@@ -4,8 +4,8 @@
         for PSoC5LP
 
   <pre>
-  Copyright (C) 2016-2021 Kyushu Institute of Technology.
-  Copyright (C) 2016-2021 Shimane IT Open-Innovation Center.
+  Copyright (C) 2015- Kyushu Institute of Technology.
+  Copyright (C) 2015- Shimane IT Open-Innovation Center.
 
   This file is distributed under BSD 3-Clause License.
   </pre>

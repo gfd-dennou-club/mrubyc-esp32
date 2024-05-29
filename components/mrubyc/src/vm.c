@@ -3,8 +3,8 @@
   mruby bytecode executor.
 
   <pre>
-  Copyright (C) 2015-2023 Kyushu Institute of Technology.
-  Copyright (C) 2015-2023 Shimane IT Open-Innovation Center.
+  Copyright (C) 2015- Kyushu Institute of Technology.
+  Copyright (C) 2015- Shimane IT Open-Innovation Center.
 
   This file is distributed under BSD 3-Clause License.
 
@@ -74,8 +74,7 @@ static void send_by_name( struct VM *vm, mrbc_sym sym_id, int a, int c )
   if( narg == CALL_MAXARGS ) {
     mrbc_value argv = recv[1];
     narg = mrbc_array_size(&argv);
-    int i;
-    for( i = 0; i < narg; i++ ) {
+    for( int i = 0; i < narg; i++ ) {
       mrbc_incref( &argv.array->data[i] );
     }
 
@@ -115,29 +114,35 @@ static void send_by_name( struct VM *vm, mrbc_sym sym_id, int a, int c )
     mrbc_raisef(vm, MRBC_CLASS(NoMethodError),
 		"undefined local variable or method '%s' for %s",
 		mrbc_symid_to_str(sym_id), mrbc_symid_to_str( cls->sym_id ));
+    if( vm->callinfo_tail != 0 ) {
+      vm->exception.exception->method_id = vm->callinfo_tail->method_id;
+    }
     return;
   }
 
+  // call C function and return.
   if( method.c_func ) {
-    // call C method.
     method.func(vm, recv, narg);
+
+    if( mrbc_israised(vm) && vm->exception.exception->method_id == 0 ) {
+      vm->exception.exception->method_id = sym_id;
+    }
     if( sym_id == MRBC_SYM(call) ) return;
     if( sym_id == MRBC_SYM(new) ) return;
 
-    int i;
-    for( i = 1; i <= narg+1; i++ ) {
+    for( int i = 1; i <= narg+1; i++ ) {
       mrbc_decref_empty( recv + i );
     }
-
-  } else {
-    // call Ruby method.
-    mrbc_callinfo *callinfo = mrbc_push_callinfo(vm, sym_id, a, narg);
-    callinfo->own_class = method.cls;
-
-    vm->cur_irep = method.irep;
-    vm->inst = vm->cur_irep->inst;
-    vm->cur_regs = recv;
+    return;
   }
+
+  // call Ruby method.
+  mrbc_callinfo *callinfo = mrbc_push_callinfo(vm, sym_id, a, narg);
+  callinfo->own_class = method.cls;
+
+  vm->cur_irep = method.irep;
+  vm->inst = vm->cur_irep->inst;
+  vm->cur_regs = recv;
 }
 
 
@@ -243,10 +248,10 @@ mrbc_callinfo * mrbc_push_callinfo( struct VM *vm, mrbc_sym method_id, int reg_o
   callinfo->target_class = vm->target_class;
 
   callinfo->own_class = 0;
+  callinfo->karg_keep = 0;
   callinfo->method_id = method_id;
   callinfo->reg_offset = reg_offset;
   callinfo->n_args = n_args;
-  callinfo->kd_reg_offset = 0;
   callinfo->is_called_super = 0;
 
   callinfo->prev = vm->callinfo_tail;
@@ -269,6 +274,9 @@ void mrbc_pop_callinfo( struct VM *vm )
   mrbc_value *reg2 = vm->cur_regs + vm->cur_irep->nregs;
   while( reg1 < reg2 ) {
     mrbc_decref_empty( reg1++ );
+  }
+  if( callinfo->karg_keep ) {
+    mrbc_hash_delete( &(mrbc_value){.tt = MRBC_TT_HASH, .hash = callinfo->karg_keep} );
   }
 
   // copy callinfo to vm
@@ -386,10 +394,10 @@ void mrbc_vm_begin( struct VM *vm )
   vm->flag_stop = 0;
 
   // set self to reg[0], others nil
+  mrbc_decref( &vm->regs[0] );
   vm->regs[0] = mrbc_instance_new(vm, mrbc_class_object, 0);
   if( vm->regs[0].instance == NULL ) return;	// ENOMEM
-  int i;
-  for( i = 1; i < vm->regs_size; i++ ) {
+  for( int i = 1; i < vm->regs_size; i++ ) {
     vm->regs[i] = mrbc_nil_value();
   }
 }
@@ -413,8 +421,7 @@ void mrbc_vm_end( struct VM *vm )
   assert( vm->ret_blk == 0 );
 
   int n_used = 0;
-  int i;
-  for( i = 0; i < vm->regs_size; i++ ) {
+  for( int i = 1; i < vm->regs_size; i++ ) {
     //mrbc_printf("vm->regs[%d].tt = %d\n", i, mrbc_type(vm->regs[i]));
     if( mrbc_type(vm->regs[i]) != MRBC_TT_NIL ) n_used = i;
     mrbc_decref_empty(&vm->regs[i]);
@@ -674,6 +681,10 @@ static inline void op_getiv( mrbc_vm *vm, mrbc_value *regs EXT )
     return;
   }
   mrbc_value *self = mrbc_get_self( vm, regs );
+  if( self->tt != MRBC_TT_OBJECT ) {
+    mrbc_raise(vm, MRBC_CLASS(NotImplementedError), 0);
+    return;
+  }
 
   mrbc_decref(&regs[a]);
   regs[a] = mrbc_instance_getiv(self, sym_id);
@@ -696,6 +707,10 @@ static inline void op_setiv( mrbc_vm *vm, mrbc_value *regs EXT )
     return;
   }
   mrbc_value *self = mrbc_get_self( vm, regs );
+  if( self->tt != MRBC_TT_OBJECT ) {
+    mrbc_raise(vm, MRBC_CLASS(NotImplementedError), 0);
+    return;
+  }
 
   mrbc_instance_setiv(self, sym_id, &regs[a]);
 }
@@ -715,18 +730,33 @@ static inline void op_getconst( mrbc_vm *vm, mrbc_value *regs EXT )
   mrbc_value *v;
 
   if( vm->target_class->sym_id != MRBC_SYM(Object) ) {
-    cls = vm->target_class;
+    cls = vm->target_class;		// References in class definitions.
   } else if( vm->callinfo_tail ) {
-    cls = vm->callinfo_tail->own_class;
+    cls = vm->callinfo_tail->own_class;	// References in methods.
   }
+  if( !cls ) goto TOP_LEVEL;
 
-  // search back through super classes.
-  while( cls != NULL ) {
-    v = mrbc_get_class_const(cls, sym_id);
+  // search in my class, then search nested outer class.
+  mrbc_class *cls1 = cls;
+  while( 1 ) {
+    v = mrbc_get_class_const(cls1, sym_id);
     if( v != NULL ) goto DONE;
-    cls = cls->super;
+    if( !mrbc_is_nested_symid(cls1->sym_id) ) break;
+
+    mrbc_sym outer_id;
+    mrbc_separate_nested_symid( cls1->sym_id, &outer_id, 0 );
+    cls1 = mrbc_get_const( outer_id )->cls;
   }
 
+  // search in super class.
+  cls1 = cls->super;
+  while( cls1 ) {
+    v = mrbc_get_class_const(cls1, sym_id);
+    if( v != NULL ) goto DONE;
+    cls1 = cls1->super;
+  }
+
+ TOP_LEVEL:
   // is top level constant definition?
   v = mrbc_get_const(sym_id);
   if( v == NULL ) {
@@ -777,7 +807,7 @@ static inline void op_getmcnst( mrbc_vm *vm, mrbc_value *regs EXT )
 
   while( !(v = mrbc_get_class_const(cls, sym_id)) ) {
     cls = cls->super;
-    if( !cls ) {
+    if( cls->sym_id == MRBC_SYM(Object) ) {
       mrbc_raisef( vm, MRBC_CLASS(NameError), "uninitialized constant %s::%s",
 	mrbc_symid_to_str( regs[a].cls->sym_id ), mrbc_symid_to_str( sym_id ));
       return;
@@ -805,8 +835,7 @@ static inline void op_getupvar( mrbc_vm *vm, mrbc_value *regs EXT )
   assert( mrbc_type(regs[0]) == MRBC_TT_PROC );
   mrbc_callinfo *callinfo = regs[0].proc->callinfo;
 
-  int i;
-  for( i = 0; i < c; i++ ) {
+  for( int i = 0; i < c; i++ ) {
     assert( callinfo );
     mrbc_value *reg0 = callinfo->cur_regs + callinfo->reg_offset;
 
@@ -839,8 +868,7 @@ static inline void op_setupvar( mrbc_vm *vm, mrbc_value *regs EXT )
   assert( regs[0].tt == MRBC_TT_PROC );
   mrbc_callinfo *callinfo = regs[0].proc->callinfo;
 
-  int i;
-  for( i = 0; i < c; i++ ) {
+  for( int i = 0; i < c; i++ ) {
     assert( callinfo );
     mrbc_value *reg0 = callinfo->cur_regs + callinfo->reg_offset;
     assert( reg0->tt == MRBC_TT_PROC );
@@ -1234,40 +1262,59 @@ static inline void op_super( mrbc_vm *vm, mrbc_value *regs EXT )
 {
   FETCH_BB();
 
+  int narg = b & 0x0f;
+  int karg = (b >> 4) & 0x0f;
+  mrbc_value *recv = regs + a;	// new regs[0]
+
   // set self to new regs[0]
-  mrbc_value *recv = mrbc_get_self(vm, regs);
-  assert( recv->tt != MRBC_TT_PROC );
+  mrbc_value *self = mrbc_get_self(vm, regs);
+  assert( self->tt != MRBC_TT_PROC );
 
-  mrbc_incref( recv );
-  mrbc_decref( &regs[a] );
-  regs[a] = *recv;
+  mrbc_incref( self );
+  mrbc_decref( recv );
+  *recv = *self;
 
-  if( (b & 0x0f) == CALL_MAXARGS ) {
+  // If it's packed in an array, expand it.
+  if( narg == CALL_MAXARGS ) {
     /* (note)
        on mrbc ver 3.1
          b = 15  in initialize method.
 	 b = 255 in other method.
     */
 
-    // expand array
-    assert( regs[a+1].tt == MRBC_TT_ARRAY );
+    assert( recv[1].tt == MRBC_TT_ARRAY );
 
-    mrbc_value argary = regs[a+1];
-    regs[a+1].tt = MRBC_TT_EMPTY;
-    mrbc_value proc = regs[a+2];
-    regs[a+2].tt = MRBC_TT_EMPTY;
+    mrbc_value argary = recv[1];
+    mrbc_value proc = recv[2];
+    recv[1].tt = MRBC_TT_EMPTY;
+    recv[2].tt = MRBC_TT_EMPTY;
 
     int argc = mrbc_array_size(&argary);
-    int i, j;
-    for( i = 0, j = a+1; i < argc; i++, j++ ) {
-      mrbc_decref( &regs[j] );
-      regs[j] = argary.array->data[i];
+    for( int i = 0; i < argc; i++ ) {
+      mrbc_decref( &recv[i+1] );
+      recv[i+1] = argary.array->data[i];
     }
     mrbc_array_delete_handle(&argary);
 
-    mrbc_decref( &regs[j] );
-    regs[j] = proc;
-    b = argc;
+    mrbc_decref( &recv[argc+1] );
+    recv[argc+1] = proc;
+    narg = argc;
+  }
+
+  // Convert keyword argument to hash.
+  if( karg && karg != CALL_MAXARGS ) {
+    narg++;
+    mrbc_value h = mrbc_hash_new( vm, karg );
+    if( !h.hash ) return;	// ENOMEM
+
+    mrbc_value *r1 = recv + narg;
+    memcpy( h.hash->data, r1, sizeof(mrbc_value) * karg * 2 );
+    h.hash->n_stored = karg * 2;
+
+    mrbc_value block = r1[karg * 2];
+    memset( r1 + 2, 0, sizeof(mrbc_value) * (karg * 2 - 1) );
+    *r1++ = h;
+    *r1 = block;
   }
 
   // find super class
@@ -1286,18 +1333,23 @@ static inline void op_super( mrbc_vm *vm, mrbc_value *regs EXT )
     return;
   }
 
-  if( method.c_func ) {	// TODO?
-    mrbc_raise( vm, MRBC_CLASS(NotImplementedError), "Not supported!" );
+  // call C function and return.
+  if( method.c_func ) {
+    method.func(vm, recv, narg);
+    for( int i = 1; i <= narg+1; i++ ) {
+      mrbc_decref_empty( recv + i );
+    }
     return;
   }
 
-  callinfo = mrbc_push_callinfo(vm, callinfo->method_id, a, b);
+  // call Ruby method.
+  callinfo = mrbc_push_callinfo(vm, callinfo->method_id, a, narg);
   callinfo->own_class = method.cls;
   callinfo->is_called_super = 1;
 
   vm->cur_irep = method.irep;
   vm->inst = vm->cur_irep->inst;
-  vm->cur_regs += a;
+  vm->cur_regs = recv;
 }
 
 
@@ -1334,8 +1386,7 @@ static inline void op_argary( mrbc_vm *vm, mrbc_value *regs EXT )
     mrbc_callinfo *callinfo = reg0->proc->callinfo;
     assert( callinfo );
 
-    int i;
-    for( i = 1; i < lv; i ++ ) {
+    for( int i = 1; i < lv; i ++ ) {
       reg0 = callinfo->cur_regs + callinfo->reg_offset;
       assert( mrbc_type(*reg0) == MRBC_TT_PROC );
       callinfo = reg0->proc->callinfo;
@@ -1350,10 +1401,15 @@ static inline void op_argary( mrbc_vm *vm, mrbc_value *regs EXT )
   mrbc_value val = mrbc_array_new( vm, array_size );
   if( !val.array ) return;	// ENOMEM
 
-  int i;
-  for( i = 0; i < array_size; i++ ) {
-    mrbc_array_push( &val, &reg0[i+1] );
-    mrbc_incref( &reg0[i+1] );
+  if( vm->callinfo_tail->karg_keep ) {
+    mrbc_value karg = {.tt = MRBC_TT_HASH, .hash = vm->callinfo_tail->karg_keep};
+    karg = mrbc_hash_dup(vm, &karg);
+    mrbc_array_push( &val, &karg );
+  } else {
+    for( int i = 1; i <= array_size; i++ ) {
+      mrbc_incref( &reg0[i] );
+      mrbc_array_push( &val, &reg0[i] );
+    }
   }
 
   mrbc_decref( &regs[a] );
@@ -1419,8 +1475,7 @@ static inline void op_enter( mrbc_vm *vm, mrbc_value *regs EXT )
     argc = mrbc_array_size(&argary);
     if( argc < m1 ) argc = m1;
 
-    int i;
-    for( i = 0; i < argc; i++ ) {
+    for( int i = 0; i < argc; i++ ) {
       mrbc_decref( &regs[i+1] );
       if( mrbc_array_size(&argary) > i ) {
 	regs[i+1] = argary.array->data[i];
@@ -1451,8 +1506,7 @@ static inline void op_enter( mrbc_vm *vm, mrbc_value *regs EXT )
       if( !rest.array ) return;	// ENOMEM
 
       int rest_reg = m1 + o + 1;
-      int i;
-      for( i = 0; i < rest_size; i++ ) {
+      for( int i = 0; i < rest_size; i++ ) {
 	mrbc_array_push( &rest, &regs[rest_reg] );
 	regs[rest_reg++].tt = MRBC_TT_EMPTY;
       }
@@ -1472,7 +1526,9 @@ static inline void op_enter( mrbc_vm *vm, mrbc_value *regs EXT )
     if( a & (FLAG_DICT|FLAG_KW) ) {
       mrbc_decref(&regs[++i]);
       regs[i] = dict;
-      vm->callinfo_tail->kd_reg_offset = i;
+      if( a & FLAG_KW ) {
+	vm->callinfo_tail->karg_keep = mrbc_hash_dup(vm, &dict).hash;
+      }
     }
     mrbc_decref(&regs[i+1]);
     regs[i+1] = proc;
@@ -1522,7 +1578,7 @@ static inline void op_key_p( mrbc_vm *vm, mrbc_value *regs EXT )
 {
   FETCH_BB();
 
-  mrbc_value *kdict = &regs[vm->callinfo_tail->kd_reg_offset];
+  mrbc_value *kdict = &regs[vm->callinfo_tail->n_args];
   mrbc_sym sym_id = mrbc_irep_symbol_id( vm->cur_irep, b );
   mrbc_value *v = mrbc_hash_search_by_id( kdict, sym_id );
 
@@ -1540,7 +1596,7 @@ static inline void op_keyend( mrbc_vm *vm, mrbc_value *regs EXT )
 {
   FETCH_Z();
 
-  mrbc_value *kdict = &regs[vm->callinfo_tail->kd_reg_offset];
+  mrbc_value *kdict = &regs[vm->callinfo_tail->n_args];
 
   if( mrbc_hash_size(kdict) != 0 ) {
     mrbc_hash_iterator ite = mrbc_hash_iterator_new(kdict);
@@ -1561,7 +1617,7 @@ static inline void op_karg( mrbc_vm *vm, mrbc_value *regs EXT )
 {
   FETCH_BB();
 
-  mrbc_value *kdict = &regs[vm->callinfo_tail->kd_reg_offset];
+  mrbc_value *kdict = &regs[vm->callinfo_tail->n_args];
   mrbc_sym sym_id = mrbc_irep_symbol_id( vm->cur_irep, b );
   mrbc_value v = mrbc_hash_remove_by_id( kdict, sym_id );
 
@@ -1599,7 +1655,9 @@ static inline void op_return__sub( mrbc_vm *vm, mrbc_value *regs, int a )
 
   // return without anything if top level.
   if( vm->callinfo_tail == NULL ) {
-    if( vm->flag_permanence ) mrbc_incref(&regs[a]);
+    mrbc_decref(&regs[0]);
+    regs[0] = regs[a];
+    regs[a].tt = MRBC_TT_EMPTY;
     vm->flag_preemption = 1;
     vm->flag_stop = 1;
     return;
@@ -2123,8 +2181,7 @@ static inline void op_array2( mrbc_vm *vm, mrbc_value *regs EXT )
   mrbc_value value = mrbc_array_new(vm, c);
   if( value.array == NULL ) return;  // ENOMEM
 
-  int i;
-  for( i = 0; i < c; i++ ) {
+  for( int i = 0; i < c; i++ ) {
     mrbc_incref( &regs[b+i] );
     value.array->data[i] = regs[b+i];
   }
@@ -2165,8 +2222,7 @@ static inline void op_arycat( mrbc_vm *vm, mrbc_value *regs EXT )
     mrbc_array_resize(&regs[a], new_size);
   }
 
-  int i;
-  for( i = 0; i < size_2; i++ ) {
+  for( int i = 0; i < size_2; i++ ) {
     mrbc_incref( &regs[a+1].array->data[i] );
     regs[a].array->data[size_1+i] = regs[a+1].array->data[i];
   }
@@ -2279,9 +2335,9 @@ static inline void op_apost( mrbc_vm *vm, mrbc_value *regs EXT )
   if( len > pre + post ) {
     int ary_size = len - pre - post;
     regs[a] = mrbc_array_new(vm, ary_size);
+
     // copy elements
-    int i;
-    for( i = 0; i < ary_size; i++ ) {
+    for( int i = 0; i < ary_size; i++ ) {
       regs[a].array->data[i] = src.array->data[pre+i];
       mrbc_incref( &regs[a].array->data[i] );
     }
@@ -2515,13 +2571,11 @@ static inline void op_class( mrbc_vm *vm, mrbc_value *regs EXT )
 {
   FETCH_BB();
 
-  const char *class_name = mrbc_irep_symbol_cstr(vm->cur_irep, b);
   mrbc_class *super = (regs[a+1].tt == MRBC_TT_CLASS) ? regs[a+1].cls : 0;
 
   // check unsupported pattern.
   if( super ) {
-    int i;
-    for( i = 1; i < MRBC_TT_MAXVAL; i++ ) {
+    for( int i = 1; i < MRBC_TT_MAXVAL; i++ ) {
       if( super == mrbc_class_tbl[i] ) {
 	mrbc_raise(vm, MRBC_CLASS(NotImplementedError), "Inherit the built-in class is not supported.");
 	return;
@@ -2529,13 +2583,26 @@ static inline void op_class( mrbc_vm *vm, mrbc_value *regs EXT )
     }
   }
 
+  mrbc_class *outer = 0;
+
+  if( regs[a].tt == MRBC_TT_CLASS ) {
+    outer = regs[a].cls;
+  } else if( vm->cur_regs[0].tt == MRBC_TT_CLASS ) {
+    outer = vm->cur_regs[0].cls;
+  }
+
+  const char *class_name = mrbc_irep_symbol_cstr(vm->cur_irep, b);
+  mrbc_class *cls;
+
   // define a new class (or get an already defined class)
-  mrbc_class *cls = mrbc_define_class(vm, class_name, super);
-  if( !cls ) return;
+  if( outer ) {
+    cls = mrbc_define_class_under(vm, outer, class_name, super);
+  } else {
+    cls = mrbc_define_class(vm, class_name, super);
+  }
 
   // (note)
-  //  regs[a] was set to NIL by compiler. So, no need to release regs[a].
-  assert( mrbc_type(regs[a]) == MRBC_TT_NIL );
+  //  regs[a] was set to NIL or Class by compiler. So, no need to release.
   regs[a].tt = MRBC_TT_CLASS;
   regs[a].cls = cls;
 }
@@ -2706,6 +2773,7 @@ static inline void op_stop( mrbc_vm *vm, mrbc_value *regs EXT )
 
   vm->flag_preemption = 1;
   vm->flag_stop = 1;
+  vm->inst--;           // to not proceed beyond OP_STOP.
 }
 
 
@@ -2719,11 +2787,12 @@ static inline void op_unsupported( mrbc_vm *vm, mrbc_value *regs EXT )
 }
 #undef EXT
 
+
 //================================================================
 /*! Fetch a bytecode and execute
 
   @param  vm	A pointer to VM.
-  @retval 0	(maybe) premption by timer.
+  @retval 0	(maybe) preemption by timer.
   @retval 1	program done.
   @retval 2	exception occurred.
 */

@@ -5,7 +5,7 @@
 
 COMPONENT_DEPENDS := mrubyc
 #COMPONENT_EXTRA_CLEAN = SRCFILES
-CFLAGS = -mlongcalls -DMRBC_USE_HAL_ESP32
+CFLAGS = -mlongcalls
 
 MRBC     = mrbc
 

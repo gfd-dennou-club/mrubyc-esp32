@@ -3,8 +3,8 @@
   exception classes
 
   <pre>
-  Copyright (C) 2015-2022 Kyushu Institute of Technology.
-  Copyright (C) 2015-2022 Shimane IT Open-Innovation Center.
+  Copyright (C) 2015- Kyushu Institute of Technology.
+  Copyright (C) 2015- Shimane IT Open-Innovation Center.
 
   This file is distributed under BSD 3-Clause License.
 
@@ -26,7 +26,13 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
 /***** Constat values *******************************************************/
+#if !defined(MRBC_EXCEPTION_CALL_NEST_LEVEL)
+#define MRBC_EXCEPTION_CALL_NEST_LEVEL 8
+#endif
+
+
 /***** Macros ***************************************************************/
 #define mrbc_israised(vm) (mrbc_type((vm)->exception) == MRBC_TT_EXCEPTION)
 
@@ -42,8 +48,10 @@ typedef struct RException {
   MRBC_OBJECT_HEADER;
 
   struct RClass *cls;		//!< exception class.
+  mrbc_sym method_id;		//!< raised method, if it is known.
   uint16_t message_size;	//!< message length.
   const uint8_t *message;	//!< to heap or ROM.
+  mrbc_sym call_nest[MRBC_EXCEPTION_CALL_NEST_LEVEL];
 
 } mrbc_exception;
 

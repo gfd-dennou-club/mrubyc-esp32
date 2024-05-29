@@ -3,8 +3,8 @@
   mruby/c String class
 
   <pre>
-  Copyright (C) 2015-2023 Kyushu Institute of Technology.
-  Copyright (C) 2015-2023 Shimane IT Open-Innovation Center.
+  Copyright (C) 2015- Kyushu Institute of Technology.
+  Copyright (C) 2015- Shimane IT Open-Innovation Center.
 
   This file is distributed under BSD 3-Clause License.
 
@@ -100,19 +100,6 @@ mrbc_value mrbc_string_new(struct VM *vm, const void *src, int len)
 
   value.string = h;
   return value;
-}
-
-
-//================================================================
-/*! constructor by c string
-
-  @param  vm	pointer to VM.
-  @param  src	source string or NULL
-  @return 	string object
-*/
-mrbc_value mrbc_string_new_cstr(struct VM *vm, const char *src)
-{
-  return mrbc_string_new(vm, src, (src ? strlen(src) : 0));
 }
 
 
@@ -252,21 +239,26 @@ int mrbc_string_append(mrbc_value *s1, const mrbc_value *s2)
 
 
 //================================================================
-/*! append c string (s1 += s2)
+/*! append c buffer (s1 += s2)
 
   @param  s1	pointer to target value 1
-  @param  s2	pointer to char (c_str)
+  @param  s2	pointer to buffer
+  @param  len2	buffer size
   @return	mrbc_error_code
 */
-int mrbc_string_append_cstr(mrbc_value *s1, const char *s2)
+int mrbc_string_append_cbuf(mrbc_value *s1, const void *s2, int len2)
 {
   int len1 = s1->string->size;
-  int len2 = strlen(s2);
 
   uint8_t *str = mrbc_raw_realloc(s1->string->data, len1+len2+1);
   if( !str ) return E_NOMEMORY_ERROR;
 
-  memcpy(str + len1, s2, len2 + 1);
+  if( s2 ) {
+    memcpy(str + len1, s2, len2);
+    str[len1 + len2] = 0;
+  } else {
+    memset(str + len1, 0, len2 + 1);
+  }
 
   s1->string->size = len1 + len2;
   s1->string->data = str;
@@ -368,6 +360,50 @@ int mrbc_string_chomp(mrbc_value *src)
   src->string->size = new_size;
 
   return 1;
+}
+
+
+//================================================================
+/*! upcase myself
+
+  @param    str     pointer to target value
+  @return   count   number of upcased characters
+*/
+static int mrbc_string_upcase(mrbc_value *str)
+{
+  int len = str->string->size;
+  int count = 0;
+  uint8_t *data = str->string->data;
+  while (len != 0) {
+    len--;
+    if ('a' <= data[len] && data[len] <= 'z') {
+      data[len] = data[len] - ('a' - 'A');
+      count++;
+    }
+  }
+  return count;
+}
+
+
+//================================================================
+/*! downcase myself
+
+  @param    str     pointer to target value
+  @return   count   number of downcased characters
+*/
+static int mrbc_string_downcase(mrbc_value *str)
+{
+  int len = str->string->size;
+  int count = 0;
+  uint8_t *data = str->string->data;
+  while (len != 0) {
+    len--;
+    if ('A' <= data[len] && data[len] <= 'Z') {
+      data[len] = data[len] + ('a' - 'A');
+      count++;
+    }
+  }
+  return count;
 }
 
 
@@ -752,12 +788,12 @@ static void c_string_inspect(struct VM *vm, mrbc_value v[], int argc)
 */
 static void c_string_ord(struct VM *vm, mrbc_value v[], int argc)
 {
-  int i = ((uint8_t *)mrbc_string_cstr(v))[0];
-
-  if (i == 0) {
+  if( mrbc_string_size(v) == 0 ) {
     mrbc_raise(vm, MRBC_CLASS(ArgumentError), "empty string");
     return;
   }
+
+  int i = ((uint8_t *)mrbc_string_cstr(v))[0];
 
   SET_INT_RETURN( i );
 }
@@ -1279,6 +1315,49 @@ static void c_string_bytes(struct VM *vm, mrbc_value v[], int argc)
 }
 
 
+//================================================================
+/*! (method) upcase
+*/
+static void c_string_upcase(struct VM *vm, mrbc_value v[], int argc)
+{
+  mrbc_value ret = mrbc_string_dup(vm, &v[0]);
+  mrbc_string_upcase(&ret);
+  SET_RETURN(ret);
+}
+
+//================================================================
+/*! (method) upcase!
+*/
+static void c_string_upcase_self(struct VM *vm, mrbc_value v[], int argc)
+{
+  if (mrbc_string_upcase(&v[0]) == 0) {
+    SET_NIL_RETURN();
+  }
+}
+
+
+//================================================================
+/*! (method) downcase
+*/
+static void c_string_downcase(struct VM *vm, mrbc_value v[], int argc)
+{
+  mrbc_value ret = mrbc_string_dup(vm, &v[0]);
+  mrbc_string_downcase(&ret);
+  SET_RETURN(ret);
+}
+
+
+//================================================================
+/*! (method) downcase!
+*/
+static void c_string_downcase_self(struct VM *vm, mrbc_value v[], int argc)
+{
+  if (mrbc_string_downcase(&v[0]) == 0) {
+    SET_NIL_RETURN();
+  }
+}
+
+
 /* MRBC_AUTOGEN_METHOD_TABLE
 
   CLASS("String")
@@ -1320,6 +1399,10 @@ static void c_string_bytes(struct VM *vm, mrbc_value v[], int argc)
   METHOD( "end_with?",	c_string_end_with )
   METHOD( "include?",	c_string_include )
   METHOD( "bytes",	c_string_bytes )
+  METHOD( "upcase",	c_string_upcase )
+  METHOD( "upcase!",	c_string_upcase_self )
+  METHOD( "downcase",	c_string_downcase )
+  METHOD( "downcase!",	c_string_downcase_self )
 
 #if MRBC_USE_FLOAT
   METHOD( "to_f",	c_string_to_f )

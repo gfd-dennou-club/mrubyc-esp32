@@ -3,8 +3,8 @@
   mruby/c Hash class
 
   <pre>
-  Copyright (C) 2015-2023 Kyushu Institute of Technology.
-  Copyright (C) 2015-2023 Shimane IT Open-Innovation Center.
+  Copyright (C) 2015- Kyushu Institute of Technology.
+  Copyright (C) 2015- Shimane IT Open-Innovation Center.
 
   This file is distributed under BSD 3-Clause License.
 
@@ -105,6 +105,15 @@ static inline int mrbc_hash_resize(mrbc_value *hash, int size)
 
 //================================================================
 /*! iterator constructor
+
+<b>Code example</b>
+@code
+  mrbc_hash_iterator ite = mrbc_hash_iterator_new( hash );
+  while( mrbc_hash_i_has_next( &ite ) ) {
+    mrbc_value *kv = mrbc_hash_i_next( &ite );
+    // using kv[0] as key, kv[1] as value
+  }
+@endcode
 */
 static inline mrbc_hash_iterator mrbc_hash_iterator_new( const mrbc_value *v )
 {

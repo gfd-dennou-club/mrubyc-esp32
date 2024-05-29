@@ -3,8 +3,8 @@
   Constant and global variables.
 
   <pre>
-  Copyright (C) 2015-2022 Kyushu Institute of Technology.
-  Copyright (C) 2015-2022 Shimane IT Open-Innovation Center.
+  Copyright (C) 2015- Kyushu Institute of Technology.
+  Copyright (C) 2015- Shimane IT Open-Innovation Center.
 
   This file is distributed under BSD 3-Clause License.
 
@@ -19,10 +19,10 @@
 
 /***** Local headers ********************************************************/
 #include "value.h"
+#include "symbol.h"
 #include "global.h"
 #include "keyvalue.h"
 #include "class.h"
-#include "symbol.h"
 #include "console.h"
 
 /***** Constat values *******************************************************/
@@ -36,33 +36,6 @@ static mrbc_kv_handle handle_global;	//!< for global variables.
 /***** Global variables *****************************************************/
 /***** Signal catching functions ********************************************/
 /***** Local functions ******************************************************/
-
-//================================================================
-/*! make internal use strings for class constant
-
-  @param  buf		output buffer.
-  @param  id1		parent class symbol id
-  @param  id2		target symbol id
-*/
-static void make_nested_symbol_s( char *buf, mrbc_sym id1, mrbc_sym id2 )
-{
-  static const int w = sizeof(mrbc_sym) * 2;
-  char *p = buf + w * 2;
-  *p = 0;
-
-  int i;
-  for( i = w; i > 0; i-- ) {
-    *--p = '0' + (id2 & 0x0f);
-    id2 >>= 4;
-  }
-
-  for( i = w; i > 0; i-- ) {
-    *--p = '0' + (id1 & 0x0f);
-    id1 >>= 4;
-  }
-}
-
-
 /***** Global functions *****************************************************/
 
 //================================================================
@@ -106,9 +79,6 @@ int mrbc_set_class_const( const struct RClass *cls, mrbc_sym sym_id, mrbc_value 
 
   make_nested_symbol_s( buf, cls->sym_id, sym_id );
   mrbc_sym id = mrbc_symbol( mrbc_symbol_new( 0, buf ));
-  if( v->tt == MRBC_TT_CLASS ) {
-    v->cls->sym_id = id;
-  }
 
   return mrbc_set_const( id, v );
 }
@@ -136,29 +106,16 @@ mrbc_value * mrbc_get_const( mrbc_sym sym_id )
 mrbc_value * mrbc_get_class_const( const struct RClass *cls, mrbc_sym sym_id )
 {
   if( cls->sym_id == MRBC_SYM(Object) ) {
-    return mrbc_kv_get( &handle_const, sym_id );
+    return mrbc_kv_get( &handle_const, sym_id );  // ::CONST case.
   }
 
-  while( 1 ) {
-    char buf[sizeof(mrbc_sym)*4+1];
+  char buf[sizeof(mrbc_sym)*4+1];
 
-    make_nested_symbol_s( buf, cls->sym_id, sym_id );
-    mrbc_sym id = mrbc_search_symid(buf);
-    if( id > 0 ) {
-      mrbc_value *v = mrbc_kv_get( &handle_const, id );
-      if( v ) return v;
-    }
+  make_nested_symbol_s( buf, cls->sym_id, sym_id );
+  mrbc_sym id = mrbc_search_symid(buf);
+  if( id <= 0 ) return 0;
 
-    // not found it in own class, traverses nested class.
-    if( !mrbc_is_nested_symid(cls->sym_id) ) break;
-
-    mrbc_separate_nested_symid( cls->sym_id, &id, 0 );
-    mrbc_value *v = mrbc_kv_get( &handle_const, id );
-    assert( v->tt == MRBC_TT_CLASS );
-    cls = v->cls;
-  }
-
-  return 0;
+  return mrbc_kv_get( &handle_const, id );
 }
 
 
@@ -199,31 +156,6 @@ void mrbc_global_clear_vm_id(void)
 #endif
 
 
-//================================================================
-/*! separate nested symbol ID
-*/
-void mrbc_separate_nested_symid(mrbc_sym sym_id, mrbc_sym *id1, mrbc_sym *id2)
-{
-  static const int w = sizeof(mrbc_sym) * 2;
-  const char *s = mrbc_symid_to_str(sym_id);
-
-  assert( mrbc_is_nested_symid( sym_id ));
-  assert( strlen(s) == w*2 );
-
-  *id1 = 0;
-  int i = 0;
-  while( i < w ) {
-    *id1 = (*id1 << 4) + (s[i++] - '0');
-  }
-
-  if( id2 == NULL ) return;
-  *id2 = 0;
-  while( i < w*2 ) {
-    *id2 = (*id2 << 4) + (s[i++] - '0');
-  }
-}
-
-
 #ifdef MRBC_DEBUG
 //================================================================
 /*! debug dump all const table.
@@ -242,15 +174,19 @@ void mrbc_debug_dump_const( void )
 
     if( kv->sym_id < 0x100 ) continue;
 
-    mrbc_printf(" %04x:%s", kv->sym_id, s );
+    mrbc_printf(" %04x:\"%s\"", kv->sym_id, s );
     if( mrbc_is_nested_symid(kv->sym_id) ) {
       mrbc_printf("(");
-      mrbc_print_nested_symbol(kv->sym_id);
+      mrbc_print_symbol(kv->sym_id);
       mrbc_printf(")");
     }
 
     if( kv->value.tt == MRBC_TT_CLASS ) {
-      mrbc_printf(" class\n");
+      const mrbc_class *cls = kv->value.cls;
+      mrbc_printf(" = Class(symid=$%x name=", cls->sym_id);
+      mrbc_print_symbol(cls->sym_id);
+      mrbc_printf(")\n");
+
       continue;
     }
 

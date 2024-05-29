@@ -3,8 +3,8 @@
   console output module. (not yet input)
 
   <pre>
-  Copyright (C) 2015-2022 Kyushu Institute of Technology.
-  Copyright (C) 2015-2022 Shimane IT Open-Innovation Center.
+  Copyright (C) 2015- Kyushu Institute of Technology.
+  Copyright (C) 2015- Shimane IT Open-Innovation Center.
 
   This file is distributed under BSD 3-Clause License.
 
@@ -25,12 +25,12 @@
 //@endcond
 
 /***** Local headers ********************************************************/
-#include "hal_selector.h"
+#include "hal.h"
 #include "alloc.h"
 #include "value.h"
+#include "symbol.h"
 #include "class.h"
 #include "console.h"
-#include "symbol.h"
 #include "error.h"
 #include "c_string.h"
 #include "c_array.h"
@@ -132,11 +132,11 @@ void mrbc_putchar(char c)
 
 
 //================================================================
-/*! display symbol name with nested.
+/*! display symbol name.
 
   @param  sym_id	symbol ID to print.
 */
-void mrbc_print_nested_symbol(mrbc_sym sym_id)
+void mrbc_print_symbol(mrbc_sym sym_id)
 {
   // normal case
   if( !mrbc_is_nested_symid(sym_id) ) {
@@ -148,9 +148,9 @@ void mrbc_print_nested_symbol(mrbc_sym sym_id)
   mrbc_sym id1, id2;
   mrbc_separate_nested_symid( sym_id, &id1, &id2 );
 
-  mrbc_print_nested_symbol( id1 );
+  mrbc_print_symbol( id1 );
   mrbc_print("::");
-  mrbc_print_nested_symbol( id2 );
+  mrbc_print_symbol( id2 );
 }
 
 
@@ -444,12 +444,12 @@ int mrbc_print_sub(const mrbc_value *v)
 #if MRBC_USE_FLOAT
   case MRBC_TT_FLOAT:	mrbc_printf("%g", v->d);	break;
 #endif
-  case MRBC_TT_SYMBOL:  mrbc_print(mrbc_symbol_cstr(v));		break;
-  case MRBC_TT_CLASS:	mrbc_print_nested_symbol( v->cls->sym_id );	break;
+  case MRBC_TT_SYMBOL:	mrbc_print_symbol(v->i);	break;
+  case MRBC_TT_CLASS:	mrbc_print_symbol(v->cls->sym_id); break;
 
   case MRBC_TT_OBJECT:
     mrbc_printf("#<");
-    mrbc_print_nested_symbol( find_class_by_object(v)->sym_id );
+    mrbc_print_symbol( find_class_by_object(v)->sym_id );
     mrbc_printf(":%08x>", v->instance );
     break;
 

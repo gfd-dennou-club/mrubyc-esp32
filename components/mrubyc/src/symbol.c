@@ -3,8 +3,8 @@
   mruby/c Symbol class
 
   <pre>
-  Copyright (C) 2015-2023 Kyushu Institute of Technology.
-  Copyright (C) 2015-2023 Shimane IT Open-Innovation Center.
+  Copyright (C) 2015- Kyushu Institute of Technology.
+  Copyright (C) 2015- Shimane IT Open-Innovation Center.
 
   This file is distributed under BSD 3-Clause License.
 
@@ -27,13 +27,14 @@
 #undef MRBC_DEFINE_SYMBOL_TABLE
 #include "alloc.h"
 #include "value.h"
+#include "symbol.h"
 #include "class.h"
 #include "c_string.h"
 #include "c_array.h"
 #include "console.h"
 
 /***** Constant values ******************************************************/
-#if !defined(MRBC_SYMBOL_SEARCH_LINER) && !defined(MRBC_SYMBOL_SEARCH_BTREE)
+#if !defined(MRBC_SYMBOL_SEARCH_LINEAR) && !defined(MRBC_SYMBOL_SEARCH_BTREE)
 #define MRBC_SYMBOL_SEARCH_BTREE
 #endif
 
@@ -132,7 +133,7 @@ static int search_builtin_symbol( const char *str )
 */
 static int search_index( uint16_t hash, const char *str )
 {
-#ifdef MRBC_SYMBOL_SEARCH_LINER
+#ifdef MRBC_SYMBOL_SEARCH_LINEAR
   int i;
   for( i = 0; i < sym_index_pos; i++ ) {
     if( sym_index[i].hash == hash && strcmp(str, sym_index[i].cstr) == 0 ) {
@@ -275,6 +276,62 @@ mrbc_sym mrbc_search_symid( const char *str )
 
 
 //================================================================
+/*! make internal use strings for class constant
+
+  @param  buf		output buffer.
+  @param  id1		parent class symbol id
+  @param  id2		target symbol id
+*/
+void make_nested_symbol_s( char *buf, mrbc_sym id1, mrbc_sym id2 )
+{
+  static const int w = sizeof(mrbc_sym) * 2;
+  char *p = buf + w * 2;
+  *p = 0;
+
+  int i;
+  for( i = w; i > 0; i-- ) {
+    *--p = '0' + (id2 & 0x0f);
+    id2 >>= 4;
+  }
+
+  for( i = w; i > 0; i-- ) {
+    *--p = '0' + (id1 & 0x0f);
+    id1 >>= 4;
+  }
+}
+
+
+//================================================================
+/*! separate nested symbol ID
+
+  @param	sym_id	symbol ID
+  @param [out]	id1	result 1
+  @param [out]	id2	result 2
+  @see	make_nested_symbol_s
+*/
+void mrbc_separate_nested_symid(mrbc_sym sym_id, mrbc_sym *id1, mrbc_sym *id2)
+{
+  static const int w = sizeof(mrbc_sym) * 2;
+  const char *s = mrbc_symid_to_str(sym_id);
+
+  assert( mrbc_is_nested_symid( sym_id ));
+  assert( strlen(s) == w*2 );
+
+  *id1 = 0;
+  int i = 0;
+  while( i < w ) {
+    *id1 = (*id1 << 4) + (s[i++] - '0');
+  }
+
+  if( id2 == NULL ) return;
+  *id2 = 0;
+  while( i < w*2 ) {
+    *id2 = (*id2 << 4) + (s[i++] - '0');
+  }
+}
+
+
+//================================================================
 /*! constructor
 
   @param  vm	pointer to VM.
@@ -374,28 +431,35 @@ static void c_symbol_to_s(struct VM *vm, mrbc_value v[], int argc)
 #if defined(MRBC_DEBUG)
 //================================================================
 /*! debug dump all symbols.
+
+  (examples)
+  mrbc_define_method(0, 0, "dump_symbol", (mrbc_func_t)mrbc_debug_dump_symbol);
 */
 void mrbc_debug_dump_symbol(void)
 {
-  mrbc_print("<< Symbol table dump >>\n");
+  mrbc_printf("<< Symbol table dump >>\n");
 
-  int i;
-  for( i = 0; i < sym_index_pos; i++ ) {
+  for( int i = 0; i < sym_index_pos; i++ ) {
     mrbc_sym sym_id = i + OFFSET_BUILTIN_SYMBOL;
-    mrbc_printf(" %04x:%s\n", sym_id, sym_index[i].cstr );
+    mrbc_printf(" %04x: %s", sym_id, sym_index[i].cstr );
+    if( mrbc_is_nested_symid(sym_id) ) {
+      mrbc_printf(" as ");
+      mrbc_print_symbol(sym_id);
+    }
+    mrbc_printf("\n");
   }
 
-  mrbc_print("\n");
+  mrbc_printf("\n");
 }
 
 
 //================================================================
-/* statistics
+/*! statistics
 
-   (e.g.)
-   total = MAX_SYMBOLS_COUNT;
-   mrbc_symbol_statistics( &used );
-   mrbc_printf("Symbol table: %d/%d %d%% used.\n",
+  (examples)
+  int used, total = MAX_SYMBOLS_COUNT;
+  mrbc_symbol_statistics( &used );
+  mrbc_printf("Symbol table: %d/%d %d%% used.\n",
 		used, total, 100 * used / total );
 */
 void mrbc_symbol_statistics( int *total_used )

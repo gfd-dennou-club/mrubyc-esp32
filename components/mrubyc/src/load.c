@@ -3,8 +3,8 @@
   mruby bytecode loader.
 
   <pre>
-  Copyright (C) 2015-2023 Kyushu Institute of Technology.
-  Copyright (C) 2015-2023 Shimane IT Open-Innovation Center.
+  Copyright (C) 2015- Kyushu Institute of Technology.
+  Copyright (C) 2015- Shimane IT Open-Innovation Center.
 
   This file is distributed under BSD 3-Clause License.
 
@@ -138,7 +138,6 @@ static mrbc_irep * load_irep_1(struct VM *vm, const uint8_t *bin, int *len, int 
 {
   mrbc_irep irep;
   const uint8_t *p = bin + 4;	// 4 = skip record size.
-  int i;
 
 #if defined(MRBC_DEBUG)
   irep.type[0] = 'R';	// set "RP"
@@ -158,7 +157,7 @@ static mrbc_irep * load_irep_1(struct VM *vm, const uint8_t *bin, int *len, int 
   irep.plen = bin_to_uint16(p);		p += 2;
 
   // skip pool
-  for( i = 0; i < irep.plen; i++ ) {
+  for( int i = 0; i < irep.plen; i++ ) {
     int siz = 0;
     switch( *p++ ) {
     case IREP_TT_STR:
@@ -198,21 +197,28 @@ static mrbc_irep * load_irep_1(struct VM *vm, const uint8_t *bin, int *len, int 
 
   // make a sym_id table.
   mrbc_sym *tbl_syms = mrbc_irep_tbl_syms(p_irep);
-  for( i = 0; i < irep.slen; i++ ) {
-    int siz = bin_to_uint16(p);	p += 2;
-    mrbc_sym sym = mrbc_str_to_symid( (const char *)p );
+  for( int i = 0; i < irep.slen; i++ ) {
+    int siz = bin_to_uint16(p) + 1;	p += 2;
+    char *sym_str;
+    if (vm->flag_permanence == 1) {
+      sym_str = mrbc_raw_alloc_no_free(siz);
+      memcpy(sym_str, p, siz);
+    } else {
+      sym_str = (char *)p;
+    }
+    mrbc_sym sym = mrbc_str_to_symid( sym_str );
     if( sym < 0 ) {
       mrbc_raise(vm, MRBC_CLASS(Exception), "Overflow MAX_SYMBOLS_COUNT");
       return NULL;
     }
     *tbl_syms++ = sym;
-    p += (siz+1);
+    p += (siz);
   }
 
   // make a pool data's offset table.
   uint16_t *ofs_pools = mrbc_irep_tbl_pools(p_irep);
   p = p_irep->pool + 2;
-  for( i = 0; i < irep.plen; i++ ) {
+  for( int i = 0; i < irep.plen; i++ ) {
     int siz = 0;
     if( (p - irep.pool) > UINT16_MAX ) {
       mrbc_raise(vm, MRBC_CLASS(Exception), "Overflow IREP data offset table.");

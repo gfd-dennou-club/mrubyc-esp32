@@ -3,8 +3,8 @@
   mruby/c memory management.
 
   <pre>
-  Copyright (C) 2015-2022 Kyushu Institute of Technology.
-  Copyright (C) 2015-2022 Shimane IT Open-Innovation Center.
+  Copyright (C) 2015- Kyushu Institute of Technology.
+  Copyright (C) 2015- Shimane IT Open-Innovation Center.
 
   This file is distributed under BSD 3-Clause License.
 
@@ -53,7 +53,10 @@
 #if !defined(MRBC_ALLOC_LIBC)
 /***** Local headers ********************************************************/
 #include "alloc.h"
-#include "hal_selector.h"
+#include "hal.h"
+#if defined(MRBC_DEBUG)
+#include "console.h"
+#endif
 
 /***** Constant values ******************************************************/
 /*
@@ -324,12 +327,6 @@ static void add_free_block(MEMORY_POOL *pool, FREE_BLOCK *target)
     target->next_free->prev_free = target;
   }
   pool->free_blocks[index] = target;
-
-#if defined(MRBC_DEBUG)
-  SET_VM_ID( target, 0xff );
-  memset( (uint8_t *)target + sizeof(FREE_BLOCK) - sizeof(FREE_BLOCK *), 0xff,
-          BLOCK_SIZE(target) - sizeof(FREE_BLOCK) );
-#endif
 }
 
 
@@ -528,7 +525,7 @@ void * mrbc_raw_alloc(unsigned int size)
   MRBC_OUT_OF_MEMORY();
 #else
   static const char msg[] = "Fatal error: Out of memory.\n";
-  hal_write(1, msg, sizeof(msg)-1);
+  hal_write(2, msg, sizeof(msg)-1);
 #endif
   return NULL;  // ENOMEM
 
@@ -632,6 +629,32 @@ void * mrbc_raw_alloc_no_free(unsigned int size)
 */
 void mrbc_raw_free(void *ptr)
 {
+#if defined(MRBC_DEBUG)
+  {
+    if( ptr == NULL ) {
+      static const char msg[] = "mrbc_raw_free(): NULL pointer was given.\n";
+      hal_write(2, msg, sizeof(msg)-1);
+      return;
+    }
+
+    FREE_BLOCK *target = (FREE_BLOCK *)((uint8_t *)ptr - sizeof(USED_BLOCK));
+    FREE_BLOCK *block = BLOCK_TOP(memory_pool);
+    while( block < (FREE_BLOCK *)BLOCK_END(memory_pool) ) {
+      if( block == target ) break;
+      block = PHYS_NEXT(block);
+    }
+
+    if( block != target || IS_FREE_BLOCK(block) ) {
+      static const char msg[] = "mrbc_raw_free(): double free detected.\n";
+      hal_write(2, msg, sizeof(msg)-1);
+      return;
+    }
+
+    SET_VM_ID( target, 0xff );
+    memset( ptr, 0xff, BLOCK_SIZE(target) - sizeof(USED_BLOCK) );
+  }
+#endif
+
   MEMORY_POOL *pool = memory_pool;
 
   // get target block
@@ -740,7 +763,7 @@ void * mrbc_raw_realloc(void *ptr, unsigned int size)
 unsigned int mrbc_alloc_usable_size(void *ptr)
 {
   USED_BLOCK *target = (USED_BLOCK *)((uint8_t *)ptr - sizeof(USED_BLOCK));
-  return (unsigned int)(target->size - sizeof(USED_BLOCK));
+  return (unsigned int)(BLOCK_SIZE(target) - sizeof(USED_BLOCK));
 }
 
 
@@ -845,7 +868,6 @@ void mrbc_alloc_statistics( struct MRBC_ALLOC_STATISTICS *ret )
 
 
 #if defined(MRBC_DEBUG)
-#include "console.h"
 //================================================================
 /*! print memory block for debug.
 
