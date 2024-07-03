@@ -16,11 +16,9 @@
 #include "mrbc_esp32_adc.h"
 #include "mrbc_esp32_uart.h"
 #include "mrbc_esp32_i2c.h"
-#ifdef CONFIG_USE_ESP32_WIFI
 #include "mrbc_esp32_wifi.h"
 #include "mrbc_esp32_sntp.h"
 #include "mrbc_esp32_http_client.h"
-#endif
 #include "mrbc_esp32_sleep.h"
 #include "mrbc_esp32_spi.h"
 #include "mrbc_esp32_utils.h"
@@ -52,6 +50,7 @@ uint8_t * save_spiffs_file(const char *filename, int len, uint8_t *data)
     fwrite(&data[i], sizeof(uint8_t), 1, fp);
   }
   fclose(fp);
+  return NULL;
 }
 
 // SPIFFS でバイナリデータを読み込み
@@ -108,6 +107,7 @@ uint8_t init_spiffs(){
   } else {
     ESP_LOGI(TAG, "Partition size: total: %d, used: %d", total, used);
   }
+  return 1;
 }
 
 //UART 初期化
@@ -124,6 +124,7 @@ uint8_t init_uart(){
   //uart_param_config(UART_NUM_0, &uart_config);
   uart_driver_install(UART_NUM_0, BUF_SIZE * 2, BUF_SIZE * 2, 20, &uart0_queue, 0);
   uart_param_config(UART_NUM_0, &uart_config);
+  return 1;
 }  
 
 
@@ -163,7 +164,7 @@ void app_main(void) {
 
   while (1) {
     //バイト数の取得
-    int len = uart_read_bytes(UART_NUM_0, data, BUF_SIZE, 1000 / portTICK_RATE_MS);
+    int len = uart_read_bytes(UART_NUM_0, data, BUF_SIZE, 1000 / portTICK_PERIOD_MS);
     
     //取得したバイト数が正か否かで場合分け
     if (len > 0) {
@@ -204,7 +205,7 @@ void app_main(void) {
 	//execute	  
 	} else if (strncmp(buffer, "execute", 7) == 0) {
 	  printf("+OK execute \n\n");
-	  vTaskDelay(2000 / portTICK_RATE_MS);
+	  vTaskDelay(2000 / portTICK_PERIOD_MS);
 	  break; //ループから抜ける
 	  
 	//write	  
@@ -317,12 +318,10 @@ void app_main(void) {
   mrbc_esp32_i2c_gem_init(0);
   printf("start UART (C)\n");
   mrbc_esp32_uart_gem_init(0);
-#ifdef CONFIG_USE_ESP32_WIFI
   printf("start WiFi (C) \n");
   mrbc_esp32_wifi_gem_init(0);
   mrbc_esp32_sntp_gem_init(0);
   mrbc_esp32_httpclient_gem_init(0);
-#endif  
   printf("start SLEEP (C) \n");
   mrbc_esp32_sleep_gem_init(0);
   printf("start SPI (C) \n");
