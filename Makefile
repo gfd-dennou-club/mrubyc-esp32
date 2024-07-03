@@ -38,7 +38,7 @@ SRCDIR   = $(PROJECT_PATH)/src
 SRCFILES = $(wildcard $(SRCDIR)/*.rb)
 OBJS     = $(patsubst %.rb,%.h,$(SRCFILES))
 
-CLASSDIR   = $(PROJECT_PATH)/mrblib
+CLASSDIR   = $(PROJECT_PATH)/components/*/mrblib
 CLASSFILES = $(wildcard $(CLASSDIR)/*.rb)
 MYCLASS    = myclass_bytecode
 
