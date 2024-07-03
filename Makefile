@@ -18,30 +18,13 @@ else
 BAUD0 = $(shell echo $(BAUD))
 endif
 
-# include
-ifneq ("$(IDF_PATH)","")
-include $(IDF_PATH)/make/project.mk
-endif
-
-# baud rate
-ifeq ("$(BAUD)","")
-BAUD0 = 115200
-else
-BAUD0 = $(shell echo $(BAUD))
-endif
-
 # command
 MRBC     = mrbc
-MAKE     = make
 RM       = rm
+CP       = cp
 ESPTOOL  = esptool.py
+IDFTOOL  = idf.py
 MKSPIFFS = $(shell which mkspiffs|xargs -I@ basename @)
-FLASH_FIRMWARE_CMD = $(shell make print_flash_cmd)
-
-# files
-master = master.rb
-slave  = slave.rb
-FIRMWAREDIR = firmware
 
 # parameters
 SPIFFS_OTA_OFFSET      = $(shell awk '/otadata/ {print $$0}' partitions.csv| cut -d , -f 4)
@@ -49,41 +32,54 @@ SPIFFS_OTA0_OFFSET     = $(shell awk '/app0/    {print $$0}' partitions.csv| cut
 SPIFFS_DATA_OFFSET     = $(shell awk '/spiffs/  {print $$0}' partitions.csv| cut -d , -f 4)
 SPIFFS_DATA_TABLE_SIZE = $(shell awk '/spiffs/  {print $$0}' partitions.csv| cut -d , -f 5)
 
-gems: mrblib
+PROJECT_PATH = .
+
+SRCDIR   = $(PROJECT_PATH)/src
+SRCFILES = $(wildcard $(SRCDIR)/*.rb)
+OBJS     = $(patsubst %.rb,%.h,$(SRCFILES))
+
+CLASSDIR   = $(PROJECT_PATH)/mrblib
+CLASSFILES = $(wildcard $(CLASSDIR)/*.rb)
+MYCLASS    = myclass_bytecode
+
+MAINDIR  = $(PROJECT_PATH)/main
+FIRMWAREDIR = $(PROJECT_PATH)/firmware
+SPIFFSDIR = $(PROJECT_PATH)/spiffs/mrbc
+SPIFFSFILE = $(PROJECT_PATH)/spiffs/mrbc.spiffs.bin
+
+.PHONY: spiffs flash monitor store-vm 
+
+all: $(OBJS)
+	$(MRBC) -B $(MYCLASS) --remove-lv -o $(PROJECT_PATH)/main/mrblib.c  $(CLASSFILES)
+	$(IDFTOOL) build
+
+flash: all
+	$(IDFTOOL) flash
+
+monitor:
+	$(IDFTOOL) monitor
+
+clean:
+	$(IDFTOOL) clean
+
+$(SRCDIR)/%.h: $(SRCDIR)/%.rb
+	$(MRBC) -B $(basename $(notdir $@)) -o $(MAINDIR)/$(basename $(notdir $@)).h $^
+	$(MRBC) -o $(SPIFFSDIR)/$(basename $(notdir $@)).mrbc $^
+
+gems: 
 	python bin/make-gems.py
 
 gems-clean:
 	python bin/clean-gems.py
 
-.PHONY: spiffs spiffs-clean spiffs-monitor store-vm flash-vm 
-
-spiffs: 
-	@echo $(MRBC) -o ./spiffs/mrbc/master.mrbc -E ./src/master.rb
-	$(MRBC) -o ./spiffs/mrbc/master.mrbc -E ./src/master.rb
-	@echo $(MRBC) -o ./spiffs/mrbc/slave.mrbc -E ./src/slave.rb
-	$(MRBC) -o ./spiffs/mrbc/slave.mrbc -E ./src/slave.rb
-	@echo $(MKSPIFFS) -c ./spiffs/mrbc -p 256 -b 4096 -s $(SPIFFS_DATA_TABLE_SIZE) ./spiffs/mrbc.spiffs.bin
-	$(MKSPIFFS) -c ./spiffs/mrbc -p 256 -b 4096 -s $(SPIFFS_DATA_TABLE_SIZE) ./spiffs/mrbc.spiffs.bin
-	@echo $(ESPTOOL) --chip esp32 --baud $(BAUD0) --port $(PORT0) --before default_reset --after hard_reset write_flash -z --flash_mode dio --flash_freq 40m --flash_size detect $(SPIFFS_DATA_OFFSET) ./spiffs/mrbc.spiffs.bin
-	$(ESPTOOL) --chip esp32 --baud $(BAUD0) --port $(PORT0) --before default_reset --after hard_reset write_flash -z --flash_mode dio --flash_freq 40m --flash_size detect $(SPIFFS_DATA_OFFSET) ./spiffs/mrbc.spiffs.bin
-
-spiffs-clean:
-	@echo $(RM) ./spiffs/mrbc.spiffs.bin
-	$(RM) ./spiffs/mrbc.spiffs.bin
-	@echo $(RM) ./spiffs/mrbc/master.mrbc
-	$(RM) ./spiffs/mrbc/master.mrbc
-	@echo $(RM) ./spiffs/mrbc/slave.mrbc
-	$(RM) ./spiffs/mrbc/slave.mrbc
-
-spiffs-monitor:
-	python bin/idf_monitor.py --port $(PORT0) firmware/mrubyc-esp32.elf
+spiffs:  $(OBJS)
+	$(MKSPIFFS) -c $(SPIFFSDIR) -p 256 -b 4096 -s $(SPIFFS_DATA_TABLE_SIZE) $(SPIFFSFILE)
+	$(ESPTOOL) --chip esp32 --baud $(BAUD0) --port $(PORT0) --before default_reset --after hard_reset write_flash -z --flash_mode dio --flash_freq 40m --flash_size detect $(SPIFFS_DATA_OFFSET) $(SPIFFSFILE)
 
 store-vm:
-	cp build/mrubyc-esp32.bin          ${FIRMWAREDIR}
-	cp build/mrubyc-esp32.elf          ${FIRMWAREDIR}
-	cp build/ota_data_initial.bin      ${FIRMWAREDIR}
-	cp build/partitions.bin            ${FIRMWAREDIR}
-	cp build/bootloader/bootloader.bin ${FIRMWAREDIR}
+	$(CP) build/mrubyc-esp32.bin          ${FIRMWAREDIR}
+	$(CP) build/mrubyc-esp32.elf          ${FIRMWAREDIR}
+	$(CP) build/ota_data_initial.bin      ${FIRMWAREDIR}
+	$(CP) build/partitions.bin            ${FIRMWAREDIR}
+	$(CP) build/bootloader/bootloader.bin ${FIRMWAREDIR}
 
-flash-vm:
-	$(ESPTOOL) --chip esp32 --baud $(BAUD0) --port $(PORT0) --before default_reset --after hard_reset write_flash -z --flash_mode dio --flash_freq 40m --flash_size detect $(SPIFFS_OTA_OFFSET) $(FIRMWAREDIR)/ota_data_initial.bin 0x1000 $(FIRMWAREDIR)/bootloader.bin $(SPIFFS_OTA0_OFFSET) $(FIRMWAREDIR)/mrubyc-esp32.bin 0x8000 $(FIRMWAREDIR)/partitions.bin
