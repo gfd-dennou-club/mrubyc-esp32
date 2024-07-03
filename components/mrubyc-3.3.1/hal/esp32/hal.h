@@ -55,14 +55,14 @@ extern "C" {
 void mrbc_tick(void);
 
 #if !defined(MRBC_NO_TIMER)
-void hal_init(void);
+void hal_mrubyc_init(void);
 void hal_enable_irq(void);
 void hal_disable_irq(void);
                            // Note: argument of vTaskDelay() should be 1+
 # define hal_idle_cpu()    vTaskDelay(MRBC_TICK_UNIT / portTICK_PERIOD_MS)
 
 #else // MRBC_NO_TIMER
-# define hal_init()        ((void)0)
+# define hal_mrubyc_init()        ((void)0)
 # define hal_enable_irq()  ((void)0)
 # define hal_disable_irq() ((void)0)
                            // Note: argument of vTaskDelay() should be 1+

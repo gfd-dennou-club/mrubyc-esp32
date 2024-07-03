@@ -49,8 +49,10 @@ static portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 */
 static void on_timer(void *arg)
 {
-    TIMERG0.int_clr_timers.t0 = 1;
-    TIMERG0.hw_timer[TIMER_0].config.alarm_en = TIMER_ALARM_EN;
+    //TIMERG0.int_clr_timers.t0 = 1;
+    TIMERG0.int_clr_timers.t0_int_clr = 1;  
+    //TIMERG0.hw_timer[TIMER_0].config.alarm_en = TIMER_ALARM_EN;
+    TIMERG0.hw_timer[TIMER_0].config.tx_alarm_en = TIMER_ALARM_EN;    
     mrbc_tick();
 }
 
@@ -66,7 +68,7 @@ static void on_timer(void *arg)
   initialize
 
 */
-void hal_init(void)
+void hal_mrubyc_init(void)
 {
   timer_config_t config;
 
@@ -76,6 +78,7 @@ void hal_init(void)
   config.alarm_en = TIMER_ALARM_EN;
   config.intr_type = TIMER_INTR_LEVEL;
   config.auto_reload = TIMER_AUTORELOAD_EN;
+  config.clk_src = TIMER_SRC_CLK_APB;
 
   timer_init(TIMER_GROUP_0, TIMER_0, &config);
   timer_set_counter_value(TIMER_GROUP_0, TIMER_0, 0x00000000ULL);

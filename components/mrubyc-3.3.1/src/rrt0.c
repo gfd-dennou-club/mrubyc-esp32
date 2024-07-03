@@ -1398,7 +1398,8 @@ static void c_vm_tick(mrbc_vm *vm, mrbc_value v[], int argc)
 */
 void mrbc_init(void *heap_ptr, unsigned int size)
 {
-  hal_init();
+  //hal_init();
+  hal_mrubyc_init();
   mrbc_init_alloc(heap_ptr, size);
   mrbc_init_global();
   mrbc_init_class();
