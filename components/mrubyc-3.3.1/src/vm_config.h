@@ -45,7 +45,7 @@
 
 // Use math. Support Math class.
 #if !defined(MRBC_USE_MATH)
-#define MRBC_USE_MATH 0
+#define MRBC_USE_MATH 1
 #endif
 /* (NOTE)
    maybe you need
