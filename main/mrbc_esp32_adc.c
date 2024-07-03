@@ -114,6 +114,7 @@ static bool adc_calibration_init(adc_unit_t unit, adc_atten_t atten, adc_cali_ha
       .unit_id = unit,
       .atten = atten,
       .bitwidth = ADC_BITWIDTH_DEFAULT,
+      .default_vref = 0
     };
     ret = adc_cali_create_scheme_line_fitting(&cali_config, &handle);
     if (ret == ESP_OK) {
