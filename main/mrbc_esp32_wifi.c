@@ -35,6 +35,7 @@ static esp_netif_t *sta_netif = NULL;
 static int s_retry_num = 0;
 static wifi_config_t wifi_config;
 
+static mrbc_error_code hash_set_address(struct VM*, mrbc_value*, const char*, const esp_ip4_addr_t*);
 static char* get_auth_mode_name(const wifi_auth_mode_t);
 
 /*! WiFi イベントハンドラ
@@ -452,51 +453,50 @@ mrbc_esp32_wifi_config_ip(mrb_vm* vm, mrb_value* v, int argc)
 */
 
 
-/*! メソッド ifconfig() 本体
-  @param 
+/*! メソッド ifconfig 本体
+  引数なし 
 */
-/*
-static void
-mrbc_esp32_wifi_ifconfig(mrb_vm* vm, mrb_value* v, int argc)
+static void mrbc_esp32_wifi_ifconfig(mrb_vm* vm, mrb_value* v, int argc)
 {
-  tcpip_adapter_ip_info_t info;
+  esp_netif_ip_info_t ip_info;
   esp_netif_dns_info_t dns_info;
-  mrbc_value mrbc_ifconfig ;
-  mrbc_value key;
-  mrbc_value value;
+  mrbc_value mrbc_ifconfig;
   
-  const char *args = (const char *)GET_STRING_ARG(1);
+  ESP_ERROR_CHECK(esp_netif_get_ip_info(sta_netif, &ip_info));
+  ESP_ERROR_CHECK(esp_netif_get_dns_info(sta_netif, ESP_NETIF_DNS_MAIN, &dns_info));
 
   mrbc_ifconfig = mrbc_hash_new(vm, 0);
   
-  if(strcmp(args, "STA") || strcmp(args, "sta")){
-    ESP_ERROR_CHECK(esp_netif_get_ip_info(TCPIP_ADAPTER_IF_STA, &info));
-    ESP_ERROR_CHECK(esp_netif_get_dns_info(TCPIP_ADAPTER_IF_STA, 0, &dns_info));
-  } else if(strcmp(args, "AP") || strcmp(args, "ap") || strcmp(args, "SOFTAP") || strcmp(args, "softap")) {
-    ESP_ERROR_CHECK(esp_netif_get_ip_info(TCPIP_ADAPTER_IF_AP, &info));
-    ESP_ERROR_CHECK(esp_netif_get_dns_info(TCPIP_ADAPTER_IF_AP, 0, &dns_info));
-  }
-  key = mrbc_string_new_cstr(vm, "ip");
-  value = mrbc_string_new_cstr(vm, ip4addr_ntoa(&info.ip));
-  mrbc_hash_set(&mrbc_ifconfig, &key, &value);
-
-  key = mrbc_string_new_cstr(vm, "netmask");
-  value = mrbc_string_new_cstr(vm, ip4addr_ntoa(&info.netmask));
-  mrbc_hash_set(&mrbc_ifconfig, &key, &value);
-
-  key = mrbc_string_new_cstr(vm, "gw");
-  value = mrbc_string_new_cstr(vm, ip4addr_ntoa(&info.gw));
-  mrbc_hash_set(&mrbc_ifconfig, &key, &value);
-  char dns[16];
-  uint8_t *dns_ip = (uint8_t *)&dns_info.ip;
-  sprintf(dns, "%u.%u.%u.%u", dns_ip[0],dns_ip[1],dns_ip[2],dns_ip[3]);
-  key = mrbc_string_new_cstr(vm, "dns");
-  value = mrbc_string_new_cstr(vm,dns);
-  mrbc_hash_set(&mrbc_ifconfig, &key, &value);
+  hash_set_address(vm, &mrbc_ifconfig, "ip", &ip_info.ip);
+  hash_set_address(vm, &mrbc_ifconfig, "netmask", &ip_info.netmask);
+  hash_set_address(vm, &mrbc_ifconfig, "gw", &ip_info.gw);
+  hash_set_address(vm, &mrbc_ifconfig, "dns", (esp_ip4_addr_t*)&dns_info.ip);
 
   SET_RETURN(mrbc_ifconfig);
 }
+
+/*! mrbcのHashに, IPv4アドレスを十進表現にして書き込む
+  @param vm vm
+  @param hash 書き込むHashのアドレス
+  @param key 追加する要素のキー
+  @param address 追加するIPv4アドレスのアドレス
+  @return `mrbc_error_code`
 */
+static mrbc_error_code hash_set_address(
+  struct VM* vm,
+  mrbc_value* hash,
+  const char* key,
+  const esp_ip4_addr_t* address
+) {
+  const int addr_buf_size = 16;
+  char addr_buf[addr_buf_size];
+
+  mrbc_value mrbc_key = mrbc_string_new_cstr(vm, key);
+  assert(esp_ip4addr_ntoa(address, addr_buf, addr_buf_size) != NULL);
+  mrbc_value mrbc_value = mrbc_string_new_cstr(vm, addr_buf);
+
+  return mrbc_hash_set(hash, &mrbc_key, &mrbc_value);
+}
 
 /*! クラス定義処理を記述した関数
   この関数を呼ぶことでクラス WiFi が定義される
@@ -514,4 +514,5 @@ mrbc_esp32_wifi_gem_init(struct VM* vm)
   mrbc_define_method(0, wlan, "connect",       mrbc_esp32_wifi_connect);
   mrbc_define_method(0, wlan, "connected?",    mrbc_esp32_wifi_connected);
   mrbc_define_method(0, wlan, "scan",          mrbc_esp32_wifi_scan);
+  mrbc_define_method(0, wlan, "ifconfig",      mrbc_esp32_wifi_ifconfig);
 }
