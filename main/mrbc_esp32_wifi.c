@@ -419,17 +419,24 @@ static char* get_mac_address(int argc){
   return buf;
 }
 
-/*! メソッド mac() 本体
-
+/*! メソッド mac 本体
+引数なし
 */
-static void
-mrbc_esp32_wifi_config_mac(mrb_vm* vm, mrb_value* v, int argc)
+static void mrbc_esp32_wifi_mac(mrb_vm* vm, mrb_value* v, int argc)
 {
-  mrb_value value;
-  //  const char *args = (const char *)GET_STRING_ARG(1);
+  wifi_mode_t mode;
+  mrb_value mrbc_mac;
 
-  value = mrbc_string_new_cstr(vm, get_mac_address(ESP_MAC_WIFI_STA));
-  SET_RETURN(value);
+  ESP_ERROR_CHECK(esp_wifi_get_mode(&mode));
+  assert(mode == WIFI_MODE_STA || mode == WIFI_MODE_AP || mode == WIFI_MODE_APSTA); // STAモードとAPモードのみサポート
+
+  if(mode == WIFI_MODE_STA) {
+    mrbc_mac = mrbc_string_new_cstr(vm, get_mac_address(ESP_MAC_WIFI_STA));
+  } else if(mode == WIFI_MODE_AP || mode == WIFI_MODE_APSTA) {
+    mrbc_mac = mrbc_string_new_cstr(vm, get_mac_address(ESP_MAC_WIFI_SOFTAP));
+  }
+
+  SET_RETURN(mrbc_mac);
 }
 
 /*! メソッド ip() 本体
@@ -515,4 +522,5 @@ mrbc_esp32_wifi_gem_init(struct VM* vm)
   mrbc_define_method(0, wlan, "connected?",    mrbc_esp32_wifi_connected);
   mrbc_define_method(0, wlan, "scan",          mrbc_esp32_wifi_scan);
   mrbc_define_method(0, wlan, "ifconfig",      mrbc_esp32_wifi_ifconfig);
+  mrbc_define_method(0, wlan, "mac",           mrbc_esp32_wifi_mac);
 }
