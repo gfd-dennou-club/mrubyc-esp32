@@ -292,14 +292,12 @@ mrbc_esp32_wifi_connected(mrb_vm* vm, mrb_value* v, int argc)
     SET_FALSE_RETURN();
   }
 }
-/*! メソッド scan() 本体
+
+/*! メソッド scan 本体
   引数なし
-  @return hash in array : [{ssid: "SSID", bssid: "BSSID", channel: channnel, rssi: "RSSI", authmode: "AUTHMODE", hidden: false} ]
-
+  @return hash in array : [{ssid: "SSID", bssid: "BSSID", channel: channnel, rssi: rssi, authmode: "AUTHMODE", hidden: false}]
 */
-
-static void
-mrbc_esp32_wifi_scan(mrb_vm* vm, mrb_value* v, int argc)
+static void mrbc_esp32_wifi_scan(mrb_vm* vm, mrb_value* v, int argc)
 {
   wifi_mode_t mode;
   ESP_ERROR_CHECK(esp_wifi_get_mode(&mode));
@@ -322,13 +320,14 @@ mrbc_esp32_wifi_scan(mrb_vm* vm, mrb_value* v, int argc)
   ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
   ESP_ERROR_CHECK(esp_wifi_start());
   ESP_ERROR_CHECK(esp_wifi_scan_start(NULL, true));
-  ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records(&number, ap_info));
-  ESP_ERROR_CHECK(esp_wifi_scan_get_ap_num(&ap_count));
+    ESP_ERROR_CHECK(esp_wifi_scan_get_ap_num(&ap_count));
+  ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records(&number, ap_info)); // `esp_wifi_scan_get_ap_num`の後に呼ぶ必要がある
+
   for(uint16_t i = 0; i < ap_count; i++){
     mrbc_value mrbc_ap_records;
     mrbc_value key;
     mrbc_value value;
-    char buf[20];
+    char bssid_buf[20];
     mrbc_ap_records = mrbc_hash_new(vm, 0);
 
     key = mrbc_string_new_cstr(vm, "ssid");
@@ -337,7 +336,7 @@ mrbc_esp32_wifi_scan(mrb_vm* vm, mrb_value* v, int argc)
 
     key = mrbc_string_new_cstr(vm, "bssid");
     // TODO: macアドレスの生成に使えるので後で関数化するかもしれない
-    sprintf(buf,
+    sprintf(bssid_buf,
             "%02X:%02X:%02X:%02X:%02X:%02X",
             ap_info[i].bssid[0],
             ap_info[i].bssid[1],
@@ -345,15 +344,15 @@ mrbc_esp32_wifi_scan(mrb_vm* vm, mrb_value* v, int argc)
             ap_info[i].bssid[3],
             ap_info[i].bssid[4],
             ap_info[i].bssid[5]);
-    value = mrbc_string_new_cstr(vm, buf);
+    value = mrbc_string_new_cstr(vm, bssid_buf);
     mrbc_hash_set(&mrbc_ap_records, &key, &value);
 
     key = mrbc_string_new_cstr(vm, "channel");
-    value = mrbc_fixnum_value(ap_info[i].primary);
+    value = mrbc_integer_value(ap_info[i].primary);
     mrbc_hash_set(&mrbc_ap_records, &key, &value);
 
     key = mrbc_string_new_cstr(vm, "rssi");
-    value = mrbc_fixnum_value(ap_info[i].rssi);
+    value = mrbc_integer_value(ap_info[i].rssi);
     mrbc_hash_set(&mrbc_ap_records, &key, &value);
 
     // 別関数にした方がいいかもしれない
@@ -389,7 +388,7 @@ mrbc_esp32_wifi_scan(mrb_vm* vm, mrb_value* v, int argc)
     
     mrbc_array_set(&result, i, &mrbc_ap_records);
   }
-  ESP_ERROR_CHECK( esp_wifi_stop() );
+  ESP_ERROR_CHECK(esp_wifi_stop());
   SET_RETURN(result);
 }
 
@@ -504,4 +503,5 @@ mrbc_esp32_wifi_gem_init(struct VM* vm)
   mrbc_define_method(0, wlan, "initialize",    mrbc_esp32_wifi_initialize);
   mrbc_define_method(0, wlan, "connect",       mrbc_esp32_wifi_connect);
   mrbc_define_method(0, wlan, "connected?",    mrbc_esp32_wifi_connected);
+  mrbc_define_method(0, wlan, "scan",          mrbc_esp32_wifi_scan);
 }
