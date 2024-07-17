@@ -279,12 +279,12 @@ mrbc_esp32_wifi_setup_ent_peap(mrb_vm* vm, mrb_value* v, int argc)
 }
 */
 
-/*! メソッド is_connected() 本体
+/*! メソッド connected? 本体
   引数なし
   @return true : CONNECTED / false : CONNECTED 以外
 */
 static void
-mrbc_esp32_wifi_is_connected(mrb_vm* vm, mrb_value* v, int argc)
+mrbc_esp32_wifi_connected(mrb_vm* vm, mrb_value* v, int argc)
 {
   if(connection_status == CONNECTED) {
     SET_TRUE_RETURN();
@@ -503,8 +503,5 @@ mrbc_esp32_wifi_gem_init(struct VM* vm)
   mrbc_define_method(0, wlan, "new",           mrbc_esp32_wifi_new);
   mrbc_define_method(0, wlan, "initialize",    mrbc_esp32_wifi_initialize);
   mrbc_define_method(0, wlan, "connect",       mrbc_esp32_wifi_connect);
-  mrbc_define_method(0, wlan, "is_connected?", mrbc_esp32_wifi_is_connected);
-  //  mrbc_define_method(0, wlan, "scan",          mrbc_esp32_wifi_scan);
-  mrbc_define_method(0, wlan, "mac",           mrbc_esp32_wifi_config_mac);
-  //  mrbc_define_method(0, wlan, "ip",            mrbc_esp32_wifi_config_ip);
+  mrbc_define_method(0, wlan, "connected?",    mrbc_esp32_wifi_connected);
 }
