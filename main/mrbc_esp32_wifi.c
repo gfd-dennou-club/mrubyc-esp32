@@ -35,6 +35,8 @@ static esp_netif_t *sta_netif = NULL;
 static int s_retry_num = 0;
 static wifi_config_t wifi_config;
 
+static char* get_auth_mode_name(const wifi_auth_mode_t);
+
 /*! WiFi イベントハンドラ
   各種 WiFi イベントが発生した際に呼び出される
 */
@@ -293,36 +295,6 @@ mrbc_esp32_wifi_connected(mrb_vm* vm, mrb_value* v, int argc)
   }
 }
 
-/*! APレコードのauthmodeをその名称の文字列にマップする
-  @param auth_mode APレコード内のauthmodeプロパティ
-  @return auth_modeに対応する名称の文字列
-*/
-static char* get_auth_mode_name(const wifi_auth_mode_t auth_mode)
-{
-  char *auth_mode_name;
-  switch(auth_mode){
-  case WIFI_AUTH_OPEN:
-    auth_mode_name = "OPEN";
-    break;
-  case WIFI_AUTH_WEP:
-    auth_mode_name = "WEP";
-    break;
-  case WIFI_AUTH_WPA_PSK:
-    auth_mode_name = "WPA PSK";
-    break;
-  case WIFI_AUTH_WPA2_PSK:
-    auth_mode_name = "WPA2 PSK";
-    break;
-  case WIFI_AUTH_WPA_WPA2_PSK:
-    auth_mode_name = "WPA/WPA2 PSK";
-    break;
-  default:
-    auth_mode_name = "Unknown";
-    break;
-  }
-  return auth_mode_name;
-}
-
 /*! メソッド scan 本体
   引数なし
   @return hash in array : [{ssid: "SSID", bssid: "BSSID", channel: channnel, rssi: rssi, authmode: "AUTHMODE", hidden: false}]
@@ -398,6 +370,36 @@ static void mrbc_esp32_wifi_scan(mrb_vm* vm, mrb_value* v, int argc)
   }
   ESP_ERROR_CHECK(esp_wifi_stop());
   SET_RETURN(result);
+}
+
+/*! APレコードのauthmodeをその名称の文字列にマップする
+  @param auth_mode APレコード内のauthmodeプロパティ
+  @return auth_modeに対応する名称の文字列
+*/
+static char* get_auth_mode_name(const wifi_auth_mode_t auth_mode)
+{
+  char *auth_mode_name;
+  switch(auth_mode){
+  case WIFI_AUTH_OPEN:
+    auth_mode_name = "OPEN";
+    break;
+  case WIFI_AUTH_WEP:
+    auth_mode_name = "WEP";
+    break;
+  case WIFI_AUTH_WPA_PSK:
+    auth_mode_name = "WPA PSK";
+    break;
+  case WIFI_AUTH_WPA2_PSK:
+    auth_mode_name = "WPA2 PSK";
+    break;
+  case WIFI_AUTH_WPA_WPA2_PSK:
+    auth_mode_name = "WPA/WPA2 PSK";
+    break;
+  default:
+    auth_mode_name = "Unknown";
+    break;
+  }
+  return auth_mode_name;
 }
 
 static char* get_mac_address(int argc){
