@@ -306,13 +306,10 @@ while true
   puts wlan.mac
 
   # WiFiの接続が切れたときに自動的に際接続する
-  if( ! wlan.is_connected? )
+  if !wlan.connected?
     puts 'start reconnect....'
     wlan.connect("SugiyamaLab", "matsue-ct.ac.jp")
-    while true
-      if( wlan.is_connected? )
-        break
-      end
+    while !wlan.connected?
       sleep 1
     end
   end
@@ -321,7 +318,13 @@ end
 =end
 =begin
 wlan = WLAN.new
+puts "scan result: #{wlan.scan}"
+
 wlan.connect("SugiyamaLab", "matsue-ct.ac.jp")
+puts "connected: #{wlan.connected?}"
+puts "ifconfig: #{wlan.ifconfig}"
+puts "mac: #{wlan.mac}"
+puts "ip: #{wlan.ip}"
 
 # Web ページ表示
 #HTTP.get("https://www.gfd-dennou.org/")
