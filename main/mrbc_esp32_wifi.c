@@ -52,7 +52,7 @@ static void event_handler(void* ctx, esp_event_base_t event_base, int32_t event_
     connection_status = DISCONNECTED;
   } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
     ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
-    ESP_LOGI(TAG, "got ip!!:" IPSTR, IP2STR(&event->ip_info.ip));
+    ESP_LOGI(TAG, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
     s_retry_num = 0;
     connection_status = CONNECTED;
     xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
@@ -69,7 +69,7 @@ bool mrbc_trans_cppbool_value(mrbc_vtype tt)
 
 /*! constructor
 
-  adc = ADC.new( num )		# num: pin number
+  wlan = WLAN.new
 */
 static void mrbc_esp32_wifi_new(mrbc_vm *vm, mrbc_value v[], int argc)
 {
@@ -90,7 +90,7 @@ static void mrbc_esp32_wifi_new(mrbc_vm *vm, mrbc_value v[], int argc)
 }
 
 
-/*! メソッド initializer() 本体 : wrapper for esp_wifi_init
+/*! メソッド initialize 本体 : wrapper for esp_wifi_init
 
   引数なし
 */
@@ -323,7 +323,7 @@ static void mrbc_esp32_wifi_scan(mrb_vm* vm, mrb_value* v, int argc)
   ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
   ESP_ERROR_CHECK(esp_wifi_start());
   ESP_ERROR_CHECK(esp_wifi_scan_start(NULL, true));
-    ESP_ERROR_CHECK(esp_wifi_scan_get_ap_num(&ap_count));
+  ESP_ERROR_CHECK(esp_wifi_scan_get_ap_num(&ap_count));
   ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records(&number, ap_info)); // `esp_wifi_scan_get_ap_num`の後に呼ぶ必要がある
 
   for(uint16_t i = 0; i < ap_count; i++){
@@ -357,8 +357,8 @@ static void mrbc_esp32_wifi_scan(mrb_vm* vm, mrb_value* v, int argc)
     key = mrbc_string_new_cstr(vm, "rssi");
     value = mrbc_integer_value(ap_info[i].rssi);
     mrbc_hash_set(&mrbc_ap_records, &key, &value);
-
-        key = mrbc_string_new_cstr(vm, "authmode");
+    
+    key = mrbc_string_new_cstr(vm, "authmode");
     value = mrbc_string_new_cstr(vm, get_auth_mode_name(ap_info[i].authmode));
     mrbc_hash_set(&mrbc_ap_records, &key, &value);
 
@@ -420,7 +420,7 @@ static char* get_mac_address(int argc){
 }
 
 /*! メソッド mac 本体
-引数なし
+  引数なし
 */
 static void mrbc_esp32_wifi_mac(mrb_vm* vm, mrb_value* v, int argc)
 {
@@ -444,7 +444,7 @@ static void mrbc_esp32_wifi_mac(mrb_vm* vm, mrb_value* v, int argc)
 */
 static void mrbc_esp32_wifi_ip(mrb_vm* vm, mrb_value* v, int argc)
 {
-    esp_netif_ip_info_t ip_info;
+  esp_netif_ip_info_t ip_info;
   mrb_value mrbc_ip;
 
   ESP_ERROR_CHECK(esp_netif_get_ip_info(sta_netif, &ip_info));
@@ -458,7 +458,7 @@ static void mrbc_esp32_wifi_ip(mrb_vm* vm, mrb_value* v, int argc)
 }
 
 /*! メソッド ifconfig 本体
-  引数なし 
+  引数なし
 */
 static void mrbc_esp32_wifi_ifconfig(mrb_vm* vm, mrb_value* v, int argc)
 {
@@ -470,7 +470,7 @@ static void mrbc_esp32_wifi_ifconfig(mrb_vm* vm, mrb_value* v, int argc)
   ESP_ERROR_CHECK(esp_netif_get_dns_info(sta_netif, ESP_NETIF_DNS_MAIN, &dns_info));
 
   mrbc_ifconfig = mrbc_hash_new(vm, 0);
-  
+
   hash_set_address(vm, &mrbc_ifconfig, "ip", &ip_info.ip);
   hash_set_address(vm, &mrbc_ifconfig, "netmask", &ip_info.netmask);
   hash_set_address(vm, &mrbc_ifconfig, "gw", &ip_info.gw);
@@ -503,7 +503,7 @@ static mrbc_error_code hash_set_address(
 }
 
 /*! クラス定義処理を記述した関数
-  この関数を呼ぶことでクラス WiFi が定義される
+  この関数を呼ぶことでクラス WLAN が定義される
   @param vm mruby/c VM
 */
 void
