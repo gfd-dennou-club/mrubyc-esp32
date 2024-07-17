@@ -439,26 +439,23 @@ static void mrbc_esp32_wifi_mac(mrb_vm* vm, mrb_value* v, int argc)
   SET_RETURN(mrbc_mac);
 }
 
-/*! メソッド ip() 本体
-  @param 'STA' or 'sta' STAモードのIP ADDRESS取得
-         'AP' or 'ap' or 'SOFTAP' or 'softap' APモードのIP ADDRESS取得
+/*! メソッド ip 本体
+  引数なし
 */
-
-/*
-static void
-mrbc_esp32_wifi_config_ip(mrb_vm* vm, mrb_value* v, int argc)
+static void mrbc_esp32_wifi_ip(mrb_vm* vm, mrb_value* v, int argc)
 {
-  mrb_value value;
-  esp_netif_ip_info_t ip_info;
-  esp_netif_get_ip_info(sta_netif, &ip_info);
-  uint32_t local_ip = ip_info.ip.addr;
-  //  ESP_LOGI(TAG, "ip: %d", ip_info.ip.addr);
+    esp_netif_ip_info_t ip_info;
+  mrb_value mrbc_ip;
 
-  ip_event_got_ip_t* event = (ip_event_got_ip_t*) instance_got_ip;
-  ESP_LOGI(TAG, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
+  ESP_ERROR_CHECK(esp_netif_get_ip_info(sta_netif, &ip_info));
+
+  const int addr_buf_size = 16;
+  char addr_buf[addr_buf_size];
+  assert(esp_ip4addr_ntoa(&ip_info.ip, addr_buf, addr_buf_size) != NULL);
+  mrbc_ip = mrbc_string_new_cstr(vm, addr_buf);
+  
+  SET_RETURN(mrbc_ip);
 }
-*/
-
 
 /*! メソッド ifconfig 本体
   引数なし 
@@ -523,4 +520,5 @@ mrbc_esp32_wifi_gem_init(struct VM* vm)
   mrbc_define_method(0, wlan, "scan",          mrbc_esp32_wifi_scan);
   mrbc_define_method(0, wlan, "ifconfig",      mrbc_esp32_wifi_ifconfig);
   mrbc_define_method(0, wlan, "mac",           mrbc_esp32_wifi_mac);
+  mrbc_define_method(0, wlan, "ip",            mrbc_esp32_wifi_ip);
 }
