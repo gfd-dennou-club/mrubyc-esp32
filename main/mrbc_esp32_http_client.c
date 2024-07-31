@@ -97,7 +97,7 @@ mrbc_esp32_httpclient_invoke(mrb_vm* vm, mrb_value* v, int argc)
 
 
 /*! クラス定義処理を記述した関数
-  この関数を呼ぶことでクラス HTTPClient が定義される
+  この関数を呼ぶことでクラス HTTP が定義される
 
   @param vm mruby/c VM
 */
