@@ -128,17 +128,26 @@ uint8_t init_uart(){
   return 1;
 }  
 
+/*!
+* @brief リセットコマンド
+*/
 void mrbwrite_cmd_reset() {
   printf("+OK reset \n\n");
   vTaskDelay(2000 / portTICK_PERIOD_MS);
   esp_restart();
 }
 
+/*!
+* @brief 書き込まれたコードを実行
+*/
 void mrbwrite_cmd_execute() {
   printf("+OK execute \n\n");
   vTaskDelay(2000 / portTICK_PERIOD_MS);
 }
 
+/*!
+* @brief バイトコードの書き込み(書き込みモードの開始)
+*/
 void mrbwrite_cmd_write(struct stat *st, uint8_t *flag_write_mode, uint8_t *ifile) {
   printf("+OK Write bytecode \n\n");
   *flag_write_mode = 1;
@@ -154,6 +163,9 @@ void mrbwrite_cmd_write(struct stat *st, uint8_t *flag_write_mode, uint8_t *ifil
   }
 }
 
+/*!
+* @brief 書き込まれたバイトコードの消去
+*/
 void mrbwrite_cmd_clear(struct stat *st) {
   //ファイルを消す
   if (stat("/spiffs/master.mrbc", st) == 0) {
@@ -165,6 +177,9 @@ void mrbwrite_cmd_clear(struct stat *st) {
   printf("+OK\n\n");
 }
 
+/*!
+* @brief ヘルプ(コマンド一覧)の表示
+*/
 void mrbwrite_cmd_help() {
   printf("+OK Commands \n");
   printf("  version  \n");
@@ -176,10 +191,16 @@ void mrbwrite_cmd_help() {
   printf("+DONE\n\n");
 }
 
+/*!
+* @brief マイコン/mrubycのバージョン表示
+*/
 void mrbwrite_cmd_version() {
   printf("+OK %s\n\n", MRUBYC_VERSION_STRING);
 }
 
+/*!
+* @brief プログラムの表示
+*/
 void mrbwrite_cmd_showplog(struct stat *st) {
   //読み込み
   if (stat("/spiffs/master.mrbc", st) == 0) {
@@ -193,9 +214,8 @@ void mrbwrite_cmd_showplog(struct stat *st) {
   printf("+DONE\n\n");
 }
 
-/*
-* 0: 何もしない
-* 1: break
+/*!
+* @return 0: 何もしない / 1: コマンドモードを抜けた
 */
 int mrbwrite_cmd_mode(
   struct stat *st,
