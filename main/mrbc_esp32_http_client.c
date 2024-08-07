@@ -9,7 +9,7 @@
 #include "mrbc_esp32_http_client.h"
 #include "esp_log.h"
 #include "esp_http_client.h"
-#include "esp_tls.h"
+#include "esp_crt_bundle.h"
 
 static char* TAG = "HTTP_CLIENT";
 
@@ -77,6 +77,8 @@ mrbc_esp32_httpclient_invoke(mrb_vm* vm, mrb_value* v, int argc)
     .event_handler = http_event_handler,
     //    .user_data = local_response_buffer,        // Pass address of local buffer to get response
     .disable_auto_redirect = true,
+    .transport_type = HTTP_TRANSPORT_OVER_SSL, // SSL/TLSを通す
+    .crt_bundle_attach = esp_crt_bundle_attach, // 組み込みの証明書バンドル
   };
   esp_http_client_handle_t client = esp_http_client_init(&config);
   
@@ -95,7 +97,7 @@ mrbc_esp32_httpclient_invoke(mrb_vm* vm, mrb_value* v, int argc)
 
 
 /*! クラス定義処理を記述した関数
-  この関数を呼ぶことでクラス HTTPClient が定義される
+  この関数を呼ぶことでクラス HTTP が定義される
 
   @param vm mruby/c VM
 */
