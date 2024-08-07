@@ -31,6 +31,7 @@
 
 static const char *TAG = "mrubyc-esp32";
 
+#define MRUBYC_VERSION_STRING "mruby/c v3.3 ESP32"
 #define BUF_SIZE (1024)
 #define MEMORY_SIZE (1024*70)
 #define RD_BUF_SIZE (BUF_SIZE)
@@ -127,6 +128,144 @@ uint8_t init_uart(){
   return 1;
 }  
 
+/*!
+* @brief リセットコマンド
+*/
+void mrbwrite_cmd_reset() {
+  printf("+OK reset \n\n");
+  vTaskDelay(2000 / portTICK_PERIOD_MS);
+  esp_restart();
+}
+
+/*!
+* @brief 書き込まれたコードを実行
+*/
+void mrbwrite_cmd_execute() {
+  printf("+OK execute \n\n");
+  vTaskDelay(2000 / portTICK_PERIOD_MS);
+}
+
+/*!
+* @brief バイトコードの書き込み(書き込みモードの開始)
+*/
+void mrbwrite_cmd_write(struct stat *st, uint8_t *flag_write_mode, uint8_t *ifile) {
+  printf("+OK Write bytecode \n\n");
+  *flag_write_mode = 1;
+  // 書き込み先ファイルの決定.
+  if (stat("/spiffs/master.mrbc", st) != 0) {
+    *ifile = 1;
+  } else if (stat("/spiffs/slave.mrbc", st) != 0) {
+    *ifile = 2;
+  } else {
+    ESP_LOGE(TAG, "Failed to determine file to write");
+    *ifile = 0;
+    *flag_write_mode = 0; //書き込みモード終了
+  }
+}
+
+/*!
+* @brief 書き込まれたバイトコードの消去
+*/
+void mrbwrite_cmd_clear(struct stat *st) {
+  //ファイルを消す
+  if (stat("/spiffs/master.mrbc", st) == 0) {
+    unlink("/spiffs/master.mrbc");
+  }
+  if (stat("/spiffs/slave.mrbc", st) == 0) {
+    unlink("/spiffs/slave.mrbc");
+  }
+  printf("+OK\n\n");
+}
+
+/*!
+* @brief ヘルプ(コマンド一覧)の表示
+*/
+void mrbwrite_cmd_help() {
+  printf("+OK Commands \n");
+  printf("  version  \n");
+  printf("  write    \n");
+  printf("  showprog \n");
+  printf("  clear    \n");
+  printf("  reset    \n");
+  printf("  execute  \n");
+  printf("+DONE\n\n");
+}
+
+/*!
+* @brief マイコン/mrubycのバージョン表示
+*/
+void mrbwrite_cmd_version() {
+  printf("+OK %s\n\n", MRUBYC_VERSION_STRING);
+}
+
+/*!
+* @brief プログラムの表示
+*/
+void mrbwrite_cmd_showplog(struct stat *st) {
+  //読み込み
+  if (stat("/spiffs/master.mrbc", st) == 0) {
+    printf("**** master.mrbc **** \n\n");
+    load_spiffs_file("/spiffs/master.mrbc");
+  }
+  if (stat("/spiffs/slave.mrbc", st) == 0) {
+    printf("**** slave.mrbc **** \n\n");
+    load_spiffs_file("/spiffs/slave.mrbc");
+  }
+  printf("+DONE\n\n");
+}
+
+/*!
+* @return 0: 何もしない / 1: コマンドモードを抜けた
+*/
+int mrbwrite_cmd_mode(
+  struct stat *st,
+  uint8_t *ifile,
+  uint8_t *flag_write_mode,
+  const char buffer[BUF_SIZE],
+  int len,
+  uint8_t *data
+) {
+  //コマンドモードに入っている場合
+  if (strncmp(buffer, "reset", 5) == 0) {
+    //reset
+    mrbwrite_cmd_reset();
+  } else if (strncmp(buffer, "execute", 7) == 0) {
+    //execute
+    mrbwrite_cmd_execute();
+    return 1;
+  } else if (strncmp(buffer, "write", 5) == 0) {
+    //write
+    mrbwrite_cmd_write(st, flag_write_mode, ifile);
+  } else if (strncmp(buffer, "clear", 5) == 0) {
+    //clear
+    mrbwrite_cmd_clear(st);
+  } else if (strncmp(buffer, "help", 4) == 0) {
+    //help
+    mrbwrite_cmd_help();
+  } else if (strncmp(buffer, "version", 6) == 0) {
+    //version
+    mrbwrite_cmd_version();
+  } else if (strncmp(buffer, "showprog", 8) == 0) {
+    //showprog
+    mrbwrite_cmd_showplog(st);
+  } else if (*flag_write_mode == 1) {
+    // 書き込み
+    
+    //ファイル書き込み
+    if (*ifile == 1) {
+      save_spiffs_file("/spiffs/master.mrbc", len, data);
+    } else if (*ifile == 2){
+      save_spiffs_file("/spiffs/slave.mrbc", len, data);
+    }
+
+    //書き込みを継続するか否か．バッファーサイズと読み込みバイト数で判断．
+    if (len < BUF_SIZE ) { 
+      printf("+DONE\n\n");
+      flag_write_mode = 0; //書き込みモード終了
+    }
+  }
+  return 0;
+}
 
 
 //*******************************************
@@ -144,7 +283,7 @@ void app_main(void) {
   uint8_t* data = (uint8_t*) malloc(BUF_SIZE);
   uint8_t wait = 0;
   uint8_t flag_cmd_mode = 0;
-  uint8_t flag_write_mode = 1;
+  uint8_t flag_write_mode = 0;
   uint8_t ifile = 0;
   char buffer[BUF_SIZE];
   struct stat st;
@@ -158,9 +297,7 @@ void app_main(void) {
   //************************************
   // mrbcwrite モード開始
   //************************************
-  ESP_LOGI(TAG, "");  
   ESP_LOGI(TAG, "Please push Enter key x 2 to mrbwite mode");  
-  printf("\n\n");
 
   while (1) {
     //バイト数の取得
@@ -177,132 +314,47 @@ void app_main(void) {
       
       //文字型に変換
       for (int i = 0; i < len; i++){
-	buffer[i] = data[i];
+	      buffer[i] = data[i];
       }
       buffer[len] = '\0'; //末尾に終了記号
 
       //コマンドモードに入っていない場合
       if (flag_cmd_mode == 0){
-
-	//コマンドモードに入っていない状態で Enter が 2 度打鍵された場合は
-	//コマンドモードに入るためのフラグを立てる
-	if ( (data[0] == 0x0d && data[1] == 0x0d) ||
-	     (data[0] == 0x0d && data[2] == 0x0d && data[1] == 0x0a && data[3] == 0x0a ) ) {
-	  //ESP_LOGI(TAG, "Entering Command Mode ...");
-	  printf("+OK mruby/c \n\n");
-	  flag_cmd_mode = 1;
-	}
-
-      //コマンドモードに入っている場合
-      }else{
-
-	//reset
-	if (strncmp(buffer, "reset", 5) == 0) {
-	  printf("+OK reset \n\n");
-	  vTaskDelay(2000 / portTICK_PERIOD_MS);
-	  esp_restart();
-
-	//execute	  
-	} else if (strncmp(buffer, "execute", 7) == 0) {
-	  printf("+OK execute \n\n");
-	  vTaskDelay(2000 / portTICK_PERIOD_MS);
-	  break; //ループから抜ける
-	  
-	//write	  
-	} else if (strncmp(buffer, "write", 5) == 0) {
-	  printf("+OK write bytecode \n\n");	  
-	  flag_write_mode = 1;  //書き込みフラグを立てる
-
-	  // 書き込み先ファイルの決定.
-	  if (stat("/spiffs/master.mrbc", &st) != 0) {
-	    printf("+OK writting to master.mrbc \n\n");
-	    ifile = 1;
-	  }else if (stat("/spiffs/slave.mrbc", &st) != 0) {
-	    printf("+OK writting to slave.mrbc \n\n");
-	    ifile = 2;
-	  } else {
-	    ESP_LOGE(TAG, "Failed to determine file to write");
-	    ifile = 0;
-	    flag_write_mode = 0; //書き込みモード終了	      
-	  }
-
-	//clear	  
-	} else if (strncmp(buffer, "clear", 5) == 0) {
-	  printf("+OK clear \n\n");
-
-	  //ファイルを消す
-	  if (stat("/spiffs/master.mrbc", &st) == 0) {
-	    unlink("/spiffs/master.mrbc");
-	    printf("+OK Delete master.mrbc \n\n");
-	  }
-	  if (stat("/spiffs/slave.mrbc", &st) == 0) {
-	    unlink("/spiffs/slave.mrbc");
-	    printf("+OK Delete slave.mrbc \n\n");
-	  }
-	  
-        //help	  
-	} else if (strncmp(buffer, "help", 4) == 0) {
-	  printf("+OK help   \n");
-	  printf("  version  \n");
-	  printf("  write    \n");
-	  printf("  showprog \n");
-	  printf("  clear    \n");
-	  printf("  reset    \n");
-	  printf("  execute  \n");
-
-        //version
-	} else if (strncmp(buffer, "version", 6) == 0) {
-	  printf("+OK mruby/c 3.1 \n\n");
-
-	//showprog
-	} else if (strncmp(buffer, "showprog", 8) == 0) {
-	  printf("+OK show program \n\n");
-
-	  //読み込み
-	  if (stat("/spiffs/master.mrbc", &st) == 0) {
-	    printf("**** master.mrbc **** \n\n");
-	    load_spiffs_file("/spiffs/master.mrbc");
-	  }
-	  if (stat("/spiffs/slave.mrbc", &st) == 0) {	  
-	    printf("**** slave.mrbc **** \n\n");
-	    load_spiffs_file("/spiffs/slave.mrbc");
-	  }
-	  
-	// 書き込み
-	} else if (flag_write_mode == 1){
-
-	  //ファイル書き込み
-	  if (ifile == 1) {
-	    save_spiffs_file("/spiffs/master.mrbc", len, data);
-	  } else if (ifile == 2){
-	    save_spiffs_file("/spiffs/slave.mrbc", len, data);
-	  }
-	  
-	  //書き込みを継続するか否か．バッファーサイズと読み込みバイト数で判断．
-	  if (len < BUF_SIZE ) { 
-	    printf("+DONE write bytecode \n\n");
-	    flag_write_mode = 0; //書き込みモード終了
-	  }
-	}	 	
+	      //コマンドモードに入っていない状態で Enter が 2 度打鍵された場合は
+	      //コマンドモードに入るためのフラグを立てる
+	      if ( (data[0] == 0x0d && data[1] == 0x0d) ||
+	           (data[0] == 0x0d && data[2] == 0x0d && data[1] == 0x0a && data[3] == 0x0a ) ) {
+	        //ESP_LOGI(TAG, "Entering Command Mode ...");
+	        printf("+OK mruby/c \n\n");
+	        flag_cmd_mode = 1;
+	      }
+      } else {
+        int cmd_state = mrbwrite_cmd_mode(
+          &st,
+          &ifile,
+          &flag_write_mode,
+          buffer,
+          len,
+          data
+        );
+        if (cmd_state == 1) break;
       }
-    }else{
-      //入力バイト数がゼロの場合
+    } else {
+        //入力バイト数がゼロの場合
 
-      //コマンドモードでなければカウントアップ
-      if (flag_cmd_mode == 0){
-	wait += 1; 
-      }
-      //閾値を越えたらタイムアウト
-      if (wait > 2){
-	break; 
-      }      
+        //コマンドモードでなければカウントアップ
+        if (flag_cmd_mode == 0){
+	        wait += 1; 
+        }
+        //閾値を越えたらタイムアウト
+        if (wait > 2){
+	        break; 
+        }
     }
   }
   //書き込みモード終了
   ESP_LOGI(TAG, "End mrbwrite mode");
 
-  
-  
   //***************************************
   // Ruby 
   //***************************************
@@ -349,8 +401,5 @@ void app_main(void) {
     mrbc_create_task( slave, 0 );
   }
 #endif
-
   mrbc_run();
-
 }
-
