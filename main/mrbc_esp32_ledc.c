@@ -52,14 +52,14 @@ static void mrbc_esp32_ledc_new(mrbc_vm *vm, mrbc_value v[], int argc)
   if( MRBC_ISNUMERIC(channel) ) {
     hndl.channel = MRBC_TO_INT(channel);
   }
-#ifdef debug_mrubyc_esp32  
+
   ESP_LOGI(TAG, "PWM initial");
   ESP_LOGI(TAG, "pin:       %d", hndl.pin);
   ESP_LOGI(TAG, "timer:     %d", hndl.timer);
   ESP_LOGI(TAG, "channel:   %d", hndl.channel);
   ESP_LOGI(TAG, "freq(ini): [%"PRIu32"]", hndl.freq_ini);
   ESP_LOGI(TAG, "duty(percent)(ini): [%"PRIu32"]", hndl.duty_ini);
-#endif
+
   
   //インスタンス作成
   v[0] = mrbc_instance_new(vm, v[0].cls, sizeof(LEDC_HANDLE));

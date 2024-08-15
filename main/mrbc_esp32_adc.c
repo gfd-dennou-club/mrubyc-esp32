@@ -200,7 +200,7 @@ static void mrbc_esp32_adc_initialize(mrb_vm *vm, mrb_value *v, int argc){
       ESP_ERROR_CHECK(adc_oneshot_new_unit(&init_config2, &adc2_handle));
       flag_adc2_init = 1; //初期化済み
     }
-
+    
     adc_oneshot_chan_cfg_t config = {
       .bitwidth = ADC_BITWIDTH_DEFAULT,
       .atten = ADC_ATTEN,
@@ -226,7 +226,8 @@ static int adc_multisampling(adc_unit_t unit, adc_channel_t channel ){
       ESP_ERROR_CHECK(adc_oneshot_read(adc2_handle, channel, &adc_raw));
     }
     adc_reading += adc_raw;
-    vTaskDelay(pdMS_TO_TICKS(50));
+    vTaskDelay(5 / portTICK_PERIOD_MS);  //wait
+    //    vTaskDelay(pdMS_TO_TICKS(50));
   }
   return adc_reading /= NO_OF_SAMPLES;
 }
@@ -242,7 +243,7 @@ static void mrbc_esp32_adc_rawread(mrb_vm *vm, mrb_value *v, int argc){
 
   //生データ取得
   int adc_reading = adc_multisampling( hndl.unit, hndl.channel );
-  ESP_LOGI(TAG, "ADC%d Channel[%d] Raw Data: %d", hndl.unit + 1, hndl.channel, adc_reading);
+  //  ESP_LOGI(TAG, "ADC%d Channel[%d] Raw Data: %d", hndl.unit + 1, hndl.channel, adc_reading);
   
   //値を戻す
   SET_INT_RETURN(adc_reading);
@@ -260,7 +261,7 @@ static void mrbc_esp32_adc_read(mrb_vm *vm, mrb_value *v, int argc){
   
   //生データ取得
   int adc_reading = adc_multisampling( hndl.unit, hndl.channel );
-  ESP_LOGI(TAG, "ADC%d Channel[%d] Raw Data: %d", hndl.unit + 1, hndl.channel, adc_reading);
+  //  ESP_LOGI(TAG, "ADC%d Channel[%d] Raw Data: %d", hndl.unit + 1, hndl.channel, adc_reading);
 
   //ユニット毎に処理を分けて実行
   if (hndl.unit == ADC_UNIT_1) {
@@ -274,7 +275,7 @@ static void mrbc_esp32_adc_read(mrb_vm *vm, mrb_value *v, int argc){
     }
     //電圧に変換 (adc1_cali を利用)
     ESP_ERROR_CHECK(adc_cali_raw_to_voltage(adc1_cali, adc_reading, &adc_voltage));
-    ESP_LOGI(TAG, "ADC%d Channel[%d] Cali Voltage: %d mV", hndl.unit + 1, hndl.channel, adc_voltage);
+    //    ESP_LOGI(TAG, "ADC%d Channel[%d] Cali Voltage: %d mV", hndl.unit + 1, hndl.channel, adc_voltage);
 
   }
   else if (hndl.unit == ADC_UNIT_2) {
@@ -288,7 +289,7 @@ static void mrbc_esp32_adc_read(mrb_vm *vm, mrb_value *v, int argc){
     }
     //電圧に変換 (adc2_cali を利用)
     ESP_ERROR_CHECK(adc_cali_raw_to_voltage(adc2_cali, adc_reading, &adc_voltage));
-    ESP_LOGI(TAG, "ADC%d Channel[%d] Cali Voltage: %d mV", hndl.unit + 1, hndl.channel, adc_voltage);
+    //    ESP_LOGI(TAG, "ADC%d Channel[%d] Cali Voltage: %d mV", hndl.unit + 1, hndl.channel, adc_voltage);
   }
 
   //値を戻す

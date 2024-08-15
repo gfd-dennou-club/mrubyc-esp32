@@ -15,12 +15,12 @@
 #include "mrbc_esp32_ledc.h"
 #include "mrbc_esp32_adc.h"
 #include "mrbc_esp32_uart.h"
-#include "mrbc_esp32_i2c.h"
+//#include "mrbc_esp32_i2c.h"
 #include "mrbc_esp32_wifi.h"
 #include "mrbc_esp32_sntp.h"
 #include "mrbc_esp32_http_client.h"
 #include "mrbc_esp32_sleep.h"
-#include "mrbc_esp32_spi.h"
+//#include "mrbc_esp32_spi.h"
 #include "mrbc_esp32_utils.h"
 
 //*********************************************
@@ -76,7 +76,7 @@ uint8_t * load_spiffs_file(const char *filename)
     fprintf(stderr, "Memory allocate error.\n");
   }
   fclose(fp);
-  ESP_LOG_BUFFER_HEXDUMP(TAG, p, size, ESP_LOG_INFO);
+  //  ESP_LOG_BUFFER_HEXDUMP(TAG, p, size, ESP_LOG_INFO);  //バイトコード出力
 
   return p;
 }
@@ -366,8 +366,8 @@ void app_main(void) {
   mrbc_esp32_ledc_gem_init(0);
   printf("start ADC (C)\n");
   mrbc_esp32_adc_gem_init(0);
-  printf("start I2C (C)\n");
-  mrbc_esp32_i2c_gem_init(0);
+  //  printf("start I2C (C)\n");
+  //  mrbc_esp32_i2c_gem_init(0);
   printf("start UART (C)\n");
   mrbc_esp32_uart_gem_init(0);
   printf("start WiFi (C) \n");
@@ -376,8 +376,8 @@ void app_main(void) {
   mrbc_esp32_httpclient_gem_init(0);
   printf("start SLEEP (C) \n");
   mrbc_esp32_sleep_gem_init(0);
-  printf("start SPI (C) \n");
-  mrbc_esp32_spi_gem_init(0);
+  //  printf("start SPI (C) \n");
+  //  mrbc_esp32_spi_gem_init(0);
   printf("start Utils (C) \n");
   mrbc_esp32_utils_gem_init(0);  
     
