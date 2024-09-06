@@ -10,15 +10,13 @@
 
 static char* TAG = "SPI";
 
-#define DMA_CHAN    2
+#define DMA_CHAN  SPI3_HOST
 
-typedef struct SPI_HANDLE {
-  int mosi;
-  int miso;
-  int clk;
-  int cs;
-  spi_device_handle_t spidev;
-} SPI_HANDLE;
+int spi_mosi_pin = 23;
+int spi_miso_pin = 18;
+int spi_clk_pin  = 14;
+int spi_freq = SPI_MASTER_FREQ_40M;
+int spi_mode = 3;
 
 
 /*! constructor
@@ -26,130 +24,74 @@ typedef struct SPI_HANDLE {
   spi = SPI.new( )	
   spi = SPI.new( mosi:23, miso:18, clk:14, cs:27 )
 
-  @param   mosi MOSI Pin Number
+  @param   mosi_pin MOSI Pin Number
            miso MISO Pin Number
            clk SPI Clock Pin Number
            cs   CS Pin Number
 */
 static void mrbc_esp32_spi_new(mrbc_vm *vm, mrbc_value v[], int argc)
 {
-  //構造体へ入力. デフォルト値の設定
-  SPI_HANDLE hndl;
-  hndl.mosi = 23;
-  hndl.miso = 18;
-  hndl.clk = 14;
-  hndl.cs   = 27;
-  
   //オプション解析
-  MRBC_KW_ARG(mosi, miso, clk, cs);
-  if( MRBC_ISNUMERIC(mosi) ) {
-    hndl.mosi = MRBC_TO_INT(mosi);
+  MRBC_KW_ARG(frequency, freq, mosi_pin, miso_pin, clk_pin, mode, unit);
+  if( MRBC_ISNUMERIC(frequency) ) {
+    spi_freq = MRBC_TO_INT(frequency);
   }
-  if( MRBC_ISNUMERIC(miso) ) {
-    hndl.miso = MRBC_TO_INT(miso);
+  if( MRBC_ISNUMERIC(freq) ) {
+    spi_freq = MRBC_TO_INT(freq);
   }
-  if( MRBC_ISNUMERIC(clk) ) {
-    hndl.clk = MRBC_TO_INT(clk);
+  if( MRBC_ISNUMERIC(mosi_pin) ) {
+    spi_mosi_pin = MRBC_TO_INT(mosi_pin);
   }
-  if( MRBC_ISNUMERIC(cs) ) {
-    hndl.cs = MRBC_TO_INT(cs);
+  if( MRBC_ISNUMERIC(miso_pin) ) {
+    spi_miso_pin = MRBC_TO_INT(miso_pin);
   }
-  
-  ESP_LOGI(TAG, "SPI initial");
-  ESP_LOGI(TAG, "mosi: %d", hndl.mosi);
-  ESP_LOGI(TAG, "miso: %d", hndl.miso);
-  ESP_LOGI(TAG, "clk:  %d", hndl.clk);
-  ESP_LOGI(TAG, "cs:   %d", hndl.cs);
+  if( MRBC_ISNUMERIC(clk_pin) ) {
+    spi_clk_pin = MRBC_TO_INT(clk_pin);
+  }
+  if( MRBC_ISNUMERIC(mode) ) {
+    spi_mode = MRBC_TO_INT(mode);
+  }
+  if( MRBC_ISNUMERIC(unit) ){
+    if ( MRBC_TO_INT(unit) > 1 ) {
+      ESP_LOGE(TAG, "unknown SPI unit number detected");
+    }
+  }
 
   //インスタンス作成
-  v[0] = mrbc_instance_new(vm, v[0].cls, sizeof(SPI_HANDLE));
+  v[0] = mrbc_instance_new(vm, v[0].cls, sizeof(spi_host_device_t));
 
-  // instance->data を構造体へのポインタとみなして、値を代入する。
-  *((SPI_HANDLE *)(v[0].instance->data)) = hndl;
-  
   //initialize を call
   mrbc_instance_call_initialize( vm, v, argc );
   
   vTaskDelay(100 / portTICK_PERIOD_MS);  //wait
 }
 
+
 /*! initializer
 
 */
 static void mrbc_esp32_spi_initialize(mrbc_vm *vm, mrbc_value v[], int argc)
 {
-  SPI_HANDLE hndl = *((SPI_HANDLE *)(v[0].instance->data));
-  
+  spi_host_device_t spi_unit = SPI3_HOST;
   spi_bus_config_t bus_cfg = {
-    .mosi_io_num = hndl.mosi,
-    .miso_io_num = hndl.miso,  //-1
-    .sclk_io_num = hndl.clk,
+    .mosi_io_num = spi_mosi_pin,
+    .miso_io_num = spi_miso_pin,  
+    .sclk_io_num = spi_clk_pin,
     .quadwp_io_num = -1,
-    .quadhd_io_num = -1
+    .quadhd_io_num = -1,
   };
   
-  esp_err_t ret = spi_bus_initialize(HSPI_HOST, &bus_cfg, DMA_CHAN);
-  assert(ret == ESP_OK);
+  ESP_ERROR_CHECK(spi_bus_initialize(spi_unit, &bus_cfg, DMA_CHAN));
   
-  spi_device_interface_config_t dev_cfg = {
-    .clock_speed_hz = SPI_MASTER_FREQ_40M,
-    .spics_io_num = hndl.cs,
-    .queue_size = 7,
-    .flags = SPI_DEVICE_NO_DUMMY,
-  };
-  ret = spi_bus_add_device(HSPI_HOST, &dev_cfg, &hndl.spidev);
-  assert(ret == ESP_OK);
+  // instance->data を構造体へのポインタとみなして、値を代入する。
+  *((spi_host_device_t *)(v[0].instance->data)) = spi_unit;
+  
+  ESP_LOGI(TAG, "SPI initial");
+  ESP_LOGI(TAG, "unit: %d", spi_unit);
+  ESP_LOGI(TAG, "mosi: %d", spi_mosi_pin);
+  ESP_LOGI(TAG, "miso: %d", spi_miso_pin);
+  ESP_LOGI(TAG, "clk:  %d", spi_clk_pin);
 }
-
-
-/*! Method write_byte(data)
-    @param data
- */
-static void
-mrbc_esp32_spi_write(mrb_vm* vm, mrb_value* v, int argc)
-{
-  SPI_HANDLE hndl = *((SPI_HANDLE *)(v[0].instance->data));
-  
-  spi_transaction_t transaction;
-  esp_err_t ret;
-  assert(GET_ARG(1).tt == MRBC_TT_ARRAY);
-  mrbc_value *data = GET_ARG(1).array->data;
-  uint8_t Data[1024];
-  size_t dataLength = GET_INT_ARG(2);
-  for (int i = 0; i < dataLength; i++)
-    {
-      Data[i] = data[i].i;
-    }
-  memset(&transaction, 0, sizeof(spi_transaction_t));
-  transaction.length = 8 * dataLength;
-  transaction.tx_buffer = Data;
-  ret = spi_device_transmit(hndl.spidev, &transaction);
-  assert(ret == ESP_OK);
-}
-
-
-/*! Method read_byte()
-    @return recv_data
- */
-static void
-mrbc_esp32_spi_read(mrb_vm* vm, mrb_value* v, int argc)
-{
-  SPI_HANDLE hndl = *((SPI_HANDLE *)(v[0].instance->data));
-  
-  spi_transaction_t transaction;
-  uint8_t recv_data;
-  esp_err_t ret;
-
-  memset(&transaction, 0, sizeof(transaction));
-  transaction.length = 8;
-  transaction.rx_buffer = &recv_data;
-  
-  ret=spi_device_polling_transmit(hndl.spidev, &transaction);
-  assert(ret==ESP_OK);
-  SET_INT_RETURN(recv_data);
-}
-
-
 
 
 /*! Register SPI Class.p
@@ -163,6 +105,6 @@ mrbc_esp32_spi_gem_init(struct VM* vm)
   //メソッド定義
   mrbc_define_method(vm, spi, "new",        mrbc_esp32_spi_new);
   mrbc_define_method(vm, spi, "initialize", mrbc_esp32_spi_initialize);
-  mrbc_define_method(vm, spi, "write",      mrbc_esp32_spi_write);
-  mrbc_define_method(vm, spi, "read",       mrbc_esp32_spi_read);
+  //  mrbc_define_method(vm, spi, "write",      mrbc_esp32_spi_write);
+  //  mrbc_define_method(vm, spi, "read",       mrbc_esp32_spi_read);
 }
