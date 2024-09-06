@@ -19,9 +19,6 @@ static void mrbc_esp32_gpio_new(mrbc_vm *vm, mrbc_value v[], int argc)
 {
   v[0] = mrbc_instance_new(vm, v[0].cls, sizeof(gpio_num_t));
 
-  // instance->data をgpio_num_t 型 へのポインタとみなして、値を代入する。
-  *((gpio_num_t *)(v[0].instance->data)) = GET_INT_ARG(1);
-  
   //initialize を call
   mrbc_instance_call_initialize( vm, v, argc );
 
@@ -33,9 +30,12 @@ static void mrbc_esp32_gpio_new(mrbc_vm *vm, mrbc_value v[], int argc)
  */
 static void mrbc_esp32_gpio_initialize(mrbc_vm *vm, mrbc_value v[], int argc)
 {
-  gpio_num_t  pin  = *((gpio_num_t *)(v[0].instance->data));
+  gpio_num_t  pin  = GET_INT_ARG(1);
   gpio_mode_t mode = GET_INT_ARG(2);
   gpio_pull_mode_t pull_mode = GET_INT_ARG(3);
+
+  // instance->data をgpio_num_t 型 へのポインタとみなして、値を代入する。
+  *((gpio_num_t *)(v[0].instance->data)) = GET_INT_ARG(1); 
 
 #ifdef debug_mrubyc_esp32  
   ESP_LOGI(TAG, "pin:  %i", pin);
