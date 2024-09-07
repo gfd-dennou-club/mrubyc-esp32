@@ -37,11 +37,9 @@ static void mrbc_esp32_gpio_initialize(mrbc_vm *vm, mrbc_value v[], int argc)
   // instance->data をgpio_num_t 型 へのポインタとみなして、値を代入する。
   *((gpio_num_t *)(v[0].instance->data)) = GET_INT_ARG(1); 
 
-#ifdef debug_mrubyc_esp32  
   ESP_LOGI(TAG, "pin:  %i", pin);
   ESP_LOGI(TAG, "mode: %i", mode);
   ESP_LOGI(TAG, "pull: %i", pull_mode);
-#endif
   
   ESP_ERROR_CHECK( gpio_reset_pin(pin) );
   ESP_ERROR_CHECK( gpio_set_direction(pin, mode) );
