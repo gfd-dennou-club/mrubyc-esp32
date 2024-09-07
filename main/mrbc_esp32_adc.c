@@ -32,7 +32,6 @@ adc_cali_handle_t adc2_cali;
 static const char *TAG = "ADC";
 
 typedef struct ADC_HANDLE {
-  int           pin;      //ピン番号
   adc_unit_t    unit;     //ユニット
   adc_channel_t channel;  //チャンネル
 } ADC_HANDLE;
@@ -141,22 +140,8 @@ static bool adc_calibration_init(adc_unit_t unit, adc_atten_t atten, adc_cali_ha
 */
 static void mrbc_esp32_adc_new(mrbc_vm *vm, mrbc_value v[], int argc)
 {
-  //構造体へ入力
-  ADC_HANDLE hndl;
-  hndl.pin      = GET_INT_ARG(1);
-  hndl.unit     = select_unit( hndl.pin );
-  hndl.channel  = select_channel( hndl.pin );
-
-  ESP_LOGI(TAG, "ADC initial");
-  ESP_LOGI(TAG, "pin:     %d", hndl.pin);
-  ESP_LOGI(TAG, "unit:    %d", hndl.unit);
-  ESP_LOGI(TAG, "channel: %d", hndl.channel);
- 
   //インスタンス作成
   v[0] = mrbc_instance_new(vm, v[0].cls, sizeof(ADC_HANDLE));
-  
-  // instance->data を int へのポインタとみなして、値を代入する。
-  *((ADC_HANDLE *)(v[0].instance->data)) = hndl;
   
   //initialize を call
   mrbc_instance_call_initialize( vm, v, argc );
@@ -170,8 +155,21 @@ static void mrbc_esp32_adc_new(mrbc_vm *vm, mrbc_value v[], int argc)
 */
 static void mrbc_esp32_adc_initialize(mrb_vm *vm, mrb_value *v, int argc){
 
-  ADC_HANDLE hndl = *((ADC_HANDLE *)(v[0].instance->data));
-  
+  int pin          = GET_INT_ARG(1);
+    
+  //構造体へ入力
+  ADC_HANDLE hndl;
+  hndl.unit    = select_unit( pin );
+  hndl.channel = select_channel( pin );
+
+  ESP_LOGI(TAG, "ADC initial");
+  ESP_LOGI(TAG, "pin:     %d", pin);
+  ESP_LOGI(TAG, "unit:    %d", hndl.unit);
+  ESP_LOGI(TAG, "channel: %d", hndl.channel);
+
+  // instance->data を int へのポインタとみなして、値を代入する。
+  *((ADC_HANDLE *)(v[0].instance->data)) = hndl;
+
   if (hndl.unit == ADC_UNIT_1) {
 
     //初期化は最初の 1 回のみ実施
