@@ -9,8 +9,6 @@
 #include "esp_log.h"
 #include "mrbc_esp32_stdio.h"
 
-static struct RClass * mrbc_class_esp32_stdio;
-
 static FILE* fidfptable[8] = {0};
 static char used = 0;
 
@@ -62,15 +60,14 @@ mrbc_esp32_file_gets(mrb_vm * vm, mrb_value * v, int argc) {
   FILE* fidfp = *((FILE **)(v[0].instance->data));
   char * buf  = (char *)malloc(sizeof(char) * 1024);
 
-  if(fgets(buf, GET_INT_ARG(2), fidfp) == NULL) {
+  if(fgets(buf, 1024, fidfp) == NULL) {
     SET_NIL_RETURN();
     free(buf);
     return;
   }
   mrbc_value ret = mrbc_string_new_cstr(vm, buf);
   free(buf);
-  mrbc_decref_empty(v);
-  v[0] = ret;
+  SET_RETURN( ret );
 }
 
 static void
@@ -86,8 +83,7 @@ mrbc_esp32_file_read(mrb_vm * vm, mrb_value * v, int argc) {
   }
   mrbc_value ret = mrbc_string_new(vm, buf, sizeof(char) * read_len);
   free(buf);
-  mrbc_decref_empty(v);
-  v[0] = ret;
+  SET_RETURN( ret );
 }
 
 //////////////////////////////////////////////////
@@ -214,9 +210,7 @@ mrbc_esp32_fgets(mrb_vm * vm, mrb_value * v, int argc) {
   }
   mrbc_value ret = mrbc_string_new_cstr(vm, buf);
   free(buf);
-  mrbc_decref_empty(v);
-  //  mrbc_dec_ref_counter(v);
-  v[0] = ret;
+  SET_RETURN( ret );
 }
 
 /*! fread compatible method. Read from given file.
@@ -241,9 +235,7 @@ mrbc_esp32_fread(mrb_vm * vm, mrb_value * v, int argc) {
   }
   mrbc_value ret = mrbc_string_new(vm, buf, GET_INT_ARG(2) * read_len);
   free(buf);
-  mrbc_decref_empty(v);
-  //  mrbc_dec_ref_counter(v);
-  v[0] = ret;
+  SET_RETURN( ret );
 }
 
 /*! fgetc compatible method. Read one charactor from given file.
@@ -259,9 +251,7 @@ mrbc_esp32_fgetc(mrb_vm * vm, mrb_value *v, int argc) {
   }
   mrbc_value ret = mrbc_string_new(vm, NULL, 1);
   ret.string->data[0] = (uint8_t)fgetc(fidfptable[fid]);
-  mrbc_decref_empty(v);
-  //  mrbc_dec_ref_counter(v);
-  v[0] = ret;
+  SET_RETURN( ret );
 }
 
 /*! remove compatible method. Remove file whose name is given name.
@@ -369,7 +359,7 @@ mrbc_esp32_fseek(mrb_vm * vm, mrb_value * v, int argc) {
 void mrbc_esp32_stdio_gem_init(struct VM* vm) {
 
   //mrbc_define_class でクラス名を定義
-  mrbc_class *fileIO = mrbc_define_class(0, "File", 0);
+  mrbc_class *fileIO = mrbc_define_class(vm, "File", 0);
   mrbc_define_method(vm, fileIO, "new",        mrbc_esp32_file_new);
   mrbc_define_method(vm, fileIO, "initialize", mrbc_esp32_file_initialize);
   mrbc_define_method(vm, fileIO, "open",       mrbc_esp32_file_new);
@@ -377,20 +367,22 @@ void mrbc_esp32_stdio_gem_init(struct VM* vm) {
   mrbc_define_method(vm, fileIO, "puts",       mrbc_esp32_file_puts);
   mrbc_define_method(vm, fileIO, "gets",       mrbc_esp32_file_gets);
   mrbc_define_method(vm, fileIO, "read",       mrbc_esp32_file_read);
+  mrbc_define_method(vm, fileIO, "delete",     mrbc_esp32_remove);
+  mrbc_define_method(vm, fileIO, "rename",     mrbc_esp32_rename);
 
-  mrbc_class_esp32_stdio = mrbc_define_class(vm, "ESP32_STDIO", mrbc_class_object); 
-  mrbc_define_method(vm, mrbc_class_esp32_stdio, "fopen", mrbc_esp32_fopen);
-  mrbc_define_method(vm, mrbc_class_esp32_stdio, "fputs", mrbc_esp32_fputs);
-  mrbc_define_method(vm, mrbc_class_esp32_stdio, "fputc", mrbc_esp32_fputc);
-  mrbc_define_method(vm, mrbc_class_esp32_stdio, "fgets", mrbc_esp32_fgets);
-  mrbc_define_method(vm, mrbc_class_esp32_stdio, "fgetc", mrbc_esp32_fgetc);
-  mrbc_define_method(vm, mrbc_class_esp32_stdio, "fflush", mrbc_esp32_fflush);
-  mrbc_define_method(vm, mrbc_class_esp32_stdio, "fgetpos", mrbc_esp32_fgetpos);
-  mrbc_define_method(vm, mrbc_class_esp32_stdio, "fsetpos", mrbc_esp32_fsetpos);
-  mrbc_define_method(vm, mrbc_class_esp32_stdio, "fseek", mrbc_esp32_fseek);
-  mrbc_define_method(vm, mrbc_class_esp32_stdio, "remove", mrbc_esp32_remove);
-  mrbc_define_method(vm, mrbc_class_esp32_stdio, "fclose", mrbc_esp32_fclose);
-  mrbc_define_method(vm, mrbc_class_esp32_stdio, "rename", mrbc_esp32_rename);
-  mrbc_define_method(vm, mrbc_class_esp32_stdio, "fread", mrbc_esp32_fread);
-  mrbc_define_method(vm, mrbc_class_esp32_stdio, "fwrite", mrbc_esp32_fwrite);
+  mrbc_class *stdio = mrbc_define_class(vm, "STDIO", 0);
+  mrbc_define_method(vm, stdio, "fopen", mrbc_esp32_fopen);
+  mrbc_define_method(vm, stdio, "fputs", mrbc_esp32_fputs);
+  mrbc_define_method(vm, stdio, "fputc", mrbc_esp32_fputc);
+  mrbc_define_method(vm, stdio, "fgets", mrbc_esp32_fgets);
+  mrbc_define_method(vm, stdio, "fgetc", mrbc_esp32_fgetc);
+  mrbc_define_method(vm, stdio, "fflush", mrbc_esp32_fflush);
+  mrbc_define_method(vm, stdio, "fgetpos", mrbc_esp32_fgetpos);
+  mrbc_define_method(vm, stdio, "fsetpos", mrbc_esp32_fsetpos);
+  mrbc_define_method(vm, stdio, "fseek", mrbc_esp32_fseek);
+  mrbc_define_method(vm, stdio, "remove", mrbc_esp32_remove);
+  mrbc_define_method(vm, stdio, "fclose", mrbc_esp32_fclose);
+  mrbc_define_method(vm, stdio, "rename", mrbc_esp32_rename);
+  mrbc_define_method(vm, stdio, "fread", mrbc_esp32_fread);
+  mrbc_define_method(vm, stdio, "fwrite", mrbc_esp32_fwrite);
 }

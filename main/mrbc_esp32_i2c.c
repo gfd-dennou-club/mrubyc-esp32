@@ -18,86 +18,13 @@ static char* TAG = "I2C";
 
 //デフォルト値の設定
 int i2c_unit    = 0;
-int i2c_freq    = 100000;
+int i2c_freq    = 10000;
 int i2c_scl_pin = 22;
 int i2c_sda_pin = 21;
 
-//================================================================
-/*! make output buffer
-// ITOC 東さんのソースコードをコピー
-
-  @param vm     Pointer to vm
-  @param v      argments
-  @param argc   num of arguments
-  @param start_idx  Argument parsing start position.
-  @param ret_bufsiz allocated buffer size.
-  @return       pointer to allocated buffer, or NULL is error.
-*/
-
+//プロトタイプ宣言
 uint8_t * make_output_buffer(mrb_vm *vm, mrb_value v[], int argc,
-                             int start_idx, int *ret_bufsiz)
-{
-  uint8_t *ret = 0;
-
-  // calc temporary buffer size.
-  int bufsiz = 0;
-  for( int i = start_idx; i <= argc; i++ ) {
-    switch( v[i].tt ) {
-    case MRBC_TT_INTEGER:
-      bufsiz += 1;
-      break;
-
-    case MRBC_TT_STRING:
-      bufsiz += mrbc_string_size(&v[i]);
-      break;
-
-    case MRBC_TT_ARRAY:
-      bufsiz += mrbc_array_size(&v[i]);
-      break;
-
-    default:
-      goto ERROR_PARAM;
-    }
-  }
-  *ret_bufsiz = bufsiz;
-  if( bufsiz == 0 ) goto ERROR_PARAM;
-
-  // alloc buffer and copy data
-  ret = mrbc_alloc(vm, bufsiz);
-  uint8_t *pbuf = ret;
-  for( int i = start_idx; i <= argc; i++ ) {
-    switch( v[i].tt ) {
-    case MRBC_TT_INTEGER:
-      *pbuf++ = mrbc_integer(v[i]);
-      break;
-
-    case MRBC_TT_STRING:
-      memcpy( pbuf, mrbc_string_cstr(&v[i]), mrbc_string_size(&v[i]) );
-      pbuf += mrbc_string_size(&v[i]);
-      break;
-
-    case MRBC_TT_ARRAY: {
-      for( int j = 0; j < mrbc_array_size(&v[i]); j++ ) {
-        mrbc_value val = mrbc_array_get(&v[i], j);
-        if( val.tt != MRBC_TT_INTEGER ) goto ERROR_PARAM;
-        *pbuf++ = mrbc_integer(val);
-      }
-    } break;
-
-    default:
-      //
-    }
-  }
-  return ret;
-
- ERROR_PARAM:
-  mrbc_raise(vm, MRBC_CLASS(ArgumentError), "Output parameter error.");
-  if( ret != 0 ) {
-    mrbc_free( vm, ret );
-  }
-
-  return 0;
-}
+                             int start_idx, int *ret_bufsiz);
 
 
 /*! constructor
@@ -107,6 +34,20 @@ uint8_t * make_output_buffer(mrb_vm *vm, mrb_value v[], int argc,
   i2c = I2C.new( scl_pin:22, sda_pin:21, frequency:100000 )
 */
 static void mrbc_esp32_i2c_new(mrbc_vm *vm, mrbc_value v[], int argc)
+{ 
+  //I2C インスタンス作成
+  v[0] = mrbc_instance_new(vm, v[0].cls, sizeof(i2c_master_bus_handle_t));
+
+  //initialize を call
+  mrbc_instance_call_initialize( vm, v, argc );
+  
+  vTaskDelay(100 / portTICK_PERIOD_MS);  //wait
+}
+
+/*! initializer
+
+*/
+static void mrbc_esp32_i2c_initialize(mrbc_vm *vm, mrbc_value v[], int argc)
 {
   //オプション解析. unit は使わない．
   MRBC_KW_ARG(frequency, freq, scl_pin, sda_pin, unit);
@@ -128,20 +69,6 @@ static void mrbc_esp32_i2c_new(mrbc_vm *vm, mrbc_value v[], int argc)
     }
   }
   
-  //I2C インスタンス作成
-  v[0] = mrbc_instance_new(vm, v[0].cls, sizeof(i2c_master_bus_handle_t));
-
-  //initialize を call
-  mrbc_instance_call_initialize( vm, v, argc );
-  
-  vTaskDelay(100 / portTICK_PERIOD_MS);  //wait
-}
-
-/*! initializer
-
-*/
-static void mrbc_esp32_i2c_initialize(mrbc_vm *vm, mrbc_value v[], int argc)
-{
   i2c_master_bus_config_t i2c_mst_config = {
     .clk_source = I2C_CLK_SRC_DEFAULT,
     .i2c_port   = I2C_NUM_0,
@@ -272,7 +199,6 @@ static void mrbc_esp32_i2c_read(mrb_vm *vm, mrb_value v[], int argc)
 static void mrbc_esp32_i2c_readfrom(mrb_vm *vm, mrb_value v[], int argc)
 {
   mrbc_value result;
-  i2c_port_t port;
   int addr, len;
   uint8_t buf[MAX_READ_LEN];
 

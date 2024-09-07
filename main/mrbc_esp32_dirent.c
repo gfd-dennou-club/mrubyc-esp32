@@ -197,13 +197,13 @@ mrbc_esp32_file_time_getSecond(mrb_vm * vm, mrb_value * v, int argc) {
 }
 void mrbc_esp32_dirent_gem_init(struct VM* vm)
 {
-  mrbc_class_esp32_dirent = mrbc_define_class(vm, "ESP32_DIRENT", mrbc_class_object);
+  mrbc_class_esp32_dirent = mrbc_define_class(vm, "DIRENT", mrbc_class_object);
   mrbc_define_method(vm, mrbc_class_esp32_dirent, "childrenFiles", mrbc_esp32_dir_files);
   mrbc_define_method(vm, mrbc_class_esp32_dirent, "childrenDirs", mrbc_esp32_dir_dirs);
   mrbc_define_method(vm, mrbc_class_esp32_dirent, "children", mrbc_esp32_dir_children);
   mrbc_define_method(vm, mrbc_class_esp32_dirent, "fileTime", mrbc_esp32_file_time);
 
-  mrbc_class_esp32_filetime = mrbc_define_class(vm, "ESP32_FILETIME", mrbc_class_object);
+  mrbc_class_esp32_filetime = mrbc_define_class(vm, "FILETIME", mrbc_class_object);
   mrbc_define_method(vm, mrbc_class_esp32_filetime, "getYear", mrbc_esp32_file_time_getYear);
   mrbc_define_method(vm, mrbc_class_esp32_filetime, "getMonth", mrbc_esp32_file_time_getMonth);
   mrbc_define_method(vm, mrbc_class_esp32_filetime, "getDay", mrbc_esp32_file_time_getDay);

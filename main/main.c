@@ -15,12 +15,16 @@
 #include "mrbc_esp32_ledc.h"
 #include "mrbc_esp32_adc.h"
 #include "mrbc_esp32_uart.h"
-//#include "mrbc_esp32_i2c.h"
+#include "mrbc_esp32_i2c.h"
 #include "mrbc_esp32_wifi.h"
 #include "mrbc_esp32_sntp.h"
 #include "mrbc_esp32_http_client.h"
 #include "mrbc_esp32_sleep.h"
-//#include "mrbc_esp32_spi.h"
+#include "mrbc_esp32_spi.h"
+#include "mrbc_esp32_lcdspi.h"
+#include "mrbc_esp32_sdspi.h"
+#include "mrbc_esp32_stdio.h"
+#include "mrbc_esp32_dirent.h"
 #include "mrbc_esp32_utils.h"
 
 //*********************************************
@@ -366,8 +370,8 @@ void app_main(void) {
   mrbc_esp32_ledc_gem_init(0);
   printf("start ADC (C)\n");
   mrbc_esp32_adc_gem_init(0);
-  //  printf("start I2C (C)\n");
-  //  mrbc_esp32_i2c_gem_init(0);
+  printf("start I2C (C)\n");
+  mrbc_esp32_i2c_gem_init(0);
   printf("start UART (C)\n");
   mrbc_esp32_uart_gem_init(0);
   printf("start WiFi (C) \n");
@@ -376,11 +380,15 @@ void app_main(void) {
   mrbc_esp32_httpclient_gem_init(0);
   printf("start SLEEP (C) \n");
   mrbc_esp32_sleep_gem_init(0);
-  //  printf("start SPI (C) \n");
-  //  mrbc_esp32_spi_gem_init(0);
+  printf("start SPI (C) \n");
+  mrbc_esp32_spi_gem_init(0);
+  mrbc_esp32_lcdspi_gem_init(0);
+  mrbc_esp32_sdspi_gem_init(0);  
+  mrbc_esp32_stdio_gem_init(0);
+  mrbc_esp32_dirent_gem_init(0);
   printf("start Utils (C) \n");
-  mrbc_esp32_utils_gem_init(0);  
-    
+  mrbc_esp32_utils_gem_init(0);
+  
   // Ruby 側のクラス・メソッド定義
   extern const uint8_t myclass_bytecode[];
   mrbc_run_mrblib(myclass_bytecode);

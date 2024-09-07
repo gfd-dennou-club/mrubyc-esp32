@@ -11,13 +11,9 @@
 #include "driver/spi_common.h"
 #include "sdmmc_cmd.h"
 
-#include <stdlib.h>
-
 #include "driver/sdmmc_host.h"
 
 static char* TAG = "SDSPI";
-
-static struct RClass* mrbc_class_esp32_sdspi;
 
 typedef struct SDSPI_HANDLE {
   spi_host_device_t unit;
@@ -147,9 +143,9 @@ mrbc_esp32_sdspi_spi_bus_free(mrb_vm* vm, mrb_value* v, int argc)
 void
 mrbc_esp32_sdspi_gem_init(struct VM* vm)
 {
-  mrbc_class_esp32_sdspi = mrbc_define_class(vm, "SDSPI", mrbc_class_object);
-  mrbc_define_method(vm, mrbc_class_esp32_sdspi, "new",        mrbc_esp32_sdspi_new);
-  mrbc_define_method(vm, mrbc_class_esp32_sdspi, "initialize", mrbc_esp32_sdspi_initialize); 
-  mrbc_define_method(vm, mrbc_class_esp32_sdspi, "mount",  mrbc_esp32_sdspi_esp_vfs_fat_sdspi_mount);
-  mrbc_define_method(vm, mrbc_class_esp32_sdspi, "umount", mrbc_esp32_sdspi_esp_vfs_fat_sdcard_unmount);
+  mrbc_class *sdspi = mrbc_define_class(0, "SDSPI", 0);
+  mrbc_define_method(0, sdspi, "new",        mrbc_esp32_sdspi_new);
+  mrbc_define_method(0, sdspi, "initialize", mrbc_esp32_sdspi_initialize); 
+  mrbc_define_method(0, sdspi, "mount",      mrbc_esp32_sdspi_esp_vfs_fat_sdspi_mount);
+  mrbc_define_method(0, sdspi, "umount",     mrbc_esp32_sdspi_esp_vfs_fat_sdcard_unmount);
 }
