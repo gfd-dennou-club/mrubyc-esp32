@@ -18,18 +18,35 @@ int spi_clk_pin  = 14;
 int spi_freq = SPI_MASTER_FREQ_40M;
 int spi_mode = 3;
 
+//プロトタイプ宣言
+uint8_t * make_output_buffer(mrb_vm *vm, mrb_value v[], int argc,
+                             int start_idx, int *ret_bufsiz);
 
 /*! constructor
 
   spi = SPI.new( )	
-  spi = SPI.new( mosi:23, miso:18, clk:14, cs:27 )
+  spi = SPI.new( mosi:23, miso:18, clk:14 )
 
   @param   mosi_pin MOSI Pin Number
            miso MISO Pin Number
            clk SPI Clock Pin Number
-           cs   CS Pin Number
 */
 static void mrbc_esp32_spi_new(mrbc_vm *vm, mrbc_value v[], int argc)
+{
+  //インスタンス作成
+  v[0] = mrbc_instance_new(vm, v[0].cls, sizeof(spi_host_device_t));
+
+  //initialize を call
+  mrbc_instance_call_initialize( vm, v, argc );
+  
+  vTaskDelay(100 / portTICK_PERIOD_MS);  //wait
+}
+
+
+/*! initializer
+
+*/
+static void mrbc_esp32_spi_initialize(mrbc_vm *vm, mrbc_value v[], int argc)
 {
   //オプション解析
   MRBC_KW_ARG(frequency, freq, mosi_pin, miso_pin, clk_pin, mode, unit);
@@ -57,21 +74,6 @@ static void mrbc_esp32_spi_new(mrbc_vm *vm, mrbc_value v[], int argc)
     }
   }
 
-  //インスタンス作成
-  v[0] = mrbc_instance_new(vm, v[0].cls, sizeof(spi_host_device_t));
-
-  //initialize を call
-  mrbc_instance_call_initialize( vm, v, argc );
-  
-  vTaskDelay(100 / portTICK_PERIOD_MS);  //wait
-}
-
-
-/*! initializer
-
-*/
-static void mrbc_esp32_spi_initialize(mrbc_vm *vm, mrbc_value v[], int argc)
-{
   spi_host_device_t spi_unit = SPI3_HOST;
   spi_bus_config_t bus_cfg = {
     .mosi_io_num = spi_mosi_pin,
@@ -94,6 +96,134 @@ static void mrbc_esp32_spi_initialize(mrbc_vm *vm, mrbc_value v[], int argc)
 }
 
 
+/*! Method write_byte(data)
+    @param data
+*/
+static void
+mrbc_esp32_spi_write(mrb_vm* vm, mrb_value* v, int argc)
+{
+  uint8_t *buf = 0;
+  int bufsiz = 0;
+  
+  //第一引数は書き込みデータ
+  buf = make_output_buffer( vm, v, argc, 1, &bufsiz );
+  if (!buf){
+    SET_RETURN( mrbc_integer_value(bufsiz) );
+  }
+
+  // start SPI communication
+  spi_host_device_t spi_unit = *((spi_host_device_t *)(v[0].instance->data));
+  
+  spi_device_interface_config_t dev_cfg = {
+    .clock_speed_hz = spi_freq,
+    //    .spics_io_num = spi_cs,
+    .queue_size = 7,
+    .flags = SPI_DEVICE_NO_DUMMY,
+  };
+
+  //デバイスの追加
+  spi_device_handle_t spi_handle;
+  ESP_ERROR_CHECK(spi_bus_add_device(spi_unit, &dev_cfg, &spi_handle));
+
+  //データ送信
+  spi_transaction_t transaction;
+  memset(&transaction, 0, sizeof( spi_transaction_t ));
+  transaction.length = bufsiz * 8;
+  transaction.tx_buffer = buf;
+  ESP_ERROR_CHECK(spi_device_transmit(spi_handle, &transaction));
+  
+  //デバイス解除
+  ESP_ERROR_CHECK(spi_bus_remove_device(spi_handle));
+
+  //動的に確保したメモリの解放
+  mrbc_free( vm, buf );
+  
+  //バッファのサイズを戻す
+  SET_RETURN( mrbc_integer_value(bufsiz) );
+}
+
+
+/*! Method read_byte()
+    @return recv_data
+ */
+static void
+mrbc_esp32_spi_read(mrb_vm* vm, mrb_value* v, int argc)
+{
+  uint8_t *buf = 0;
+  int bufsiz = 0;
+  mrbc_value ret = mrbc_nil_value();
+  
+  // Get parameter
+  if( argc < 1 || v[1].tt != MRBC_TT_INTEGER ){
+    ESP_LOGE(TAG, "invalid number and/or type of parameters detected");
+  }    
+  int read_bytes = mrbc_integer(v[1]);
+
+  if( read_bytes < 0 ) {
+    ESP_LOGE(TAG, "invalid number of read_bytes detected");
+  }
+
+  if( argc > 1 ) {
+    buf = make_output_buffer( vm, v, argc, 2, &bufsiz );
+    if( !buf ) {
+      SET_RETURN(ret);
+    }
+  }
+ 
+  ret = mrbc_string_new(vm, 0, read_bytes);
+  uint8_t *read_buf = (uint8_t *)mrbc_string_cstr(&ret);
+  
+  // start SPI communication
+  spi_host_device_t spi_unit = *((spi_host_device_t *)(v[0].instance->data));
+  
+  spi_device_interface_config_t dev_cfg = {
+    .clock_speed_hz = spi_freq,
+    //    .spics_io_num = spi_cs,
+    .queue_size = 7,
+    .flags = SPI_DEVICE_NO_DUMMY,
+  };
+
+  //デバイスの追加
+  spi_device_handle_t spi_handle;
+  ESP_ERROR_CHECK(spi_bus_add_device(spi_unit, &dev_cfg, &spi_handle));
+
+  //データ受信
+  spi_transaction_t transaction;
+  
+  if( buf == 0 ) {
+
+    //read する場合
+    memset(&transaction, 0, sizeof( spi_transaction_t ));
+    transaction.length    = read_bytes * 8;
+    transaction.rx_buffer = &read_buf;
+    ESP_ERROR_CHECK(spi_device_transmit(spi_handle, &transaction));
+
+  } else {
+    
+    //write してから read する場合
+    memset(&transaction, 0, sizeof( spi_transaction_t ));
+    transaction.length    = bufsiz * 8;
+    transaction.tx_buffer = buf;
+    ESP_ERROR_CHECK(spi_device_transmit(spi_handle, &transaction));
+
+    memset(&transaction, 0, sizeof( spi_transaction_t ));
+    transaction.length    = read_bytes;
+    transaction.rx_buffer = &read_buf;
+    ESP_ERROR_CHECK(spi_device_transmit(spi_handle, &transaction));
+
+  }
+
+  //デバイス解除
+  ESP_ERROR_CHECK(spi_bus_remove_device(spi_handle));
+
+  //動的に確保したメモリの解放
+  if( buf ) mrbc_free( vm, buf );
+
+  //値を返す
+  SET_RETURN(ret);
+}
+
+
 /*! Register SPI Class.p
  */
 void
@@ -105,6 +235,6 @@ mrbc_esp32_spi_gem_init(struct VM* vm)
   //メソッド定義
   mrbc_define_method(vm, spi, "new",        mrbc_esp32_spi_new);
   mrbc_define_method(vm, spi, "initialize", mrbc_esp32_spi_initialize);
-  //  mrbc_define_method(vm, spi, "write",      mrbc_esp32_spi_write);
-  //  mrbc_define_method(vm, spi, "read",       mrbc_esp32_spi_read);
+  mrbc_define_method(vm, spi, "write",      mrbc_esp32_spi_write);
+  mrbc_define_method(vm, spi, "read",       mrbc_esp32_spi_read);
 }
