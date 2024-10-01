@@ -14,12 +14,21 @@ static struct RClass* mrbc_class_esp32_sleep;
 
     復帰後はマイコンが再起動する
 */
-static void mrbc_esp32_sleep_deep_sleep(mrb_vm *vm, mrb_value *v, int argc){
+static void mrbc_esp32_sleep_deep_sleep_us(mrb_vm *vm, mrb_value *v, int argc){
 
-  int time_in_us = GET_INT_ARG(1);
+  uint32_t time_in_us = GET_INT_ARG(1);
   esp_deep_sleep(time_in_us);
 }
+static void mrbc_esp32_sleep_deep_sleep_ms(mrb_vm *vm, mrb_value *v, int argc){
 
+  uint32_t time_in_ms = GET_INT_ARG(1);
+  esp_deep_sleep(time_in_ms * 1000);
+}
+static void mrbc_esp32_sleep_deep_sleep_s(mrb_vm *vm, mrb_value *v, int argc){
+
+  uint32_t time_in_s = GET_INT_ARG(1);
+  esp_deep_sleep(time_in_s * 1000 * 1000);
+}
 /*! メソッド light_sleep(time_in_us) 本体 : wrapper for esp_light_sleep
 
   @param time_in_us  ライトスリープを行う秒数(μs)
@@ -27,10 +36,21 @@ static void mrbc_esp32_sleep_deep_sleep(mrb_vm *vm, mrb_value *v, int argc){
     クロックを止めて省電力モードに入る．
     スリープ解除後は開始した行の次から再開される．また，メモリも保持される．
 */
-static void mrbc_esp32_sleep_light_sleep(mrb_vm *vm, mrb_value *v, int argc){
-
-  int time_in_us = GET_INT_ARG(1);
+static void mrbc_esp32_sleep_light_sleep_us(mrb_vm *vm, mrb_value *v, int argc){
+  uint32_t time_in_us = GET_INT_ARG(1);
   esp_sleep_enable_timer_wakeup(time_in_us);
+  esp_light_sleep_start();
+}
+
+static void mrbc_esp32_sleep_light_sleep_ms(mrb_vm *vm, mrb_value *v, int argc){
+  uint32_t time_in_ms = GET_INT_ARG(1);
+  esp_sleep_enable_timer_wakeup(time_in_ms * 1000);
+  esp_light_sleep_start();
+}
+
+static void mrbc_esp32_sleep_light_sleep_s(mrb_vm *vm, mrb_value *v, int argc){
+  uint32_t time_in_s = GET_INT_ARG(1);
+  esp_sleep_enable_timer_wakeup(time_in_s * 1000 * 1000);
   esp_light_sleep_start();
 }
 
@@ -50,6 +70,10 @@ SLEEP.light_us(time_in_us)
   mrbc_class_esp32_sleep = mrbc_define_class(vm, "SLEEP", mrbc_class_object);
 
   // 各メソッド定義（mruby/c ではインスタンスメソッドをクラスメソッドとしても呼び出し可能）
-  mrbc_define_method(vm, mrbc_class_esp32_sleep, "deep_us",  mrbc_esp32_sleep_deep_sleep);
-  mrbc_define_method(vm, mrbc_class_esp32_sleep, "light_us", mrbc_esp32_sleep_light_sleep);
+  mrbc_define_method(vm, mrbc_class_esp32_sleep, "deep_us",  mrbc_esp32_sleep_deep_sleep_us);
+  mrbc_define_method(vm, mrbc_class_esp32_sleep, "deep_ms",  mrbc_esp32_sleep_deep_sleep_ms);
+  mrbc_define_method(vm, mrbc_class_esp32_sleep, "deep",     mrbc_esp32_sleep_deep_sleep_s);
+  mrbc_define_method(vm, mrbc_class_esp32_sleep, "light_us", mrbc_esp32_sleep_light_sleep_us);
+  mrbc_define_method(vm, mrbc_class_esp32_sleep, "light_ms", mrbc_esp32_sleep_light_sleep_ms);
+  mrbc_define_method(vm, mrbc_class_esp32_sleep, "light",    mrbc_esp32_sleep_light_sleep_s);
 }
