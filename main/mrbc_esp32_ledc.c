@@ -18,6 +18,9 @@ typedef struct LEDC_HANDLE {
   ledc_channel_t channel;  //チャンネル
 } LEDC_HANDLE;
 
+ledc_channel_t nowSelectedChannel = 0;  //チャンネル
+
+
 
 /*! constructor
 
@@ -42,13 +45,13 @@ static void mrbc_esp32_ledc_initialize(mrbc_vm *vm, mrbc_value v[], int argc)
 {
   int pin = GET_INT_ARG(1);
   uint32_t freq_ini    = 1000;   //周波数(初期)
-  uint32_t duty_pc_ini = 0;      //デューティー比(初期)
+  uint32_t duty_pc_ini = 50;      //デューティー比(初期)
   
   //構造体へ入力. チェンネルとタイマーのデフォルト値はゼロ．
   LEDC_HANDLE hndl;
   hndl.timer    = 0;
-  hndl.channel  = 0;
-
+  hndl.channel  = nowSelectedChannel + 1; //チャンネル番号のインクリメント
+  
   //オプション解析
   MRBC_KW_ARG(frequency, freq, duty, timer, channel);
   if( MRBC_ISNUMERIC(frequency) ) {
@@ -64,11 +67,16 @@ static void mrbc_esp32_ledc_initialize(mrbc_vm *vm, mrbc_value v[], int argc)
     hndl.timer = MRBC_TO_INT(timer);
   }
   if( MRBC_ISNUMERIC(channel) ) {
-    hndl.channel = MRBC_TO_INT(channel);
+    int channel0 = MRBC_TO_INT(channel);
+    if ( channel0 > nowSelectedChannel){
+      hndl.channel = channel0;
+    }else{
+      ESP_LOGE(TAG, "LEDC Channel %d is duplicated", channel0 );
+    }
   }
 
-  if ( hndl.channel > 3 ){
-    ESP_LOGE(TAG, "LEDC Channel >= 4");
+  if ( hndl.channel > 7 ){
+    ESP_LOGE(TAG, "LEDC Channel >= 7");
   }
   if ( hndl.timer > 3 ){
     ESP_LOGE(TAG, "LEDC Timer >= 4");
@@ -84,6 +92,7 @@ static void mrbc_esp32_ledc_initialize(mrbc_vm *vm, mrbc_value v[], int argc)
   ESP_LOGI(TAG, "freq(ini): [%"PRIu32"]", freq_ini);
   ESP_LOGI(TAG, "duty(percent)(ini): [%"PRIu32"]", duty_pc_ini);
 
+  // タイマー設定
   ledc_timer_config_t ledc_timer = {
     .speed_mode      = LEDC_HIGH_SPEED_MODE,
     .duty_resolution = LEDC_TIMER_10_BIT,
@@ -92,7 +101,8 @@ static void mrbc_esp32_ledc_initialize(mrbc_vm *vm, mrbc_value v[], int argc)
     .clk_cfg         = LEDC_AUTO_CLK,
   };
   ESP_ERROR_CHECK(ledc_timer_config(&ledc_timer));
-  
+
+  // チャンネル設定
   ledc_channel_config_t ledc_channel = {
     .speed_mode = LEDC_HIGH_SPEED_MODE,
     .intr_type  = LEDC_INTR_DISABLE,
@@ -103,6 +113,9 @@ static void mrbc_esp32_ledc_initialize(mrbc_vm *vm, mrbc_value v[], int argc)
     .hpoint     = 0,
   };
   ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel));
+  
+  // 使用したチャンネルを保管
+  nowSelectedChannel = hndl.channel; 
 }
 
 /*! ledc_freq( freq ) 
