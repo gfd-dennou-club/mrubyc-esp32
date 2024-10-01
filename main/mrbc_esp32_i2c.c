@@ -5,192 +5,235 @@
 */
 
 #include "mrbc_esp32_i2c.h"
-#include "driver/i2c.h"
+#include "driver/i2c_master.h"
+#include "esp_err.h"
+#include "esp_log.h"
 
+static char* TAG = "I2C";
 
 /*! @def
   I2C Read 操作で用意されるバッファの長さ。
 */
 #define MAX_READ_LEN  32
 
-static struct RClass* mrbc_class_esp32_i2c;
-static mrbc_sym symid_port;
-static mrbc_sym symid_scl;
-static mrbc_sym symid_sda;
-static mrbc_sym symid_freq;
+//デフォルト値の設定
+int i2c_unit    = 0;
+int i2c_freq    = 10000;
+int i2c_scl_pin = 22;
+int i2c_sda_pin = 21;
 
-/*! メソッド msleep(milisec) 本体 : sleep by milisec
+//プロトタイプ宣言
+uint8_t * make_output_buffer(mrb_vm *vm, mrb_value v[], int argc,
+                             int start_idx, int *ret_bufsiz);
 
-  @param milisec ミリ秒単位でのスリープ時間
+
+/*! constructor
+  ESP32 は I2C の物理ユニットが 1 つしかないので ID は無視する (scl = 22, sda = 21)
+
+  i2c = I2C.new( )		
+  i2c = I2C.new( scl_pin:22, sda_pin:21, frequency:100000 )
 */
-static void
-mrbc_msleep(mrb_vm* vm, mrb_value* v, int argc)
-{
-  int ms = GET_INT_ARG(1);
-  vTaskDelay(ms / portTICK_PERIOD_MS);
+static void mrbc_esp32_i2c_new(mrbc_vm *vm, mrbc_value v[], int argc)
+{ 
+  //I2C インスタンス作成
+  v[0] = mrbc_instance_new(vm, v[0].cls, sizeof(i2c_master_bus_handle_t));
+
+  //initialize を call
+  mrbc_instance_call_initialize( vm, v, argc );
+  
+  vTaskDelay(100 / portTICK_PERIOD_MS);  //wait
 }
 
+/*! initializer
 
-/*! メソッド driver_install() 本体 : wrapper for i2c_driver_install
-  引数なし
-  インスタンス変数 port, scl, sda を参照する
 */
-static void
-mrbc_esp32_i2c_driver_install(mrb_vm* vm, mrb_value* v, int argc)
+static void mrbc_esp32_i2c_initialize(mrbc_vm *vm, mrbc_value v[], int argc)
 {
-  mrbc_value tmp;
-  i2c_mode_t mode = I2C_MODE_MASTER;
-  i2c_port_t port;
-  int scl;
-  int sda;
-  int freq;
-
-  // インスタンス変数 port を参照
-  tmp = mrbc_instance_getiv(&v[0], symid_port);
-  assert( tmp.tt == MRBC_TT_FIXNUM );
-  port = tmp.i;
-
-  // インスタンス変数 scl を参照
-  tmp = mrbc_instance_getiv(&v[0], symid_scl);
-  assert( tmp.tt == MRBC_TT_FIXNUM );
-  scl = tmp.i;
-
-  // インスタンス変数 sda を参照
-  tmp = mrbc_instance_getiv(&v[0], symid_sda);
-  assert( tmp.tt == MRBC_TT_FIXNUM );
-  sda = tmp.i;
-
-  // インスタンス変数 freq を参照
-  tmp = mrbc_instance_getiv(&v[0], symid_freq);
-  assert( tmp.tt == MRBC_TT_FIXNUM );
-  freq = tmp.i;
-
-  i2c_config_t config = {
-    .mode = mode,
-    .scl_io_num = scl,
-    .sda_io_num = sda,
-    .scl_pullup_en = true,
-    .sda_pullup_en = true,
-    .master.clk_speed = freq,
+  //オプション解析. unit は使わない．
+  MRBC_KW_ARG(frequency, freq, scl_pin, sda_pin, unit);
+  if( MRBC_ISNUMERIC(frequency) ) {
+    i2c_freq = MRBC_TO_INT(frequency);
+  }
+  if( MRBC_ISNUMERIC(freq) ) {
+    i2c_freq = MRBC_TO_INT(freq);
+  }
+  if( MRBC_ISNUMERIC(scl_pin) ) {
+    i2c_scl_pin = MRBC_TO_INT(scl_pin);
+  }
+  if( MRBC_ISNUMERIC(sda_pin) ) {
+    i2c_sda_pin = MRBC_TO_INT(sda_pin);
+  }
+  if( MRBC_ISNUMERIC(unit) ){
+    if ( MRBC_TO_INT(unit) > 1 ) {
+      ESP_LOGE(TAG, "unknown I2C unit number detected");
+    }
+  }
+  
+  i2c_master_bus_config_t i2c_mst_config = {
+    .clk_source = I2C_CLK_SRC_DEFAULT,
+    .i2c_port   = I2C_NUM_0,
+    .scl_io_num = i2c_scl_pin,
+    .sda_io_num = i2c_sda_pin,
+    .glitch_ignore_cnt = 7,
+    .flags.enable_internal_pullup = true,
   };
 
-  ESP_ERROR_CHECK( i2c_param_config(port, &config) );
-  ESP_ERROR_CHECK( i2c_driver_install(port, mode, 0, 0, 0) );
+  i2c_master_bus_handle_t bus_handle;
+  ESP_ERROR_CHECK(i2c_new_master_bus(&i2c_mst_config, &bus_handle));
+  
+  // instance->data を構造体へのポインタとみなして、値を代入する。
+  *((i2c_master_bus_handle_t *)(v[0].instance->data)) = bus_handle;
+  
+  ESP_LOGI(TAG, "I2C initial");
+  ESP_LOGI(TAG, "unit:    %i", I2C_NUM_0);
+  ESP_LOGI(TAG, "freq:    %i", i2c_freq);
+  ESP_LOGI(TAG, "scl_pin: %i", i2c_scl_pin);
+  ESP_LOGI(TAG, "sda_pin: %i", i2c_sda_pin);  
 }
 
-
-/*! メソッド driver_delete() 本体 : wrapper for i2c_driver_delete
-  引数なし
-  インスタンス変数 port を参照する
-*/
-static void
-mrbc_esp32_i2c_driver_delete(mrb_vm* vm, mrb_value* v, int argc)
+static void mrbc_esp32_i2c_write(mrb_vm *vm, mrb_value v[], int argc)
 {
-  mrbc_value tmp;
-  i2c_port_t port;
+  uint8_t *buf = 0;
+  int bufsiz = 0;
 
-  // インスタンス変数 port を参照
-  tmp = mrbc_instance_getiv(&v[0], symid_port);
-  assert( tmp.tt == MRBC_TT_FIXNUM );
-  port = tmp.i;
-
-  ESP_ERROR_CHECK( i2c_driver_delete(port) );
-}
-
-
-/*! メソッド write(addr, data) 本体 : wrapper for i2c_master_write_byte sequence
-  インスタンス変数 port を参照する
-
-  @param addr I2C スレーブアドレス
-  @param data write データ、Fixnum を収めた Array インスタンス
-*/
-static void
-mrbc_esp32_i2c_write(mrb_vm* vm, mrb_value* v, int argc)
-{
-  mrbc_value tmp;
-  i2c_port_t port;
-  int addr;
-  int len;
-
-  // インスタンス変数 port を参照
-  tmp = mrbc_instance_getiv(&v[0], symid_port);
-  assert( tmp.tt == MRBC_TT_FIXNUM );
-  port = tmp.i;
-
-  addr = GET_INT_ARG(1);
-
-  // 第２引数 data が Array 型であることを検査し、長さを取得
-  assert( v[2].tt == MRBC_TT_ARRAY );
-  len = mrbc_array_size(&v[2]);
-
-  i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-
-  ESP_ERROR_CHECK( i2c_master_start(cmd) );
-  ESP_ERROR_CHECK( i2c_master_write_byte(cmd, addr << 1, I2C_MASTER_ACK) );
-  for ( int x = 0; x < len; ++x ) {
-    // 第２引数 data から x 番目の要素を取得、型が Fixnum であることを検査
-    tmp = mrbc_array_get(&v[2], x);
-    assert( tmp.tt == MRBC_TT_FIXNUM );
-    // 取得した要素を送信コマンドリンクに登録
-    ESP_ERROR_CHECK( i2c_master_write_byte(cmd, tmp.i, I2C_MASTER_ACK) );
+  // 第一引数はアドレス
+  if( argc < 1 || v[1].tt != MRBC_TT_INTEGER ) {
+    ESP_LOGE(TAG, "invalid number and/or type of parameters detected");
   }
-  ESP_ERROR_CHECK( i2c_master_stop(cmd) );
+  int i2c_addr_7 = mrbc_integer(v[1]);
 
-  //ESP_ERROR_CHECK( i2c_master_cmd_begin(port, cmd, 1 / portTICK_RATE_MS));
-  i2c_master_cmd_begin(port, cmd, 1 / portTICK_RATE_MS);
+  // 第二引数は書き込みデータ
+  buf = make_output_buffer( vm, v, argc, 2, &bufsiz );
+  if (!buf){
+    SET_RETURN( mrbc_integer_value(bufsiz) );
+  }
 
-  i2c_cmd_link_delete(cmd);
+  // start I2C communication
+  i2c_master_bus_handle_t bus_handle = *((i2c_master_bus_handle_t *)(v[0].instance->data));
+
+  i2c_device_config_t dev_cfg = {
+    .dev_addr_length = I2C_ADDR_BIT_LEN_7,
+    .device_address = i2c_addr_7,
+    .scl_speed_hz = i2c_freq,
+  };
+
+  //デバイスの追加
+  i2c_master_dev_handle_t dev_handle;
+  ESP_ERROR_CHECK(i2c_master_bus_add_device(bus_handle, &dev_cfg, &dev_handle));
+
+  //データ送信
+  ESP_ERROR_CHECK(i2c_master_transmit(dev_handle, buf, bufsiz, -1));
+
+  //デバイス解除
+  ESP_ERROR_CHECK(i2c_master_bus_rm_device(dev_handle));
+
+  //動的に確保したメモリの解放
+  mrbc_free( vm, buf );
+
+  //バッファのサイズを戻す
+  SET_RETURN( mrbc_integer_value(bufsiz) );
 }
 
 
-/*! メソッド read(addr, len) 本体 : wrapper for i2c_master_read_byte sequence
-  インスタンス変数 port を参照する
-
-  @param addr I2C スレーブアドレス
-  @param len  read データ長、MAX_READ_LEN 以下である必要あり
-  @return     read データ、Fixnum を収めた Array
-*/
-static void
-mrbc_esp32_i2c_read(mrb_vm* vm, mrb_value* v, int argc)
+static void mrbc_esp32_i2c_read(mrb_vm *vm, mrb_value v[], int argc)
 {
-  mrbc_value tmp, result;
-  i2c_port_t port;
+  uint8_t *buf = 0;
+  int bufsiz = 0;
+  mrbc_value ret = mrbc_nil_value();
+  
+  // Get parameter
+  if( argc < 2 || v[1].tt != MRBC_TT_INTEGER || v[2].tt != MRBC_TT_INTEGER ){
+    ESP_LOGE(TAG, "invalid number and/or type of parameters detected");
+  }  
+  int i2c_adrs_7 = mrbc_integer(v[1]);
+  int read_bytes = mrbc_integer(v[2]);
+  
+  if( read_bytes < 0 ) {
+    ESP_LOGE(TAG, "invalid number of read_bytes detected");
+  }
+
+  if( argc > 2 ) {
+    buf = make_output_buffer( vm, v, argc, 3, &bufsiz );
+    if( !buf ) {
+      SET_RETURN(ret);
+    }
+  }
+
+  // Start I2C communication
+  ret = mrbc_string_new(vm, 0, read_bytes);
+  uint8_t *read_buf = (uint8_t *)mrbc_string_cstr(&ret);
+
+  // start I2C communication
+  i2c_master_bus_handle_t bus_handle = *((i2c_master_bus_handle_t *)(v[0].instance->data));
+  
+  i2c_device_config_t dev_cfg = {
+    .dev_addr_length = I2C_ADDR_BIT_LEN_7,
+    .device_address = i2c_adrs_7,
+    .scl_speed_hz = i2c_freq,
+  };
+
+  //デバイスの追加
+  i2c_master_dev_handle_t dev_handle;
+  ESP_ERROR_CHECK(i2c_master_bus_add_device(bus_handle, &dev_cfg, &dev_handle));
+  
+  //データ受信
+  if( buf == 0 ) {
+    //read する場合
+    ESP_ERROR_CHECK(i2c_master_receive(dev_handle, read_buf, read_bytes, -1));
+  } else {
+    //write してから read する場合
+    ESP_ERROR_CHECK(i2c_master_transmit_receive(dev_handle, buf, bufsiz, read_buf, read_bytes, -1));
+  }
+
+  //デバイス解除
+  ESP_ERROR_CHECK(i2c_master_bus_rm_device(dev_handle));
+
+  //動的に確保したメモリの解放
+  if( buf ) mrbc_free( vm, buf );
+
+  //値を返す
+  SET_RETURN(ret);
+}
+
+
+static void mrbc_esp32_i2c_readfrom(mrb_vm *vm, mrb_value v[], int argc)
+{
+  mrbc_value result;
   int addr, len;
   uint8_t buf[MAX_READ_LEN];
-
-  // インスタンス変数 port を参照
-  tmp = mrbc_instance_getiv(&v[0], symid_port);
-  assert( tmp.tt == MRBC_TT_FIXNUM );
-  port = tmp.i;
 
   addr = GET_INT_ARG(1);
   len  = GET_INT_ARG(2);
 
   // len が MAX_READ_LEN 以下であることを検査
   assert( len <= MAX_READ_LEN );
+
+  // start I2C communication
+  i2c_master_bus_handle_t bus_handle = *((i2c_master_bus_handle_t *)(v[0].instance->data));
+  
+  i2c_device_config_t dev_cfg = {
+    .dev_addr_length = I2C_ADDR_BIT_LEN_7,
+    .device_address = addr,
+    .scl_speed_hz = i2c_freq,
+  };
+  
+  i2c_master_dev_handle_t dev_handle;
+  ESP_ERROR_CHECK(i2c_master_bus_add_device(bus_handle, &dev_cfg, &dev_handle));
+  
+  //データ受信
+  ESP_ERROR_CHECK(i2c_master_receive(dev_handle, buf, len, -1));
+  
+  //デバイス解除
+  ESP_ERROR_CHECK(i2c_master_bus_rm_device(dev_handle));
+
   // Array インスタンスを生成
   result = mrbc_array_new(vm, len);
-
-
-  i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-
-  ESP_ERROR_CHECK( i2c_master_start(cmd) );
-  ESP_ERROR_CHECK( i2c_master_write_byte(cmd, (addr << 1) | 1, I2C_MASTER_ACK) );
-  for ( int x = 0; x < len; ++x ) {
-    ESP_ERROR_CHECK( i2c_master_read_byte(cmd, buf + x, ((x < len - 1) ? I2C_MASTER_ACK : I2C_MASTER_NACK)) );
-  }
-  ESP_ERROR_CHECK( i2c_master_stop(cmd) );
-
-  //ESP_ERROR_CHECK( i2c_master_cmd_begin(port, cmd, 1 / portTICK_RATE_MS));
-  i2c_master_cmd_begin(port, cmd, 1 / portTICK_RATE_MS);
-
-  i2c_cmd_link_delete(cmd);
-
 
   // Array インスタンス result に Fixnum インスタンスとして read データをセット
   for ( int x = 0; x < len; ++x ) {
     mrbc_array_set(&result, x, &mrbc_fixnum_value(buf[x]));
   }
+  
   // Array インスタンス result を本メソッドの返り値としてセット
   SET_RETURN(result);
 }
@@ -204,25 +247,13 @@ mrbc_esp32_i2c_read(mrb_vm* vm, mrb_value* v, int argc)
 void
 mrbc_esp32_i2c_gem_init(struct VM* vm)
 {
-/*
-I2C.new(port, scl, sda)
-I2C#driver_install
-I2C#driver_delete
-I2C#write(addr, data)
-I2C#read(addr, len)
-*/
-  // クラス I2C 定義
-  mrbc_class_esp32_i2c = mrbc_define_class(vm, "I2C", mrbc_class_object);
-  // 各メソッド定義
-  mrbc_define_method(vm, mrbc_class_esp32_i2c, "msleep",         mrbc_msleep);
-  mrbc_define_method(vm, mrbc_class_esp32_i2c, "driver_install", mrbc_esp32_i2c_driver_install);
-  mrbc_define_method(vm, mrbc_class_esp32_i2c, "driver_delete",  mrbc_esp32_i2c_driver_delete);
-  mrbc_define_method(vm, mrbc_class_esp32_i2c, "__write",        mrbc_esp32_i2c_write);
-  mrbc_define_method(vm, mrbc_class_esp32_i2c, "__read",         mrbc_esp32_i2c_read);
+  //mrbc_define_class でクラス名を定義
+  mrbc_class *i2c = mrbc_define_class(0, "I2C", 0);
 
-  // インスタンス変数を参照する際に必要になる Symbol インスタンスを予め生成しておく
-  symid_port = str_to_symid("port");
-  symid_scl  = str_to_symid("scl");
-  symid_sda  = str_to_symid("sda");
-  symid_freq = str_to_symid("freq");
+  // 各メソッド定義
+  mrbc_define_method(vm, i2c, "new",        mrbc_esp32_i2c_new);
+  mrbc_define_method(vm, i2c, "initialize", mrbc_esp32_i2c_initialize);
+  mrbc_define_method(vm, i2c, "write",      mrbc_esp32_i2c_write);
+  mrbc_define_method(vm, i2c, "read",       mrbc_esp32_i2c_read);
+  mrbc_define_method(vm, i2c, "readfrom",   mrbc_esp32_i2c_readfrom);
 }
