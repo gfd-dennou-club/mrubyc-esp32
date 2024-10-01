@@ -12,10 +12,15 @@
 
 static char* TAG = "UART";
 
+//プロトタイプ宣言
+uint8_t * make_output_buffer(mrb_vm *vm, mrb_value v[], int argc,
+                             int start_idx, int *ret_bufsiz);
+
 /*! constructor
 
   uart = I2C.new( 2 )		# id
   uart = I2C.new( 2, baurate:9600 )
+  uart = I2C.new( 2, baurate:9600, rts_pin:18 )  #RS485
 */
 static void mrbc_esp32_uart_new(mrbc_vm *vm, mrbc_value v[], int argc)
 {
@@ -35,19 +40,23 @@ static void mrbc_esp32_uart_initialize(mrbc_vm *vm, mrbc_value v[], int argc)
 {
   int bps = 15100;  //ボーレート (通信速度)
   uart_port_t uart_num = 2;
- 
+  int rtsPin = -1; // RTS for RS485 Half-Duplex Mode manages DE/~RE
+  
   // ID が与えられた場合の設定
   if ( GET_INT_ARG(1) >= 0){
     uart_num = GET_INT_ARG(1);
   }
 
   //オプション解析   
-  MRBC_KW_ARG(baudrate, baud);
+  MRBC_KW_ARG(baudrate, baud, rts_pin);
   if( MRBC_ISNUMERIC(baudrate) ) {
     bps = MRBC_TO_INT(baudrate);
   }
   if( MRBC_ISNUMERIC(baud) ) {
     bps = MRBC_TO_INT(baud);
+  }
+  if( MRBC_ISNUMERIC(rts_pin) ) {
+    rtsPin = MRBC_TO_INT(rts_pin);
   } 
 
   // instance->data を構造体へのポインタとみなして、値を代入する。
@@ -64,11 +73,10 @@ static void mrbc_esp32_uart_initialize(mrbc_vm *vm, mrbc_value v[], int argc)
     .stop_bits  = UART_STOP_BITS_1,
     .flow_ctrl  = UART_HW_FLOWCTRL_DISABLE,
     .source_clk = UART_SCLK_APB,
-  };
-  ESP_ERROR_CHECK( uart_param_config(uart_num, &uart_config) );
+  }; 
 
   // ピン番号を決める
-  int txPin=1, rxPin=3; 
+  int txPin = 1, rxPin = 3; 
   if(uart_num == 0){
     txPin = 1;
     rxPin = 3; 
@@ -81,69 +89,97 @@ static void mrbc_esp32_uart_initialize(mrbc_vm *vm, mrbc_value v[], int argc)
     txPin = 17;
     rxPin = 16;
   }
-  ESP_ERROR_CHECK( uart_set_pin(uart_num, txPin, rxPin, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE) );  
-  
-  //ドライバインストール
-  uart_driver_install(uart_num, BUF_SIZE * 2, 0, 0, NULL, 0);
-  
-  if(uart_is_driver_installed(uart_num) == 1){
-    ESP_LOGI(TAG, "UART: driver was successfully installed\n");
+
+  // Install UART driver
+  ESP_ERROR_CHECK( uart_driver_install(uart_num, BUF_SIZE * 2, 0, 0, NULL, 0) );
+
+  // Configure UART parameters
+  ESP_ERROR_CHECK( uart_param_config(uart_num, &uart_config) );
+
+  //RS232C or RS485
+  if ( rtsPin > 0 ){
+    ESP_LOGI(TAG, "UART MODE: RS485");
+    ESP_LOGI(TAG, "rtsPin: %d", rtsPin);
+
+    // Set UART pins (RS485)
+    ESP_ERROR_CHECK( uart_set_pin(uart_num, txPin, rxPin, rtsPin, UART_PIN_NO_CHANGE) );
+
+    // Set RS485 half duplex mode
+    ESP_ERROR_CHECK( uart_set_mode(uart_num, UART_MODE_RS485_HALF_DUPLEX) );
+
+    // Set read timeout of UART TOUT feature
+    ESP_ERROR_CHECK( uart_set_rx_timeout(uart_num, 100 / portTICK_PERIOD_MS) );    
+
+  }else{
+    ESP_LOGI(TAG, "UART MODE: RS232C");
+
+    // Set UART pins (RS232C)
+    ESP_ERROR_CHECK( uart_set_pin(uart_num, txPin, rxPin, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE) );
   }
 }
 
 
-/*! メソッド read(bytes, nonblock:1)  本体:wrapper for uart_read_bytes
+/*! メソッド read( bytes )  本体:wrapper for uart_read_bytes
 
   @param bytes          読み込むデータのバイト数
-  @param nonblock       bytesがrxキュー内のバイト数を超えたとき、
-                        読み込みを続けるかどうかのフラグ(1 = true)
 */
 static void mrbc_esp32_uart_read(mrb_vm* vm, mrb_value* v, int argc)
 {
   uart_port_t uart_num = *((uart_port_t *)(v[0].instance->data));  
-  int bytes = GET_INT_ARG(1);
-  int is_nonblock = 0;         //デフォルト
+  int read_bytes = GET_INT_ARG(1);
+  
+  //データ読み出し
+  mrbc_value ret = mrbc_string_new(vm, 0, read_bytes);
+  char *buf = mrbc_string_cstr(&ret);
+  
+  int len = uart_read_bytes( uart_num, buf, read_bytes, 100 / portTICK_PERIOD_MS );
+  if (len != read_bytes){
+    ESP_LOGE(TAG, "ERROR: Received %u bytes", len);
+  }
+  buf[read_bytes] = '\0';
+  
+  SET_RETURN(ret);
+  
+  /* 確認 */  
+  if (len > 0) {
+    ESP_LOGI(TAG, "Received %u bytes:", len);
+    printf("[ ");
+    for (int i = 0; i < len; i++) {
+      printf("0x%.2X ", (uint8_t)buf[i]);
+    }
+    printf("] \n");
+  } else {
+    ESP_LOGE(TAG, "Read data critical failure.");
+  }
+	
+  /* 配列で値を返す場合
+     
+  uint8_t* data = (uint8_t*) malloc(BUF_SIZE);
+  int len = uart_read_bytes( uart_num, data, read_bytes, 100 / portTICK_PERIOD_MS );
+  if (len != read_bytes){
+    ESP_LOGE(TAG, "ERROR: Received %u bytes", len);
+  }  
+  mrbc_value result = mrbc_array_new(vm, len);
+  
+  // Array インスタンス result に Fixnum インスタンスとして read データをセット
+  for ( int x = 0; x < len; ++x ) {
+    mrbc_array_set(&result, x, &mrbc_fixnum_value(data[x]));
+  }
+  
+  // Array インスタンス result を本メソッドの返り値としてセット
+  SET_RETURN(result);
     
-  //オプション解析   
-  MRBC_KW_ARG(nonblock);
-  if( MRBC_ISNUMERIC(nonblock) ) {
-    is_nonblock = MRBC_TO_INT(nonblock); 
-  }
-  
-  //  ESP_LOGI(TAG, "UART read");
-  //  ESP_LOGI(TAG, "id:       %d", uart_num);
-  //  ESP_LOGI(TAG, "nonblock: %d", is_nonblock);
-  
-  size_t length;
-  uint8_t *data;
-  mrb_value moji;
-
-  uart_get_buffered_data_len(uart_num, &length);
-  if(length <= bytes) {
-    if(is_nonblock == 1){
-      if(length == 0){
-        // printf("no data\n");
-        moji = mrbc_string_new_cstr(vm,"");
-        SET_RETURN(moji);
-        return;
-      }
-      bytes = length - 1;
+  if (len > 0) {
+    ESP_LOGI(TAG, "Received %u bytes:", len);
+    printf("[ ");
+    for (int i = 0; i < len; i++) {
+      printf("0x%.2X ", (uint8_t)data[i]);
     }
-    else{
-      SET_NIL_RETURN();
-      return;
-    }
+    printf("] \n");
+  } else {
+    ESP_LOGE(TAG, "Read data critical failure.");
   }
-  data = (uint8_t *)malloc(bytes + 1);
-  uart_read_bytes(uart_num, data, bytes, 20 / portTICK_PERIOD_MS);
-  data[bytes] = '\0';
-  puts((const char *) data);
-
-  //ruby用の文字列を作成
-  moji = mrbc_string_new_cstr(vm,(const char *)data);
-
-  //ruby用の文字列を返す
-  SET_RETURN(moji);
+  */
 }
 
 
@@ -210,11 +246,36 @@ static void mrbc_esp32_uart_gets(mrb_vm* vm, mrb_value* v, int argc)
 */
 static void mrbc_esp32_uart_write(mrb_vm* vm, mrb_value* v, int argc)
 {
-  uart_port_t uart_num = *((uart_port_t *)(v[0].instance->data));  
-  uint8_t *data = (uint8_t *)malloc(BUF_SIZE);
-  data = GET_STRING_ARG(2);
+  uint8_t *buf = 0;
+  int bufsiz = 0;
 
-  uart_write_bytes( uart_num,(const char *)data, strlen((const char *)data) );
+  uart_port_t uart_num = *((uart_port_t *)(v[0].instance->data));  
+
+  //第一引数は書き込みデータ
+  buf = make_output_buffer( vm, v, argc, 1, &bufsiz );
+  if (!buf){
+    SET_RETURN( mrbc_integer_value( bufsiz ) );
+  }
+
+  // 確認
+  printf("In C: [ ");
+  for (int i = 0; i < bufsiz; i++) {
+    printf("0x%.2X ", buf[i]);
+  }
+  printf("], len:%d \n", bufsiz);
+  
+  // 書き込み
+  if ( uart_write_bytes( uart_num, (const char *) buf, bufsiz ) != bufsiz ){
+    ESP_LOGE(TAG, "Send data critical failure.");
+  }
+
+  //  uint8_t *data = (uint8_t *)malloc(BUF_SIZE);
+  //  data = GET_STRING_ARG(1);
+  //  uint8_t length = strlen((const char *)data);
+    
+  //  if ( uart_write_bytes( uart_num, (const char *)data, strlen((const char *)data) ) != length){
+  //    ESP_LOGE(TAG, "Send data critical failure.");
+  //  }
 }
 
 
@@ -239,6 +300,17 @@ static void mrbc_esp32_uart_flush_input(mrb_vm* vm, mrb_value* v, int argc)
   uart_flush_input(uart_num);
 }
 
+
+static void mrbc_esp32_uart_get_buffered_data_len(mrb_vm* vm, mrb_value* v, int argc)
+{
+  uart_port_t uart_num = *((uart_port_t *)(v[0].instance->data));  
+  size_t length;
+
+  uart_get_buffered_data_len(uart_num, &length);
+  SET_INT_RETURN( length );
+}
+
+
 void mrbc_esp32_uart_gem_init(struct VM* vm)
 {
   //クラスUART定義
@@ -252,5 +324,7 @@ void mrbc_esp32_uart_gem_init(struct VM* vm)
   mrbc_define_method(vm, uart, "write",           mrbc_esp32_uart_write);
   mrbc_define_method(vm, uart, "clear_rx_buffer", mrbc_esp32_uart_flush);
   mrbc_define_method(vm, uart, "clear_tx_buffer", mrbc_esp32_uart_flush_input);
+  mrbc_define_method(vm, uart, "clear_tx_buffer", mrbc_esp32_uart_flush_input);
+  mrbc_define_method(vm, uart, "bytes_available", mrbc_esp32_uart_get_buffered_data_len);
 }
 
