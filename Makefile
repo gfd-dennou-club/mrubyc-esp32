@@ -54,10 +54,10 @@ all: $(OBJS)
 	$(IDFTOOL) build
 
 flash: all
-	$(IDFTOOL) flash
+	$(IDFTOOL) flash --baud $(BAUD0) --port $(PORT0)
 
 monitor:
-	$(IDFTOOL) monitor
+	$(IDFTOOL) monitor --monitor-baud $(BAUD0) --port $(PORT0)
 
 clean:
 	$(IDFTOOL) clean
