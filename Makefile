@@ -50,7 +50,9 @@ SPIFFSFILE = $(PROJECT_PATH)/spiffs/mrbc.spiffs.bin
 .PHONY: spiffs flash monitor store-vm 
 
 all: $(OBJS)
+ifneq ("$(CLASSFILES)", "")
 	$(MRBC) -B $(MYCLASS) --remove-lv -o $(PROJECT_PATH)/main/mrblib.c  $(CLASSFILES)
+endif
 	$(IDFTOOL) build
 
 flash: all
