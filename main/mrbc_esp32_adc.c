@@ -290,8 +290,8 @@ static void mrbc_esp32_adc_read(mrb_vm *vm, mrb_value *v, int argc){
     //    ESP_LOGI(TAG, "ADC%d Channel[%d] Cali Voltage: %d mV", hndl.unit + 1, hndl.channel, adc_voltage);
   }
 
-  //値を戻す
-  SET_INT_RETURN(adc_voltage);
+  //値を戻す. mV -> V へ変換
+  SET_FLOAT_RETURN(adc_voltage * 0.001);
 }
 
 /*! クラス定義処理を記述した関数
