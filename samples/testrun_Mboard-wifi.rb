@@ -12,7 +12,7 @@ rtc = RX8035SA.new(i2c)
 wlan = WLAN.new
 puts "scan result: #{wlan.scan}"
 
-wlan.connect("BFW6K-G-1DF00", "v7fykw68sebv")
+wlan.connect("ssid", "pass")
 
 puts "ifconfig: #{wlan.ifconfig}"
 puts "mac: #{wlan.mac}"
