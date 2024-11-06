@@ -62,7 +62,7 @@ monitor:
 	$(IDFTOOL) monitor --monitor-baud $(BAUD0) --port $(PORT0)
 
 clean:
-	$(IDFTOOL) clean
+	$(IDFTOOL) fullclean
 
 $(SRCDIR)/%.h: $(SRCDIR)/%.rb
 	$(MRBC) -B $(basename $(notdir $@)) -o $(MAINDIR)/$(basename $(notdir $@)).h $^
@@ -85,4 +85,4 @@ store-vm:
 	$(CP) build/bootloader/bootloader.bin              ${FIRMWAREDIR}
 
 menuconfig:
-	idf.py menuconfig
+	$(IDFTOOL) menuconfig
