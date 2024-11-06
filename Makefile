@@ -79,9 +79,10 @@ spiffs:  $(OBJS)
 	$(ESPTOOL) --chip esp32 --baud $(BAUD0) --port $(PORT0) --before default_reset --after hard_reset write_flash -z --flash_mode dio --flash_freq 40m --flash_size detect $(SPIFFS_DATA_OFFSET) $(SPIFFSFILE)
 
 store-vm:
-	$(CP) build/mrubyc-esp32.bin          ${FIRMWAREDIR}
-	$(CP) build/mrubyc-esp32.elf          ${FIRMWAREDIR}
-	$(CP) build/ota_data_initial.bin      ${FIRMWAREDIR}
-	$(CP) build/partitions.bin            ${FIRMWAREDIR}
-	$(CP) build/bootloader/bootloader.bin ${FIRMWAREDIR}
+	$(CP) build/main.bin                               ${FIRMWAREDIR}
+	$(CP) build/ota_data_initial.bin                   ${FIRMWAREDIR}
+	$(CP) build/partition_table/partition-table.bin    ${FIRMWAREDIR}
+	$(CP) build/bootloader/bootloader.bin              ${FIRMWAREDIR}
 
+menuconfig:
+	idf.py menuconfig

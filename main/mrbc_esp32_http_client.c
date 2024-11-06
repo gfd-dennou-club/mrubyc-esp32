@@ -70,6 +70,18 @@ static void
 mrbc_esp32_httpclient_invoke(mrb_vm* vm, mrb_value* v, int argc)
 {
   char* url = (char*)GET_STRING_ARG(1);
+  char* username = NULL;
+  char* password = NULL;
+  
+  //オプション解析
+  MRBC_KW_ARG(user, passwd);
+  if( MRBC_KW_ISVALID(user) ) {
+    username = mrbc_string_cstr(&user);
+  }
+  if( MRBC_KW_ISVALID(passwd) ) {
+    password = mrbc_string_cstr(&passwd);
+  }
+  ESP_LOGI(TAG, "%s %s \n", username, password);
   
   esp_http_client_config_t config = {
     .url = url,
@@ -79,6 +91,9 @@ mrbc_esp32_httpclient_invoke(mrb_vm* vm, mrb_value* v, int argc)
     .disable_auto_redirect = true,
     .transport_type = HTTP_TRANSPORT_OVER_SSL, // SSL/TLSを通す
     .crt_bundle_attach = esp_crt_bundle_attach, // 組み込みの証明書バンドル
+    .username = username,
+    .password = password,
+    .auth_type = HTTP_AUTH_TYPE_BASIC,
   };
   esp_http_client_handle_t client = esp_http_client_init(&config);
   
