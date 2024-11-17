@@ -234,12 +234,14 @@ static void mrbc_esp32_ili934x_initialize(mrbc_vm *vm, mrbc_value v[], int argc)
   *((spi_device_handle_t *)(v[0].instance->data)) = spi_handle;
   //  spidev = spi_handle;
 
+#ifdef CONFIG_USE_MRUBYC_DEBUG
   ESP_LOGI(TAG, "ILI934X initial");
   ESP_LOGI(TAG, "unit:%d", spi_unit);
   ESP_LOGI(TAG, "dc:  %d", gpio_dc_pin);
   ESP_LOGI(TAG, "cs:  %d", spi_cs_pin);
   ESP_LOGI(TAG, "rst: %d", gpio_rst_pin);
   ESP_LOGI(TAG, "bl:  %d", gpio_bl_pin);
+#endif
   
   //dc_pin の初期化
   ESP_ERROR_CHECK( gpio_reset_pin(gpio_dc_pin) );

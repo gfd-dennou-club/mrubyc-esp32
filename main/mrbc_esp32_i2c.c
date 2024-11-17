@@ -83,12 +83,14 @@ static void mrbc_esp32_i2c_initialize(mrbc_vm *vm, mrbc_value v[], int argc)
   
   // instance->data を構造体へのポインタとみなして、値を代入する。
   *((i2c_master_bus_handle_t *)(v[0].instance->data)) = bus_handle;
-  
+
+#ifdef CONFIG_USE_MRUBYC_DEBUG
   ESP_LOGI(TAG, "I2C initial");
   ESP_LOGI(TAG, "unit:    %i", I2C_NUM_0);
   ESP_LOGI(TAG, "freq:    %i", i2c_freq);
   ESP_LOGI(TAG, "scl_pin: %i", i2c_scl_pin);
-  ESP_LOGI(TAG, "sda_pin: %i", i2c_sda_pin);  
+  ESP_LOGI(TAG, "sda_pin: %i", i2c_sda_pin);
+#endif
 }
 
 static void mrbc_esp32_i2c_write(mrb_vm *vm, mrb_value v[], int argc)

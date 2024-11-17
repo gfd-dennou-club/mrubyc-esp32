@@ -57,11 +57,13 @@ static void mrbc_esp32_sdspi_initialize(mrbc_vm *vm, mrbc_value v[], int argc)
 
   // instance->data を構造体へのポインタとみなして、値を代入する。
   *((SDSPI_HANDLE *)(v[0].instance->data)) = handle;
-  
+
+#ifdef CONFIG_USE_MRUBYC_DEBUG
   ESP_LOGI(TAG, "SDSPI initial");
   ESP_LOGI(TAG, "unit: %d", handle.unit);
   ESP_LOGI(TAG, "cs:   %d", handle.cs_pin);
   ESP_LOGI(TAG, "slot: %d", handle.host.slot);
+#endif
 }
 
 
@@ -75,9 +77,12 @@ static void
 mrbc_esp32_sdspi_esp_vfs_fat_sdspi_mount(mrb_vm* vm, mrb_value* v, int argc)
 {  
   SDSPI_HANDLE handle = *((SDSPI_HANDLE *)(v[0].instance->data));
+
+#ifdef CONFIG_USE_MRUBYC_DEBUG
   ESP_LOGI(TAG, "unit: %d", handle.unit);
   ESP_LOGI(TAG, "cs:   %d", handle.cs_pin);
-  
+#endif
+
   printf("mount point: %s", (char *)GET_STRING_ARG(1));
   
   if(handle.mount_point != NULL) {

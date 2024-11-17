@@ -81,7 +81,9 @@ mrbc_esp32_httpclient_invoke(mrb_vm* vm, mrb_value* v, int argc)
   if( MRBC_KW_ISVALID(passwd) ) {
     password = mrbc_string_cstr(&passwd);
   }
+#ifdef CONFIG_USE_MRUBYC_DEBUG
   ESP_LOGI(TAG, "%s %s \n", username, password);
+#endif
   
   esp_http_client_config_t config = {
     .url = url,

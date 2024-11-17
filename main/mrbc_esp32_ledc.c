@@ -84,13 +84,15 @@ static void mrbc_esp32_ledc_initialize(mrbc_vm *vm, mrbc_value v[], int argc)
   
   // instance->data を int へのポインタとみなして、値を代入する。
   *((LEDC_HANDLE *)(v[0].instance->data)) = hndl;
-  
+
+#ifdef CONFIG_USE_MRUBYC_DEBUG
   ESP_LOGI(TAG, "PWM initial");
   ESP_LOGI(TAG, "pin:       %d", pin);
   ESP_LOGI(TAG, "timer:     %d", hndl.timer);
   ESP_LOGI(TAG, "channel:   %d", hndl.channel);
   ESP_LOGI(TAG, "freq(ini): [%"PRIu32"]", freq_ini);
   ESP_LOGI(TAG, "duty(percent)(ini): [%"PRIu32"]", duty_pc_ini);
+#endif
 
   // タイマー設定
   ledc_timer_config_t ledc_timer = {
@@ -128,7 +130,7 @@ mrbc_esp32_ledc_freq(mrb_vm* vm, mrb_value* v, int argc)
   uint32_t freq = GET_INT_ARG(1);
   LEDC_HANDLE hndl = *((LEDC_HANDLE *)(v[0].instance->data));
 
-#ifdef debug_mrubyc_esp32  
+#ifdef CONFIG_USE_MRUBYC_DEBUG
   ESP_LOGI(TAG, "timer: %d", hndl.timer);
   ESP_LOGI(TAG, "freq:  [%"PRIu32"]", freq);
 #endif
@@ -151,7 +153,7 @@ mrbc_esp32_ledc_duty(mrb_vm* vm, mrb_value* v, int argc)
 
   uint32_t duty = (uint32_t) (duty_pc * DutyMAX / 100.0); //10bit
 
-#ifdef debug_mrubyc_esp32  
+#ifdef CONFIG_USE_MRUBYC_DEBUG
   ESP_LOGI(TAG, "channel:       %d", hndl.channel);
   ESP_LOGI(TAG, "duty(percent): [%"PRIu32"]", duty_pc);
   ESP_LOGI(TAG, "duty:          [%"PRIu32"]", duty_pc * DutyMAX / 100.0);
@@ -175,7 +177,7 @@ mrbc_esp32_ledc_period_us(mrb_vm* vm, mrb_value* v, int argc)
 
   uint32_t freq = ( 1000000 / time ); //microsec --> Hz
 
-#ifdef debug_mrubyc_esp32
+#ifdef CONFIG_USE_MRUBYC_DEBUG
   ESP_LOGI(TAG, "timer: %d", hndl.timer);
   ESP_LOGI(TAG, "time:  [%"PRIu32"]", time);
   ESP_LOGI(TAG, "freq:  [%"PRIu32"]", freq);
@@ -201,7 +203,7 @@ mrbc_esp32_ledc_pulse_width_us(mrbc_vm *vm, mrbc_value v[], int argc)
   uint32_t freq = ledc_get_freq(LEDC_HIGH_SPEED_MODE, hndl.timer);
   uint32_t duty = (uint32_t) (ontime * (freq / 1000000.0) * DutyMAX); //10bit
 
-#ifdef debug_mrubyc_esp32  
+#ifdef CONFIG_USE_MRUBYC_DEBUG
   ESP_LOGI(TAG, "channel: %d", hndl.channel);
   ESP_LOGI(TAG, "ontime:  [%"PRIu32"]", ontime);
   ESP_LOGI(TAG, "duty:    [%"PRIu32"]", duty);
