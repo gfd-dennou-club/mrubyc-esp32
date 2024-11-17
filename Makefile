@@ -67,12 +67,6 @@ clean:
 $(SRCDIR)/%.h: $(SRCDIR)/%.rb
 	$(MRBC) -o $(SPIFFSDIR)/$(basename $(notdir $@)).mrbc $^
 
-gems: 
-	python bin/make-gems.py
-
-gems-clean:
-	python bin/clean-gems.py
-
 spiffs:  $(OBJS)
 	$(MKSPIFFS) -c $(SPIFFSDIR) -p 256 -b 4096 -s $(SPIFFS_DATA_TABLE_SIZE) $(SPIFFSFILE)
 	$(ESPTOOL) --chip esp32 --baud $(BAUD0) --port $(PORT0) --before default_reset --after hard_reset write_flash -z --flash_mode dio --flash_freq 40m --flash_size detect $(SPIFFS_DATA_OFFSET) $(SPIFFSFILE)
