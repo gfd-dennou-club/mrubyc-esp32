@@ -27,19 +27,13 @@
 #include "mrbc_esp32_dirent.h"
 #include "mrbc_esp32_utils.h"
 
-//*********************************************
-// ENABLE MASTER files written by mruby/c
-//*********************************************
-#include "master.h"
-#include "slave.h"
-
 static const char *TAG = "mrubyc-esp32";
 
-#define MRUBYC_VERSION_STRING "mruby/c v3.3 ESP32"
+#define MRUBYC_VERSION_STRING "mruby/c v3.3.1 RITE0300 MRBW1.2"
 #define BUF_SIZE (1024)
 #define MEMORY_SIZE (1024*70)
 #define RD_BUF_SIZE (BUF_SIZE)
-static QueueHandle_t uart0_queue;
+//static QueueHandle_t uart0_queue;
 static uint8_t memory_pool[MEMORY_SIZE];
 
 // SPIFFS でバイナリデータを書き込み
@@ -59,7 +53,7 @@ uint8_t * save_spiffs_file(const char *filename, int len, uint8_t *data)
 }
 
 // SPIFFS でバイナリデータを読み込み
-uint8_t * load_spiffs_file(const char *filename)
+uint8_t * load_spiffs_file(const char *filename, uint8_t flag)
 {
   FILE *fp = fopen(filename, "rb");
   if( fp == NULL ) {
@@ -80,7 +74,10 @@ uint8_t * load_spiffs_file(const char *filename)
     fprintf(stderr, "Memory allocate error.\n");
   }
   fclose(fp);
-  //  ESP_LOG_BUFFER_HEXDUMP(TAG, p, size, ESP_LOG_INFO);  //バイトコード出力
+
+  if (flag == 1){
+    ESP_LOG_BUFFER_HEXDUMP(TAG, p, size, ESP_LOG_ERROR);  //バイトコード出力
+  }
 
   return p;
 }
@@ -115,7 +112,19 @@ uint8_t init_spiffs(){
   return 1;
 }
 
-//UART 初期化
+/*!
+ * UART バッファクリア
+ */
+uint8_t clear_uart_buffer(){
+  //バッファークリア
+  ESP_ERROR_CHECK( uart_flush( UART_NUM_0 ) );
+  ESP_ERROR_CHECK( uart_flush_input( UART_NUM_0 ) );
+  return 1;  
+}
+
+/*
+ * UART 初期化
+ */
 uint8_t init_uart(){
   uart_config_t uart_config = {
     .baud_rate = 115200,
@@ -125,18 +134,20 @@ uint8_t init_uart(){
     .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
     .source_clk = UART_SCLK_APB,
   };
-  //uart_driver_install(UART_NUM_0, 2*1024, 0, 0, NULL, 0);
-  //uart_param_config(UART_NUM_0, &uart_config);
-  uart_driver_install(UART_NUM_0, BUF_SIZE * 2, BUF_SIZE * 2, 20, &uart0_queue, 0);
-  uart_param_config(UART_NUM_0, &uart_config);
+  ESP_ERROR_CHECK( uart_param_config(UART_NUM_0, &uart_config) );
+  //  uart_driver_install(UART_NUM_0, BUF_SIZE * 2, BUF_SIZE * 2, 20, &uart0_queue, 0);
+  ESP_ERROR_CHECK( uart_driver_install(UART_NUM_0, BUF_SIZE * 2, 0, 0, NULL, 0) );
+
+  clear_uart_buffer(); //clear
   return 1;
 }  
+
 
 /*!
 * @brief リセットコマンド
 */
 void mrbwrite_cmd_reset() {
-  printf("+OK reset \n\n");
+  printf("+OK \n\n");
   vTaskDelay(2000 / portTICK_PERIOD_MS);
   esp_restart();
 }
@@ -145,7 +156,7 @@ void mrbwrite_cmd_reset() {
 * @brief 書き込まれたコードを実行
 */
 void mrbwrite_cmd_execute() {
-  printf("+OK execute \n\n");
+  printf("+OK \n\n");
   vTaskDelay(2000 / portTICK_PERIOD_MS);
 }
 
@@ -178,21 +189,20 @@ void mrbwrite_cmd_clear(struct stat *st) {
   if (stat("/spiffs/slave.mrbc", st) == 0) {
     unlink("/spiffs/slave.mrbc");
   }
-  printf("+OK\n\n");
+  printf("+OK \n\n");
 }
 
 /*!
 * @brief ヘルプ(コマンド一覧)の表示
 */
 void mrbwrite_cmd_help() {
-  printf("+OK Commands \n");
   printf("  version  \n");
   printf("  write    \n");
   printf("  showprog \n");
   printf("  clear    \n");
   printf("  reset    \n");
   printf("  execute  \n");
-  printf("+DONE\n\n");
+  printf("+OK \n\n");
 }
 
 /*!
@@ -205,17 +215,17 @@ void mrbwrite_cmd_version() {
 /*!
 * @brief プログラムの表示
 */
-void mrbwrite_cmd_showplog(struct stat *st) {
+void mrbwrite_cmd_showprog(struct stat *st) {
   //読み込み
   if (stat("/spiffs/master.mrbc", st) == 0) {
     printf("**** master.mrbc **** \n\n");
-    load_spiffs_file("/spiffs/master.mrbc");
+    load_spiffs_file("/spiffs/master.mrbc", 1);
   }
   if (stat("/spiffs/slave.mrbc", st) == 0) {
     printf("**** slave.mrbc **** \n\n");
-    load_spiffs_file("/spiffs/slave.mrbc");
+    load_spiffs_file("/spiffs/slave.mrbc", 1);
   }
-  printf("+DONE\n\n");
+  printf("+OK\n\n");
 }
 
 /*!
@@ -251,7 +261,7 @@ int mrbwrite_cmd_mode(
     mrbwrite_cmd_version();
   } else if (strncmp(buffer, "showprog", 8) == 0) {
     //showprog
-    mrbwrite_cmd_showplog(st);
+    mrbwrite_cmd_showprog(st);
   } else if (*flag_write_mode == 1) {
     // 書き込み
     
@@ -282,7 +292,7 @@ void app_main(void) {
   //************************************
   // 初期化
   //************************************
-
+ 
   //変数初期化
   uint8_t* data = (uint8_t*) malloc(BUF_SIZE);
   uint8_t wait = 0;
@@ -297,13 +307,13 @@ void app_main(void) {
 
   // UART0 初期化
   init_uart();
-
+  
   //************************************
   // mrbcwrite モード開始
   //************************************
   ESP_LOGI(TAG, "Please push Enter key x 2 to mrbwite mode");  
 
-  while (1) {
+  while (wait < 2) {
     //バイト数の取得
     int len = uart_read_bytes(UART_NUM_0, data, BUF_SIZE, 1000 / portTICK_PERIOD_MS);
     
@@ -322,17 +332,16 @@ void app_main(void) {
       }
       buffer[len] = '\0'; //末尾に終了記号
 
-      //コマンドモードに入っていない場合
       if (flag_cmd_mode == 0){
-	      //コマンドモードに入っていない状態で Enter が 2 度打鍵された場合は
-	      //コマンドモードに入るためのフラグを立てる
-	      if ( (data[0] == 0x0d && data[1] == 0x0d) ||
-	           (data[0] == 0x0d && data[2] == 0x0d && data[1] == 0x0a && data[3] == 0x0a ) ) {
-	        //ESP_LOGI(TAG, "Entering Command Mode ...");
-	        printf("+OK mruby/c \n\n");
-	        flag_cmd_mode = 1;
-	      }
+	//コマンドモードに入っていない状態で Enter (CR+LF) が打鍵された場合は
+	//コマンドモードに入るためのフラグを立てる
+	if ( data[0] == 0x0d && data[1] == 0x0a ) {
+	  //ESP_LOGI(TAG, "Entering Command Mode ...");
+	  printf("+OK mruby/c \n\n");
+	  flag_cmd_mode = 1;
+	}
       } else {
+	//コマンドモードに入っている場合
         int cmd_state = mrbwrite_cmd_mode(
           &st,
           &ifile,
@@ -344,49 +353,48 @@ void app_main(void) {
         if (cmd_state == 1) break;
       }
     } else {
-        //入力バイト数がゼロの場合
 
-        //コマンドモードでなければカウントアップ
-        if (flag_cmd_mode == 0){
-	        wait += 1; 
-        }
-        //閾値を越えたらタイムアウト
-        if (wait > 2){
-	        break; 
-        }
+      //コマンドモードでなければカウントアップ
+      if (flag_cmd_mode == 0){
+	wait += 1; 
+      }
     }
+
+    clear_uart_buffer();
+    vTaskDelay(100 / portTICK_PERIOD_MS);
   }
   //書き込みモード終了
   ESP_LOGI(TAG, "End mrbwrite mode");
-
+  printf("Kani-Board, mruby/c v3.3.1 start\n");
+  
   //***************************************
   // Ruby 
   //***************************************
   mrbc_init(memory_pool, MEMORY_SIZE);
 
-  printf("start GPIO (C)\n");
+  ESP_LOGI(TAG, "start GPIO (C)\n");
   mrbc_esp32_gpio_gem_init(0);
-  printf("start PWM (C)\n");
+  ESP_LOGI(TAG, "start PWM (C)\n");
   mrbc_esp32_ledc_gem_init(0);
-  printf("start ADC (C)\n");
+  ESP_LOGI(TAG, "start ADC (C)\n");
   mrbc_esp32_adc_gem_init(0);
-  printf("start I2C (C)\n");
+  ESP_LOGI(TAG, "start I2C (C)\n");
   mrbc_esp32_i2c_gem_init(0);
-  printf("start UART (C)\n");
+  ESP_LOGI(TAG, "start UART (C)\n");
   mrbc_esp32_uart_gem_init(0);
-  printf("start WiFi (C) \n");
+  ESP_LOGI(TAG, "start WiFi (C) \n");
   mrbc_esp32_wifi_gem_init(0);
   mrbc_esp32_sntp_gem_init(0);
   mrbc_esp32_httpclient_gem_init(0);
-  printf("start SLEEP (C) \n");
+  ESP_LOGI(TAG, "start SLEEP (C) \n");
   mrbc_esp32_sleep_gem_init(0);
-  printf("start SPI (C) \n");
+  ESP_LOGI(TAG, "start SPI (C) \n");
   mrbc_esp32_spi_gem_init(0);
   mrbc_esp32_lcdspi_gem_init(0);
   mrbc_esp32_sdspi_gem_init(0);  
   mrbc_esp32_stdio_gem_init(0);
   mrbc_esp32_dirent_gem_init(0);
-  printf("start Utils (C) \n");
+  ESP_LOGI(TAG, "start Utils (C) \n");
   mrbc_esp32_utils_gem_init(0);
   
   // Ruby 側のクラス・メソッド定義
@@ -394,20 +402,15 @@ void app_main(void) {
   mrbc_run_mrblib(myclass_bytecode);
   
   // tasks
-#ifdef CONFIG_USE_ESP32_FIRMWAREFLASH
-  printf("FIRMWAREFLASH mode\n");
-  mrbc_create_task(master, 0);
-  mrbc_create_task( slave, 0 );
-#else
-  printf("SPIFFS mode\n");
+  ESP_LOGI(TAG, "SPIFFS mode\n");
 
-  uint8_t *master = load_spiffs_file("/spiffs/master.mrbc");
+  uint8_t *master = load_spiffs_file("/spiffs/master.mrbc", 0);
   mrbc_create_task(master, 0);
 
   if (stat("/spiffs/slave.mrbc", &st) == 0) {
-    uint8_t *slave = load_spiffs_file("/spiffs/slave.mrbc");
+    uint8_t *slave = load_spiffs_file("/spiffs/slave.mrbc", 0);
     mrbc_create_task( slave, 0 );
   }
-#endif
+
   mrbc_run();
 }
