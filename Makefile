@@ -65,7 +65,6 @@ clean:
 	$(IDFTOOL) fullclean
 
 $(SRCDIR)/%.h: $(SRCDIR)/%.rb
-	$(MRBC) -B $(basename $(notdir $@)) -o $(MAINDIR)/$(basename $(notdir $@)).h $^
 	$(MRBC) -o $(SPIFFSDIR)/$(basename $(notdir $@)).mrbc $^
 
 gems: 
