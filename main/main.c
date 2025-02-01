@@ -104,17 +104,18 @@ uint8_t * load_spiffs_file(const char *filename)
 }
 
 /*!
-* @brief masterに書き込まれているバイトコードのハッシュ値を計算する
-* @param *data バイトコード
+* @brief filenameに書き込まれているバイトコードのハッシュ値を計算する
+* @param *filename 確認したいファイルのパス
 */
-uint8_t crc8(uint8_t *data,const char* filename) {
+uint8_t crc8(const char* filename) {
     uint8_t crc = 0xFF;
+    uint8_t *data = load_spiffs_file(filename);
     size_t size = get_file_size(filename);
     const uint8_t poly = 0x31;
     for (size_t i = 0; i < size; i++) {
         crc ^= data[i];
-        
-        for (int j = 0; j < 8; j++) {
+
+        for (int j = 8; j > 0; --j) {
             if (crc & 0x80) {
                 crc = (crc << 1) ^ poly;
             } else {
@@ -285,12 +286,13 @@ void mrbwrite_cmd_showprog(struct stat *st) {
 }
 
 /*!
-* @brief 最後に書き込まれたバイトコードのCRC8Hash値を返す
-* @param hash 計算したハッシュ値
+* @brief 最後に書き込まれたバイトコードのCRC8ハッシュ値を計算して返す
 */
-void mrbwrite_cmd_verify(uint8_t hash)
+void mrbwrite_cmd_verify()
 {
-  printf("+OK %2x \n\n",hash);
+  //Memo:複数ファイルの書き込みを行うようにした場合はファイル名の取得して行う
+  uint8_t hash = crc8("/spiffs/master.mrbc");
+  printf("+OK %2x\n",hash);
 }
 
 /*!
@@ -305,7 +307,6 @@ int mrbwrite_cmd_mode(
   uint8_t *data,
   size_t *totallen
 ) {
-  uint8_t crc8hash=0x00;
   char copybuffer[BUF_SIZE];
   //コマンドモードに入っている場合
   if (strncmp(buffer, "reset", 5) == 0) {
@@ -347,8 +348,7 @@ int mrbwrite_cmd_mode(
     mrbwrite_cmd_showprog(st);
   }else if(strncmp(buffer, "verify", 6) == 0){
     //verify
-    crc8hash = crc8(load_spiffs_file("/spiffs/master.mrbc"),"/spiffs/master.mrbc");
-    mrbwrite_cmd_verify(crc8hash);
+    mrbwrite_cmd_verify();
   }else if (*flag_write_mode == 1) {
     // 書き込み
     //ファイル書き込み
@@ -364,7 +364,7 @@ int mrbwrite_cmd_mode(
       *flag_write_mode = 0; //書き込みモード終了
     }
   }else{
-    if(buffer[0] == 0x0d && buffer[1] == 0x0a )
+    if(buffer[0] == 0x0d && buffer[1] == 0x0a)
       printf("+OK mruby/c \n\n");
     else
       printf("-ERR Illegal command.\n\n");
@@ -393,6 +393,7 @@ void app_main(void) {
   char buffer[BUF_SIZE];
   struct stat st;
   size_t totallen = 0;
+  int write_time = 0;
   // SPIFFS 初期化
   init_spiffs();
 
@@ -403,7 +404,9 @@ void app_main(void) {
   // mrbcwrite モード開始
   //************************************
   ESP_LOGI(TAG, "Please push Enter key to mrbwite mode");  
-
+  // //検証中
+  clear_uart_buffer();
+  vTaskDelay(100 / portTICK_PERIOD_MS);
   while (wait < 2) {
     //バイト数の取得
     int len = uart_read_bytes(UART_NUM_0, data, BUF_SIZE, 1000 / portTICK_PERIOD_MS);
@@ -448,16 +451,18 @@ void app_main(void) {
         //コマンドモードでなければカウントアップ
         if ( flag_cmd_mode == 0) wait += 1; 
         //書き込みモードでバイトコード受信中の時にタイムアウトさせる
-        if (flag_write_mode == 1 && totallen != 0)
+        if (flag_write_mode == 1 && totallen != 0 && write_time <= 2)
         {
           ESP_LOGE(TAG,"-ERR Not the specified number of bytes.\n");
           totallen = 0;
           flag_write_mode = 0;
-        }
+          write_time = 0;
+        }else
+          write_time +=1;
     }
-
-    clear_uart_buffer();
-    vTaskDelay(100 / portTICK_PERIOD_MS);
+  ////(要検証)ここでURATをclearすると1024バイト超えると書き込めないかも
+  clear_uart_buffer();
+  vTaskDelay(100 / portTICK_PERIOD_MS);
   }
   //書き込みモード終了
   ESP_LOGI(TAG, "End mrbwrite mode");
