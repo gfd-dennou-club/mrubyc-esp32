@@ -62,11 +62,9 @@ static void mrbc_esp32_uart_initialize(mrbc_vm *vm, mrbc_value v[], int argc)
   // instance->data を構造体へのポインタとみなして、値を代入する。
   *((uart_port_t *)(v[0].instance->data)) = uart_num;
 
-#ifdef CONFIG_USE_MRUBYC_DEBUG
-  ESP_LOGI(TAG, "UART initial");
-  ESP_LOGI(TAG, "id:      %d", uart_num);
-  ESP_LOGI(TAG, "baurate: %d", bps);
-#endif
+  ESP_LOGD(TAG, "UART initial");
+  ESP_LOGD(TAG, "id:      %d", uart_num);
+  ESP_LOGD(TAG, "baurate: %d", bps);
 
   uart_config_t uart_config = {
     .baud_rate  = bps,
@@ -100,10 +98,8 @@ static void mrbc_esp32_uart_initialize(mrbc_vm *vm, mrbc_value v[], int argc)
 
   //RS232C or RS485
   if ( rtsPin > 0 ){
-#ifdef CONFIG_USE_MRUBYC_DEBUG
-    ESP_LOGI(TAG, "UART MODE: RS485");
-    ESP_LOGI(TAG, "rtsPin: %d", rtsPin);
-#endif
+    ESP_LOGD(TAG, "UART MODE: RS485");
+    ESP_LOGD(TAG, "rtsPin: %d", rtsPin);
 
     // Set UART pins (RS485)
     ESP_ERROR_CHECK( uart_set_pin(uart_num, txPin, rxPin, rtsPin, UART_PIN_NO_CHANGE) );
@@ -115,9 +111,7 @@ static void mrbc_esp32_uart_initialize(mrbc_vm *vm, mrbc_value v[], int argc)
     ESP_ERROR_CHECK( uart_set_rx_timeout(uart_num, 100 / portTICK_PERIOD_MS) );    
 
   }else{
-#ifdef CONFIG_USE_MRUBYC_DEBUG
-    ESP_LOGI(TAG, "UART MODE: RS232C");
-#endif
+    ESP_LOGD(TAG, "UART MODE: RS232C");
 
     // Set UART pins (RS232C)
     ESP_ERROR_CHECK( uart_set_pin(uart_num, txPin, rxPin, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE) );
@@ -148,9 +142,8 @@ static void mrbc_esp32_uart_read(mrb_vm* vm, mrb_value* v, int argc)
   
   /* 確認 */  
   if (len > 0) {
-#ifdef CONFIG_USE_MRUBYC_DEBUG
-    ESP_LOGI(TAG, "Received %u bytes:", len);
-#endif
+    ESP_LOGD(TAG, "Received %u bytes:", len);
+
     printf("[ ");
     for (int i = 0; i < len; i++) {
       printf("0x%.2X ", (uint8_t)buf[i]);
@@ -207,11 +200,9 @@ static void mrbc_esp32_uart_gets(mrb_vm* vm, mrb_value* v, int argc)
     identify_r_with_break = MRBC_TO_INT( break_r );
   }
 
-#ifdef CONFIG_USE_MRUBYC_DEBUG
-  ESP_LOGI(TAG, "UART read");
-  ESP_LOGI(TAG, "id:      %d", uart_num);
-  ESP_LOGI(TAG, "break_r: %d", identify_r_with_break);
-#endif
+  ESP_LOGD(TAG, "UART read");
+  ESP_LOGD(TAG, "id:      %d", uart_num);
+  ESP_LOGD(TAG, "break_r: %d", identify_r_with_break);
 
   size_t length;
   uint8_t *data;
