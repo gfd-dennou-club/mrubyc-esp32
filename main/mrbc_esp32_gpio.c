@@ -1,12 +1,24 @@
 /*! @file
   @brief
   mruby/c GPIO functions for ESP32
+
+  GPIO_MODE_INPUT  : 1
+  GPIO_MODE_OUTPUT : 2
+  GPIO_PULLUP_ONLY : 0
+  GPIO_PULLDOWN_ONLY : 1;
+  GPIO_MODE_INPUT_OUTPUT_OD : 2;
 */
 
 #include "mrbc_esp32_gpio.h"
 #include "driver/gpio.h"
 #include "esp_err.h"
 #include "esp_log.h"
+
+#define GPIO_IN                 0x01
+#define GPIO_OUT                0x02
+#define GPIO_PULL_UP            0x00
+#define GPIO_PULL_DOWN          0x10
+//#define GPIO_OPEN_DRAIN         0x70
 
 static char* TAG = "GPIO";
 
@@ -25,28 +37,26 @@ static void mrbc_esp32_gpio_new(mrbc_vm *vm, mrbc_value v[], int argc)
   vTaskDelay(100 / portTICK_PERIOD_MS);  //wait
 }
 
-/*! initializer()
+/*! initiaizer()
 
  */
 static void mrbc_esp32_gpio_initialize(mrbc_vm *vm, mrbc_value v[], int argc)
 {
   gpio_num_t  pin  = GET_INT_ARG(1);
-  gpio_mode_t mode = GET_INT_ARG(2);
-  gpio_pull_mode_t pull_mode = GET_INT_ARG(3);
+  gpio_mode_t mode = GET_INT_ARG(2) & 0x0F;
+  gpio_pull_mode_t pull_mode = GET_INT_ARG(2) & 0xF0;
 
   // instance->data をgpio_num_t 型 へのポインタとみなして、値を代入する。
   *((gpio_num_t *)(v[0].instance->data)) = GET_INT_ARG(1); 
 
-#ifdef CONFIG_USE_MRUBYC_DEBUG
-  ESP_LOGI(TAG, "pin:  %i", pin);
-  ESP_LOGI(TAG, "mode: %i", mode);
-  ESP_LOGI(TAG, "pull: %i", pull_mode);
-#endif
+  ESP_LOGD(TAG, "pin:  %i", pin);
+  ESP_LOGD(TAG, "mode: %i", mode);
+  ESP_LOGD(TAG, "pull: %i", pull_mode);
   
   ESP_ERROR_CHECK( gpio_reset_pin(pin) );
   ESP_ERROR_CHECK( gpio_set_direction(pin, mode) );
   
-  if (pull_mode > 0){
+  if (mode == 1){
     ESP_ERROR_CHECK( gpio_set_pull_mode(pin, pull_mode) );
   }
 }
@@ -61,18 +71,16 @@ static void mrbc_esp32_gpio_initialize(mrbc_vm *vm, mrbc_value v[], int argc)
 static void
 mrbc_esp32_gpio_setmode(mrb_vm* vm, mrb_value* v, int argc){
   gpio_num_t  pin  = *((gpio_num_t *)(v[0].instance->data));
-  gpio_mode_t mode = GET_INT_ARG(1);
-  gpio_pull_mode_t pull_mode = GET_INT_ARG(2);
-
-#ifdef CONFIG_USE_MRUBYC_DEBUG
-  ESP_LOGI(TAG, "pin:  %i", pin);
-  ESP_LOGI(TAG, "mode: %i", mode);
-  ESP_LOGI(TAG, "pull: %i", pull_mode);
-#endif
+  gpio_mode_t mode = GET_INT_ARG(1) & 0x0F;
+  gpio_pull_mode_t pull_mode = GET_INT_ARG(1) & 0xF0;
+  
+  ESP_LOGD(TAG, "pin:  %i", pin);
+  ESP_LOGD(TAG, "mode: %i", mode);
+  ESP_LOGD(TAG, "pull: %i", pull_mode);
   
   ESP_ERROR_CHECK( gpio_set_direction(pin, mode) );
   
-  if (pull_mode){
+  if (mode == 1){
     ESP_ERROR_CHECK( gpio_set_pull_mode(pin, pull_mode) );
   }
 }
@@ -184,11 +192,10 @@ mrbc_esp32_gpio_gem_init(struct VM* vm)
   mrbc_define_method(0, gpio, "write",      mrbc_esp32_gpio_set_level);
   
   //定数
-  mrbc_set_class_const(gpio, mrbc_str_to_symid("IN"),         &mrbc_integer_value(GPIO_MODE_INPUT));
-  mrbc_set_class_const(gpio, mrbc_str_to_symid("OUT"),        &mrbc_integer_value(GPIO_MODE_OUTPUT));
-  mrbc_set_class_const(gpio, mrbc_str_to_symid("PULL_UP"),    &mrbc_integer_value(GPIO_PULLUP_ONLY));
-  mrbc_set_class_const(gpio, mrbc_str_to_symid("PULL_DOWN"),  &mrbc_integer_value(GPIO_PULLDOWN_ONLY));
-  mrbc_set_class_const(gpio, mrbc_str_to_symid("OPEN_DRAIN"), &mrbc_integer_value(GPIO_MODE_INPUT_OUTPUT_OD));
+  mrbc_set_class_const(gpio, mrbc_str_to_symid("IN"),         &mrbc_integer_value(GPIO_IN));
+  mrbc_set_class_const(gpio, mrbc_str_to_symid("OUT"),        &mrbc_integer_value(GPIO_OUT));
+  mrbc_set_class_const(gpio, mrbc_str_to_symid("PULL_UP"),    &mrbc_integer_value(GPIO_PULL_UP));
+  mrbc_set_class_const(gpio, mrbc_str_to_symid("PULL_DOWN"),  &mrbc_integer_value(GPIO_PULL_DOWN));
 
   ////////////////////////////////////////////////////
   // MicroPython 同様に Pin クラスも定義しておく
@@ -206,9 +213,8 @@ mrbc_esp32_gpio_gem_init(struct VM* vm)
   mrbc_define_method(0, gpio2, "off",        mrbc_esp32_gpio_set_off);  
   
   //定数
-  mrbc_set_class_const(gpio2, mrbc_str_to_symid("IN"),         &mrbc_integer_value(GPIO_MODE_INPUT));
-  mrbc_set_class_const(gpio2, mrbc_str_to_symid("OUT"),        &mrbc_integer_value(GPIO_MODE_OUTPUT));
-  mrbc_set_class_const(gpio2, mrbc_str_to_symid("PULL_UP"),    &mrbc_integer_value(GPIO_PULLUP_ONLY));
-  mrbc_set_class_const(gpio2, mrbc_str_to_symid("PULL_DOWN"),  &mrbc_integer_value(GPIO_PULLDOWN_ONLY));
-  mrbc_set_class_const(gpio2, mrbc_str_to_symid("OPEN_DRAIN"), &mrbc_integer_value(GPIO_MODE_INPUT_OUTPUT_OD));
+  mrbc_set_class_const(gpio2, mrbc_str_to_symid("IN"),         &mrbc_integer_value(GPIO_IN));
+  mrbc_set_class_const(gpio2, mrbc_str_to_symid("OUT"),        &mrbc_integer_value(GPIO_OUT));
+  mrbc_set_class_const(gpio2, mrbc_str_to_symid("PULL_UP"),    &mrbc_integer_value(GPIO_PULL_UP));
+  mrbc_set_class_const(gpio2, mrbc_str_to_symid("PULL_DOWN"),  &mrbc_integer_value(GPIO_PULL_DOWN));
 }
