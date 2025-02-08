@@ -388,6 +388,9 @@ CONFIG_PARTITION_TABLE_MD5=y
 # mrubyc-esp32 Configuration
 #
 # CONFIG_USE_MRUBYC_DEBUG is not set
+CONFIG_UART_NUM_0=y
+# CONFIG_UART_NUM_2 is not set
+CONFIG_UART_NUM=0
 # end of mrubyc-esp32 Configuration
 
 #
