@@ -2,8 +2,6 @@
   @brief
   mruby/c HTTPClient class for ESP32
   本クラスはインスタンスを生成せず利用する
-  init() にて URL をセットし、以後 invoke() にて URL にアクセスする
-  cleanup() にて利用を終了する
 */
 
 #include "mrbc_esp32_http_client.h"
@@ -22,6 +20,7 @@ char local_response_buffer[MAX_HTTP_OUTPUT_BUFFER + 1] = {0};
 
 /*! HTTP イベントハンドラ
   各種 HTTP イベントが発生した際に呼び出される
+  esp-idf/examples/protocols/esp_http_client/main/esp_http_client_example.c より
 */
 esp_err_t http_event_handler(esp_http_client_event_t *evt)
 {
@@ -91,12 +90,12 @@ esp_err_t http_event_handler(esp_http_client_event_t *evt)
             output_len = 0;
             break;
         case HTTP_EVENT_DISCONNECTED:
-            ESP_LOGI(TAG, "HTTP_EVENT_DISCONNECTED");
+            ESP_LOGD(TAG, "HTTP_EVENT_DISCONNECTED");
             int mbedtls_err = 0;
             esp_err_t err = esp_tls_get_and_clear_last_error((esp_tls_error_handle_t)evt->data, &mbedtls_err, NULL);
             if (err != 0) {
-                ESP_LOGI(TAG, "Last esp error code: 0x%x", err);
-                ESP_LOGI(TAG, "Last mbedtls failure: 0x%x", mbedtls_err);
+                ESP_LOGD(TAG, "Last esp error code: 0x%x", err);
+                ESP_LOGD(TAG, "Last mbedtls failure: 0x%x", mbedtls_err);
             }
             if (output_buffer != NULL) {
                 free(output_buffer);
@@ -114,7 +113,6 @@ esp_err_t http_event_handler(esp_http_client_event_t *evt)
     return ESP_OK;
 }	    
 
-
 /*! メソッド get() 本体 
 
   @param url URL
@@ -125,110 +123,115 @@ mrbc_esp32_httpclient_get(mrb_vm* vm, mrb_value* v, int argc)
   char* url = (char*)GET_STRING_ARG(1);
   char* username = NULL;
   char* password = NULL;
-  
+
   //オプション解析
   MRBC_KW_ARG(user, passwd);
   if( MRBC_KW_ISVALID(user) ) {
     username = mrbc_string_cstr(&user);
+    ESP_LOGD(TAG, "username :%s\n", username);
   }
   if( MRBC_KW_ISVALID(passwd) ) {
     password = mrbc_string_cstr(&passwd);
+    ESP_LOGD(TAG, "password :%s\n", password);
   }
-#ifdef CONFIG_USE_MRUBYC_DEBUG
-  ESP_LOGI(TAG, "%s %s \n", username, password);
-#endif
   
   esp_http_client_config_t config = {
     .url = url,
-    .query = "esp",
     .event_handler = http_event_handler,
     .user_data = local_response_buffer,   // Pass address of local buffer to get response
     .disable_auto_redirect = true,
     .transport_type = HTTP_TRANSPORT_OVER_SSL, // SSL/TLSを通す
     .crt_bundle_attach = esp_crt_bundle_attach, // 組み込みの証明書バンドル
-    .username = username,
-    .password = password,
-    .auth_type = HTTP_AUTH_TYPE_BASIC,
+    .method = HTTP_METHOD_GET,
+    .auth_type = HTTP_AUTH_TYPE_NONE,
   };
   esp_http_client_handle_t client = esp_http_client_init(&config);
   
+  if (username != NULL && password != NULL ) {
+    esp_http_client_set_username(client, username);
+    esp_http_client_set_password(client, password);
+    esp_http_client_set_authtype(client, HTTP_AUTH_TYPE_BASIC);
+  }
+    
   // GET
   esp_err_t err = esp_http_client_perform(client);
+
   if (err == ESP_OK) {
-    ESP_LOGI(TAG, "HTTP GET Status = %d, content_length = %"PRId64,
+    ESP_LOGD(TAG, "HTTP GET Status = %d, content_length = %"PRId64,
 	     esp_http_client_get_status_code(client),
 	     esp_http_client_get_content_length(client));
   } else {
     ESP_LOGE(TAG, "HTTP GET request failed: %s", esp_err_to_name(err));
   }
-  ESP_LOG_BUFFER_HEX(TAG, local_response_buffer, strlen(local_response_buffer));
+
   esp_http_client_cleanup(client);
 
   mrbc_value ret = mrbc_string_new(vm, local_response_buffer, MAX_HTTP_OUTPUT_BUFFER + 1);
   SET_RETURN( ret );
 }
+
 
 /*! メソッド post() 本体 
 
   @param url URL
 */
-/*
 static void
 mrbc_esp32_httpclient_post(mrb_vm* vm, mrb_value* v, int argc)
 {
-  char* url = (char*)GET_STRING_ARG(1);
-  char* username = NULL;
-  char* password = NULL;
+  char* url        = (char*)GET_STRING_ARG(1);
+  char* post_data  = (char*)GET_STRING_ARG(2);
+  char* username   = NULL;
+  char* password   = NULL;
   
+  //オプション解析
   //オプション解析
   MRBC_KW_ARG(user, passwd);
   if( MRBC_KW_ISVALID(user) ) {
     username = mrbc_string_cstr(&user);
+    ESP_LOGD(TAG, "username :%s\n", username);
   }
   if( MRBC_KW_ISVALID(passwd) ) {
     password = mrbc_string_cstr(&passwd);
+    ESP_LOGD(TAG, "password :%s\n", password);
   }
-#ifdef CONFIG_USE_MRUBYC_DEBUG
-  ESP_LOGI(TAG, "%s %s \n", username, password);
-#endif
-  
+    
   esp_http_client_config_t config = {
     .url = url,
-    .query = "esp",
     .event_handler = http_event_handler,
     .user_data = local_response_buffer,   // Pass address of local buffer to get response
     .disable_auto_redirect = true,
-    .transport_type = HTTP_TRANSPORT_OVER_SSL, // SSL/TLSを通す
+    .transport_type = HTTP_TRANSPORT_OVER_SSL,  // SSL/TLSを通す
     .crt_bundle_attach = esp_crt_bundle_attach, // 組み込みの証明書バンドル
-    .username = username,
-    .password = password,
-    .auth_type = HTTP_AUTH_TYPE_BASIC,
+    .method = HTTP_METHOD_POST,
+    .auth_type = HTTP_AUTH_TYPE_NONE
   };
   esp_http_client_handle_t client = esp_http_client_init(&config);
+
+  if (username != NULL && password != NULL ) {
+    esp_http_client_set_username(client, username);
+    esp_http_client_set_password(client, password);
+    esp_http_client_set_authtype(client, HTTP_AUTH_TYPE_BASIC);
+  }
   
   // POST
-  esp_err_t err = esp_http_client_perform(client);
-  const char *post_data = "{\"name\":\"sugiyama\"}";
-  esp_http_client_set_url(client, "https://ik1-412-38348.vs.sakura.ne.jp/~sugiyama/esp32-get.php");
-  esp_http_client_set_method(client, HTTP_METHOD_POST);
   esp_http_client_set_header(client, "Content-Type", "application/json");
   esp_http_client_set_post_field(client, post_data, strlen(post_data));
-  err = esp_http_client_perform(client);
+  esp_err_t err = esp_http_client_perform(client);
+  
   if (err == ESP_OK) {
-    ESP_LOGI(TAG, "HTTP POST Status = %d, content_length = %"PRId64,
+    ESP_LOGD(TAG, "HTTP POST Status = %d, content_length = %"PRId64,
 	     esp_http_client_get_status_code(client),
 	     esp_http_client_get_content_length(client));
   } else {
-    ESP_LOGE(TAG, "HTTP POST request failed: %s", esp_err_to_name(err));
+    ESP_LOGD(TAG, "HTTP POST request failed: %s", esp_err_to_name(err));
   }
-  
-  ESP_LOG_BUFFER_HEX(TAG, local_response_buffer, strlen(local_response_buffer));
-  esp_http_client_cleanup(client);
 
+  esp_http_client_cleanup(client);
+  
   mrbc_value ret = mrbc_string_new(vm, local_response_buffer, MAX_HTTP_OUTPUT_BUFFER + 1);
   SET_RETURN( ret );
 }
-*/
+
 
 /*! クラス定義処理を記述した関数
   この関数を呼ぶことでクラス HTTP が定義される
@@ -242,8 +245,8 @@ mrbc_esp32_httpclient_gem_init(struct VM* vm)
   mrbc_class *http = mrbc_define_class(0, "HTTP", 0);
 
   // 各メソッド定義
-  mrbc_define_method(0, http, "invoke", mrbc_esp32_httpclient_get);
-  mrbc_define_method(0, http, "access", mrbc_esp32_httpclient_get);
   mrbc_define_method(0, http, "get",    mrbc_esp32_httpclient_get);
-  //  mrbc_define_method(0, http, "post",   mrbc_esp32_httpclient_post);
+  mrbc_define_method(0, http, "post",   mrbc_esp32_httpclient_post);
+  mrbc_define_method(0, http, "invoke", mrbc_esp32_httpclient_get); //obsolete
+  mrbc_define_method(0, http, "access", mrbc_esp32_httpclient_get); //obsolete
 }
