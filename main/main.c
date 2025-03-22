@@ -103,27 +103,34 @@ uint8_t * load_spiffs_file(const char *filename)
   return p;
 }
 
-/*!
-* @brief filenameに書き込まれているバイトコードのハッシュ値を計算する
-* @param *filename 確認したいファイルのパス
-*/
-uint8_t crc8(const char* filename) {
-    uint8_t crc = 0xFF;
-    uint8_t *data = load_spiffs_file(filename);
-    size_t size = get_file_size(filename);
-    const uint8_t poly = 0x31;
-    for (size_t i = 0; i < size; i++) {
-        crc ^= data[i];
 
-        for (int j = 8; j > 0; --j) {
-            if (crc & 0x80) {
-                crc = (crc << 1) ^ poly;
-            } else {
-                crc <<= 1;
-            }
+/**
+ * 与えられたバイナリデータのCRC8ハッシュ値を計算する
+ * - CRCレジスタ初期値: `0xff`
+ * - 生成多項式: `x^8 + x^5 + x^4 + 1`(`0x31`)
+ * - RefIn: なし(`false`)
+ * - RefOut: なし(`false`)
+ * - XorOut: なし(`0x00`)
+ *
+ * @see https://www.sunshine2k.de/articles/coding/crc/understanding_crc.html
+ * @brief filenameに書き込まれているバイトコードのハッシュ値を計算する
+ * @param *filename 確認したいファイルのパス
+ */
+uint8_t calculateCrc8(const uint8_t *data,const size_t size) {
+uint8_t crc = 0xFF;
+const uint8_t poly = 0x31;
+for (size_t i = 0; i < size; i++) {
+    crc ^= data[i];
+
+    for (int j = 8; j > 0; --j) {
+        if (crc & 0x80) {
+            crc = (crc << 1) ^ poly;
+        } else {
+            crc <<= 1;
         }
     }
-    return crc;
+}
+return crc;
 }
 
 //SPIFFS 初期化
@@ -291,7 +298,9 @@ void mrbwrite_cmd_showprog(struct stat *st) {
 void mrbwrite_cmd_verify()
 {
   //Memo:複数ファイルの書き込みを行うようにした場合はファイル名の取得して行う
-  uint8_t hash = crc8("/spiffs/master.mrbc");
+  uint8_t *data = load_spiffs_file("/spiffs/master.mrbc");
+  size_t size = get_file_size("/spiffs/master.mrbc");
+  uint8_t hash = crc8(data,size);
   printf("+OK %2x\n",hash);
 }
 
@@ -460,7 +469,6 @@ void app_main(void) {
         }else
           write_time +=1;
     }
-  ////(要検証)ここでURATをclearすると1024バイト超えると書き込めないかも
   clear_uart_buffer();
   vTaskDelay(100 / portTICK_PERIOD_MS);
   }
