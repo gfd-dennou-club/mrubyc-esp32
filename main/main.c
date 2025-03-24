@@ -321,7 +321,7 @@ void mrbwrite_cmd_verify()
   //Memo:複数ファイルの書き込みを行うようにした場合はファイル名の取得して行う
   uint8_t *data = load_spiffs_file("/spiffs/master.mrbc");
   size_t size = get_file_size("/spiffs/master.mrbc");
-  uint8_t hash = crc8(data,size);
+  uint8_t hash = calculateCrc8(data,size);
   printf("+OK %2x\n",hash);
 }
 
@@ -433,7 +433,7 @@ void app_main(void) {
   //************************************
   // mrbcwrite モード開始
   //************************************
-  printf("mrubyc-esp32: Please push Enter key x 2 to mrbwite mode\n\n");
+  printf("Kani-Board, Please push Enter key to mrbwite mode\n\n");
   while (wait < 2) {
     //バイト数の取得
     int len = uart_read_bytes(uart_num, data, BUF_SIZE, 1000 / portTICK_PERIOD_MS);
@@ -490,7 +490,7 @@ void app_main(void) {
     vTaskDelay(100 / portTICK_PERIOD_MS);
   }
   //書き込みモード終了
-  ESP_LOGI(TAG, "End mrbwrite mode");
+  printf("Kani-Board, End mrbwrite mode");
   printf("Kani-Board, mruby/c v3.3.1 start\n");
   
   //***************************************
