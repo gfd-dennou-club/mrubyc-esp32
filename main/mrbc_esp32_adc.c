@@ -108,7 +108,7 @@ static bool adc_calibration_init(adc_unit_t unit, adc_atten_t atten, adc_cali_ha
   bool calibrated = false;
   
   if (!calibrated) {
-    //    ESP_LOGI(TAG, "calibration scheme version is %s", "Line Fitting");
+    ESP_LOGD(TAG, "calibration scheme version is %s", "Line Fitting");
     adc_cali_line_fitting_config_t cali_config = {
       .unit_id = unit,
       .atten = atten,
@@ -123,7 +123,7 @@ static bool adc_calibration_init(adc_unit_t unit, adc_atten_t atten, adc_cali_ha
   
   *out_handle = handle;
   if (ret == ESP_OK) {
-    //    ESP_LOGI(TAG, "ADC%d Calibration OK", unit + 1);
+    ESP_LOGD(TAG, "ADC%d Calibration OK", unit + 1);
   } else if (ret == ESP_ERR_NOT_SUPPORTED || !calibrated) {
     ESP_LOGW(TAG, "eFuse not burnt, skip software calibration");
   } else {
@@ -162,12 +162,10 @@ static void mrbc_esp32_adc_initialize(mrb_vm *vm, mrb_value *v, int argc){
   hndl.unit    = select_unit( pin );
   hndl.channel = select_channel( pin );
 
-#ifdef CONFIG_USE_MRUBYC_DEBUG
-  ESP_LOGI(TAG, "ADC initial");
-  ESP_LOGI(TAG, "pin:     %d", pin);
-  ESP_LOGI(TAG, "unit:    %d", hndl.unit);
-  ESP_LOGI(TAG, "channel: %d", hndl.channel);
-#endif
+  ESP_LOGD(TAG, "ADC initial");
+  ESP_LOGD(TAG, "pin:     %d", pin);
+  ESP_LOGD(TAG, "unit:    %d", hndl.unit);
+  ESP_LOGD(TAG, "channel: %d", hndl.channel);
 
   // instance->data を int へのポインタとみなして、値を代入する。
   *((ADC_HANDLE *)(v[0].instance->data)) = hndl;
@@ -243,9 +241,7 @@ static void mrbc_esp32_adc_rawread(mrb_vm *vm, mrb_value *v, int argc){
 
   //生データ取得
   int adc_reading = adc_multisampling( hndl.unit, hndl.channel );
-#ifdef CONFIG_USE_MRUBYC_DEBUG
-  ESP_LOGI(TAG, "ADC%d Channel[%d] Raw Data: %d", hndl.unit + 1, hndl.channel, adc_reading);
-#endif
+  ESP_LOGD(TAG, "ADC%d Channel[%d] Raw Data: %d", hndl.unit + 1, hndl.channel, adc_reading);
 
   //値を戻す
   SET_INT_RETURN(adc_reading);
@@ -263,9 +259,7 @@ static void mrbc_esp32_adc_read(mrb_vm *vm, mrb_value *v, int argc){
   
   //生データ取得
   int adc_reading = adc_multisampling( hndl.unit, hndl.channel );
-#ifdef CONFIG_USE_MRUBYC_DEBUG
-  ESP_LOGI(TAG, "ADC%d Channel[%d] Raw Data: %d", hndl.unit + 1, hndl.channel, adc_reading);
-#endif
+  ESP_LOGD(TAG, "ADC%d Channel[%d] Raw Data: %d", hndl.unit + 1, hndl.channel, adc_reading);
 
   //ユニット毎に処理を分けて実行
   if (hndl.unit == ADC_UNIT_1) {
@@ -279,9 +273,7 @@ static void mrbc_esp32_adc_read(mrb_vm *vm, mrb_value *v, int argc){
     }
     //電圧に変換 (adc1_cali を利用)
     ESP_ERROR_CHECK(adc_cali_raw_to_voltage(adc1_cali, adc_reading, &adc_voltage));
-#ifdef CONFIG_USE_MRUBYC_DEBUG
-    ESP_LOGI(TAG, "ADC%d Channel[%d] Cali Voltage: %d mV", hndl.unit + 1, hndl.channel, adc_voltage);
-#endif
+    ESP_LOGD(TAG, "ADC%d Channel[%d] Cali Voltage: %d mV", hndl.unit + 1, hndl.channel, adc_voltage);
   }
   else if (hndl.unit == ADC_UNIT_2) {
 
@@ -294,9 +286,7 @@ static void mrbc_esp32_adc_read(mrb_vm *vm, mrb_value *v, int argc){
     }
     //電圧に変換 (adc2_cali を利用)
     ESP_ERROR_CHECK(adc_cali_raw_to_voltage(adc2_cali, adc_reading, &adc_voltage));
-#ifdef CONFIG_USE_MRUBYC_DEBUG
-    ESP_LOGI(TAG, "ADC%d Channel[%d] Cali Voltage: %d mV", hndl.unit + 1, hndl.channel, adc_voltage);
-#endif
+    ESP_LOGD(TAG, "ADC%d Channel[%d] Cali Voltage: %d mV", hndl.unit + 1, hndl.channel, adc_voltage);
   }
 
 

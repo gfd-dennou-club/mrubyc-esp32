@@ -20,7 +20,6 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-
 /***** Local headers ********************************************************/
 /***** Constant values ******************************************************/
 /***** Macros ***************************************************************/
@@ -86,7 +85,11 @@ void hal_abort(const char *s);
 */
 inline static int hal_write(int fd, const void *buf, int nbytes)
 {
-  return write(1, buf, nbytes);
+  //  return write(1, buf, nbytes);
+  //ESP_LOGI("HAL", "%.*s", nbytes, (const char *)buf);
+  //return nbytes;
+  printf("%.*s", nbytes, (const char *)buf);
+  return nbytes;
 }
 
 //================================================================

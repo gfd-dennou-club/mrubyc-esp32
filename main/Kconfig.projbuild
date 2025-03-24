@@ -1,8 +1,24 @@
 menu "mrubyc-esp32 Configuration"
 
-    config USE_MRUBYC_DEBUG
-        bool "OUTPUT MRUBYC FUNCTIONs MESSAGES"
-        default n
-	
+  config USE_MRUBYC_DEBUG
+    bool "OUTPUT MRUBYC FUNCTIONs MESSAGES"
+    default n
+
+  choice
+    prompt "UART Number for STDIO"
+    default UART_NUM_0
+
+    config UART_NUM_0
+        bool "UART0"
+    config UART_NUM_2
+        bool "UART2"
+  endchoice
+
+  config UART_NUM
+    int
+    default 0 if UART_NUM_0
+    default 2 if UART_NUM_2
+
+
 endmenu
 

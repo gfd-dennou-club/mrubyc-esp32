@@ -5,7 +5,6 @@
 #include "esp_spiffs.h"
 #include "esp_vfs_dev.h"
 #include "driver/uart.h"
-#include "esp_spiffs.h"
 #include "mrubyc.h"
 
 //*********************************************
@@ -35,6 +34,9 @@ static const char *TAG = "mrubyc-esp32";
 #define RD_BUF_SIZE (BUF_SIZE)
 //static QueueHandle_t uart0_queue;
 static uint8_t memory_pool[MEMORY_SIZE];
+
+//UART Number
+const uart_port_t uart_num = CONFIG_UART_NUM;  // make menuconfig 
 
 /*!
 * @brief SPIFFS でバイナリデータを読み込み
@@ -168,8 +170,8 @@ uint8_t init_spiffs(){
  */
 uint8_t clear_uart_buffer(){
   //バッファークリア
-  ESP_ERROR_CHECK( uart_flush( UART_NUM_0 ) );
-  ESP_ERROR_CHECK( uart_flush_input( UART_NUM_0 ) );
+  ESP_ERROR_CHECK( uart_flush( uart_num ) );
+  ESP_ERROR_CHECK( uart_flush_input( uart_num ) );
   return 1;  
 }
 
@@ -185,10 +187,29 @@ uint8_t init_uart(){
     .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
     .source_clk = UART_SCLK_APB,
   };
-  ESP_ERROR_CHECK( uart_param_config(UART_NUM_0, &uart_config) );
-  //  uart_driver_install(UART_NUM_0, BUF_SIZE * 2, BUF_SIZE * 2, 20, &uart0_queue, 0);
-  ESP_ERROR_CHECK( uart_driver_install(UART_NUM_0, BUF_SIZE * 2, 0, 0, NULL, 0) );
 
+  // UARTパラメータの設定
+  ESP_ERROR_CHECK( uart_param_config(uart_num, &uart_config) );
+  
+  // UART pin 設定
+  if (uart_num == 2){
+    ESP_ERROR_CHECK( uart_set_pin(uart_num, 17, 16, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE) );
+  }
+
+  // UARTドライバのインストール
+  ESP_ERROR_CHECK( uart_driver_install(uart_num, BUF_SIZE * 2, 0, 0, NULL, 0) );
+  //ESP_ERROR_CHECK( uart_driver_install(uart_num, BUF_SIZE * 2, BUF_SIZE * 2, 0, NULL, 0) );
+  
+  if (uart_num == 2){  
+    // 標準入出力をリダイレクト
+    FILE* uart_output = fopen("/dev/uart/2", "w");
+    if (uart_output != NULL) {
+      setvbuf(uart_output, NULL, _IONBF, 0);
+      stdout = uart_output;
+      stderr = uart_output;
+    }
+  }
+  
   clear_uart_buffer(); //clear
   return 1;
 }  
@@ -408,24 +429,20 @@ void app_main(void) {
 
   // UART0 初期化
   init_uart();
-  
+
   //************************************
   // mrbcwrite モード開始
   //************************************
-  ESP_LOGI(TAG, "Please push Enter key to mrbwite mode");  
-  // //検証中
-  clear_uart_buffer();
-  vTaskDelay(100 / portTICK_PERIOD_MS);
+  printf("mrubyc-esp32: Please push Enter key x 2 to mrbwite mode\n\n");
   while (wait < 2) {
     //バイト数の取得
-    int len = uart_read_bytes(UART_NUM_0, data, BUF_SIZE, 1000 / portTICK_PERIOD_MS);
+    int len = uart_read_bytes(uart_num, data, BUF_SIZE, 1000 / portTICK_PERIOD_MS);
     
     //取得したバイト数が正か否かで場合分け
     if (len > 0) {
-      
       //表示
-      //ESP_LOGI(TAG, "Read %d bytes", len);
-      //ESP_LOG_BUFFER_HEXDUMP(TAG, data, len, ESP_LOG_INFO);
+      ESP_LOGI(TAG, "Read %d bytes", len);
+      ESP_LOG_BUFFER_HEXDUMP(TAG, data, len, ESP_LOG_INFO);
       
       wait = 0;  //waiting の変数のクリア
       
@@ -434,7 +451,7 @@ void app_main(void) {
 	      buffer[i] = data[i];
       }
       buffer[len] = '\0'; //末尾に終了記号
-
+      
       if (flag_cmd_mode == 0){
         //コマンドモードに入っていない状態で Enter (CR+LF) が打鍵された場合は
         //コマンドモードに入るためのフラグを立てる
@@ -469,8 +486,8 @@ void app_main(void) {
         }else
           write_time +=1;
     }
-  clear_uart_buffer();
-  vTaskDelay(100 / portTICK_PERIOD_MS);
+    clear_uart_buffer();
+    vTaskDelay(100 / portTICK_PERIOD_MS);
   }
   //書き込みモード終了
   ESP_LOGI(TAG, "End mrbwrite mode");
@@ -489,8 +506,10 @@ void app_main(void) {
   mrbc_esp32_adc_gem_init(0);
   ESP_LOGI(TAG, "start I2C (C)\n");
   mrbc_esp32_i2c_gem_init(0);
-  ESP_LOGI(TAG, "start UART (C)\n");
-  mrbc_esp32_uart_gem_init(0);
+  if (uart_num < 2){
+    ESP_LOGI(TAG, "start UART (C)\n");
+    mrbc_esp32_uart_gem_init(0);
+  }
   ESP_LOGI(TAG, "start WiFi (C) \n");
   mrbc_esp32_wifi_gem_init(0);
   mrbc_esp32_sntp_gem_init(0);
