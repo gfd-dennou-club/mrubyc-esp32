@@ -166,7 +166,10 @@ mrbc_esp32_httpclient_get(mrb_vm* vm, mrb_value* v, int argc)
 
   esp_http_client_cleanup(client);
 
-  mrbc_value ret = mrbc_string_new(vm, local_response_buffer, MAX_HTTP_OUTPUT_BUFFER + 1);
+  //戻り値の生成
+  size_t length = strlen(local_response_buffer);
+  local_response_buffer[length + 1] = '\0'; // 終端文字を追加
+  mrbc_value ret = mrbc_string_new(vm, local_response_buffer, length + 1);
   SET_RETURN( ret );
 }
 
@@ -227,9 +230,21 @@ mrbc_esp32_httpclient_post(mrb_vm* vm, mrb_value* v, int argc)
   }
 
   esp_http_client_cleanup(client);
-  
-  mrbc_value ret = mrbc_string_new(vm, local_response_buffer, MAX_HTTP_OUTPUT_BUFFER + 1);
+
+  //戻り値の生成
+  size_t length = strlen(local_response_buffer);
+  local_response_buffer[length + 1] = '\0'; // 終端文字を追加
+  mrbc_value ret = mrbc_string_new(vm, local_response_buffer, length + 1);
   SET_RETURN( ret );
+  /*
+  size_t length = strlen(local_response_buffer);
+  char returned_string[length + 1];
+  strncpy(returned_string, local_response_buffer, length);
+  returned_string[length] = '\0'; // 終端文字を追加
+
+  mrbc_value ret = mrbc_string_new(vm, returned_string, length + 1);
+  SET_RETURN( ret );
+  */
 }
 
 
