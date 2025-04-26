@@ -38,7 +38,32 @@ static uint8_t memory_pool[MEMORY_SIZE];
 //UART Number
 const uart_port_t uart_num = CONFIG_UART_NUM;  // make menuconfig 
 
-// SPIFFS でバイナリデータを書き込み
+/*!
+* @brief SPIFFS でバイナリデータを読み込み
+* @param *filename ファイルのパス
+*/
+size_t get_file_size(const char *filename)
+{
+  FILE *fp= fopen(filename, "rb");
+  if( fp == NULL ) {
+    fprintf(stderr, "File not found (%s)\n", filename);
+    return 0;
+  }
+  
+  /* // get filesize */
+  fseek(fp, 0, SEEK_END);
+  size_t size = ftell(fp);
+  fseek(fp, 0, SEEK_SET);
+  fclose(fp);
+  
+  return size;
+}
+/*!
+* @brief SPIFFS でバイナリデータを書き込み
+* @param *filename ファイルのパス
+* @param len バイナリのサイズ
+* @param *data 書き込むバイナリ
+*/
 uint8_t * save_spiffs_file(const char *filename, int len, uint8_t *data)
 {
   //  FILE* fp = fopen(filename, "ab");
@@ -54,8 +79,12 @@ uint8_t * save_spiffs_file(const char *filename, int len, uint8_t *data)
   return NULL;
 }
 
-// SPIFFS でバイナリデータを読み込み
-uint8_t * load_spiffs_file(const char *filename, uint8_t flag)
+
+/*!
+* @brief SPIFFS でバイナリデータを読み込み
+* @param *filename ファイルのパス
+*/
+uint8_t * load_spiffs_file(const char *filename)
 {
   FILE *fp = fopen(filename, "rb");
   if( fp == NULL ) {
@@ -63,11 +92,7 @@ uint8_t * load_spiffs_file(const char *filename, uint8_t flag)
     return NULL;
   }
   
-  /* // get filesize */
-  fseek(fp, 0, SEEK_END);
-  size_t size = ftell(fp);
-  fseek(fp, 0, SEEK_SET);
-
+  size_t size = get_file_size(filename);
   // allocate memory
   uint8_t *p = malloc(size);
   if( p != NULL ) {
@@ -77,11 +102,37 @@ uint8_t * load_spiffs_file(const char *filename, uint8_t flag)
   }
   fclose(fp);
 
-  if (flag == 1){
-    ESP_LOG_BUFFER_HEXDUMP(TAG, p, size, ESP_LOG_INFO);  //バイトコード出力
-  }
-  
   return p;
+}
+
+
+/**
+ * 与えられたバイナリデータのCRC8ハッシュ値を計算する
+ * - CRCレジスタ初期値: `0xff`
+ * - 生成多項式: `x^8 + x^5 + x^4 + 1`(`0x31`)
+ * - RefIn: なし(`false`)
+ * - RefOut: なし(`false`)
+ * - XorOut: なし(`0x00`)
+ *
+ * @see https://www.sunshine2k.de/articles/coding/crc/understanding_crc.html
+ * @brief filenameに書き込まれているバイトコードのハッシュ値を計算する
+ * @param *filename 確認したいファイルのパス
+ */
+uint8_t calculateCrc8(const uint8_t *data,const size_t size) {
+uint8_t crc = 0xFF;
+const uint8_t poly = 0x31;
+for (size_t i = 0; i < size; i++) {
+    crc ^= data[i];
+
+    for (int j = 8; j > 0; --j) {
+        if (crc & 0x80) {
+            crc = (crc << 1) ^ poly;
+        } else {
+            crc <<= 1;
+        }
+    }
+}
+return crc;
 }
 
 //SPIFFS 初期化
@@ -217,13 +268,16 @@ void mrbwrite_cmd_clear(struct stat *st) {
 * @brief ヘルプ(コマンド一覧)の表示
 */
 void mrbwrite_cmd_help() {
+  printf("+OK \n\n");
+  printf("Commands:\n");
   printf("  version  \n");
   printf("  write    \n");
   printf("  showprog \n");
   printf("  clear    \n");
   printf("  reset    \n");
   printf("  execute  \n");
-  printf("+OK \n\n");
+  printf("  verify  \n");
+  printf("+DONE \n\n");
 }
 
 /*!
@@ -240,13 +294,35 @@ void mrbwrite_cmd_showprog(struct stat *st) {
   //読み込み
   if (stat("/spiffs/master.mrbc", st) == 0) {
     printf("**** master.mrbc **** \n\n");
-    load_spiffs_file("/spiffs/master.mrbc", 1);
-  }
+    uint8_t *data = load_spiffs_file("/spiffs/master.mrbc");
+    if(data!=NULL)
+    {      
+      size_t size = get_file_size("/spiffs/master.mrbc");
+      ESP_LOG_BUFFER_HEXDUMP(TAG, data, size, ESP_LOG_ERROR);  //バイトコード出力
+    }
   if (stat("/spiffs/slave.mrbc", st) == 0) {
     printf("**** slave.mrbc **** \n\n");
-    load_spiffs_file("/spiffs/slave.mrbc", 1);
+    uint8_t *data = load_spiffs_file("/spiffs/slave.mrbc");
+    if(data!=NULL)
+    {      
+      size_t size = get_file_size("/spiffs/slave.mrbc");
+      ESP_LOG_BUFFER_HEXDUMP(TAG, data, size, ESP_LOG_ERROR);  //バイトコード出力
+    }
   }
   printf("+DONE\n\n");
+  }
+}
+
+/*!
+* @brief 最後に書き込まれたバイトコードのCRC8ハッシュ値を計算して返す
+*/
+void mrbwrite_cmd_verify()
+{
+  //Memo:複数ファイルの書き込みを行うようにした場合はファイル名の取得して行う
+  uint8_t *data = load_spiffs_file("/spiffs/master.mrbc");
+  size_t size = get_file_size("/spiffs/master.mrbc");
+  uint8_t hash = calculateCrc8(data,size);
+  printf("+OK %2x\n",hash);
 }
 
 /*!
@@ -258,8 +334,10 @@ int mrbwrite_cmd_mode(
   uint8_t *flag_write_mode,
   const char buffer[BUF_SIZE],
   int len,
-  uint8_t *data
+  uint8_t *data,
+  size_t *totallen
 ) {
+  char copybuffer[BUF_SIZE];
   //コマンドモードに入っている場合
   if (strncmp(buffer, "reset", 5) == 0) {
     //reset
@@ -270,6 +348,21 @@ int mrbwrite_cmd_mode(
     return 1;
   } else if (strncmp(buffer, "write", 5) == 0) {
     //write
+    //write [バイト数]という風にコマンドが来るため後ろのバイト数を取得する
+    char * ret;
+    strcpy(copybuffer, buffer);
+    strtok(copybuffer," ");
+    ret = strtok(NULL, " ");
+    //char型から変換
+    for(int i = strlen(ret)-1,base = 1; 0 <= i;i--)
+    {
+      int a = ret[i] - '0';
+      if( 0<=a && a<=9)
+      {
+        *totallen += a * base;
+        base*=10;
+      }
+    }
     mrbwrite_cmd_write(st, flag_write_mode, ifile);
   } else if (strncmp(buffer, "clear", 5) == 0) {
     //clear
@@ -283,21 +376,28 @@ int mrbwrite_cmd_mode(
   } else if (strncmp(buffer, "showprog", 8) == 0) {
     //showprog
     mrbwrite_cmd_showprog(st);
-  } else if (*flag_write_mode == 1) {
+  }else if(strncmp(buffer, "verify", 6) == 0){
+    //verify
+    mrbwrite_cmd_verify();
+  }else if (*flag_write_mode == 1) {
     // 書き込み
-    
     //ファイル書き込み
     if (*ifile == 1) {
       save_spiffs_file("/spiffs/master.mrbc", len, data);
     } else if (*ifile == 2){
       save_spiffs_file("/spiffs/slave.mrbc", len, data);
     }
-
+    *totallen -= len;
     //書き込みを継続するか否か．バッファーサイズと読み込みバイト数で判断．
-    if (len < BUF_SIZE ) { 
-      printf("+DONE\n\n");
-      flag_write_mode = 0; //書き込みモード終了
+     if (*totallen == 0 ){ 
+      printf("+DONE \n\n");
+      *flag_write_mode = 0; //書き込みモード終了
     }
+  }else{
+    if(buffer[0] == 0x0d && buffer[1] == 0x0a)
+      printf("+OK mruby/c \n\n");
+    else
+      printf("-ERR Illegal command.\n\n");
   }
   return 0;
 }
@@ -322,7 +422,8 @@ void app_main(void) {
   uint8_t ifile = 0;
   char buffer[BUF_SIZE];
   struct stat st;
-
+  size_t totallen = 0;
+  int write_time = 0;
   // SPIFFS 初期化
   init_spiffs();
 
@@ -332,8 +433,7 @@ void app_main(void) {
   //************************************
   // mrbcwrite モード開始
   //************************************
-  printf("mrubyc-esp32: Please push Enter key x 2 to mrbwite mode\n\n");
-  
+  printf("Kani-Board, Please push Enter key to mrbwite mode\n\n");
   while (wait < 2) {
     //バイト数の取得
     int len = uart_read_bytes(uart_num, data, BUF_SIZE, 1000 / portTICK_PERIOD_MS);
@@ -353,36 +453,44 @@ void app_main(void) {
       buffer[len] = '\0'; //末尾に終了記号
       
       if (flag_cmd_mode == 0){
-	//コマンドモードに入っていない状態で Enter (CR+LF) が打鍵された場合は
-	//コマンドモードに入るためのフラグを立てる
-	if ( data[0] == 0x0d && data[1] == 0x0a ) {
-	  //ESP_LOGI(TAG, "Entering Command Mode ...");
-	  printf("+OK mruby/c \n\n");
-	  flag_cmd_mode = 1;
-	}
+        //コマンドモードに入っていない状態で Enter (CR+LF) が打鍵された場合は
+        //コマンドモードに入るためのフラグを立てる
+        if ( data[0] == 0x0d && data[1] == 0x0a ) {
+          //ESP_LOGI(TAG, "Entering Command Mode ...");
+          printf("+OK mruby/c \n\n");
+          flag_cmd_mode = 1;
+        }
       } else {
-	//コマンドモードに入っている場合
+	      //コマンドモードに入っている場合
         int cmd_state = mrbwrite_cmd_mode(
           &st,
           &ifile,
           &flag_write_mode,
           buffer,
           len,
-          data
+          data,
+          &totallen
         );
         if (cmd_state == 1) break;
       }
     } else {
-      //コマンドモードでなければカウントアップ
-      if (flag_cmd_mode == 0){
-	wait += 1; 
-      }
+        //コマンドモードでなければカウントアップ
+        if ( flag_cmd_mode == 0) wait += 1; 
+        //書き込みモードでバイトコード受信中の時にタイムアウトさせる
+        if (flag_write_mode == 1 && totallen != 0 && write_time <= 2)
+        {
+          ESP_LOGE(TAG,"-ERR Not the specified number of bytes.\n");
+          totallen = 0;
+          flag_write_mode = 0;
+          write_time = 0;
+        }else
+          write_time +=1;
     }
     clear_uart_buffer();
     vTaskDelay(100 / portTICK_PERIOD_MS);
   }
   //書き込みモード終了
-  ESP_LOGI(TAG, "End mrbwrite mode");
+  printf("Kani-Board, End mrbwrite mode");
   printf("Kani-Board, mruby/c v3.3.1 start\n");
   
   //***************************************
@@ -424,11 +532,11 @@ void app_main(void) {
   // tasks
   ESP_LOGI(TAG, "SPIFFS mode\n");
 
-  uint8_t *master = load_spiffs_file("/spiffs/master.mrbc", 0);
+  uint8_t *master = load_spiffs_file("/spiffs/master.mrbc");
   mrbc_create_task(master, 0);
 
   if (stat("/spiffs/slave.mrbc", &st) == 0) {
-    uint8_t *slave = load_spiffs_file("/spiffs/slave.mrbc", 0);
+    uint8_t *slave = load_spiffs_file("/spiffs/slave.mrbc");
     mrbc_create_task( slave, 0 );
   }
 
