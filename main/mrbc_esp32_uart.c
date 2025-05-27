@@ -141,40 +141,13 @@ static void mrbc_esp32_uart_read(mrb_vm* vm, mrb_value* v, int argc)
   SET_RETURN(ret);
   
   /* 確認 */  
+  /*
   if (len > 0) {
     ESP_LOGD(TAG, "Received %u bytes:", len);
 
     printf("[ ");
     for (int i = 0; i < len; i++) {
       printf("0x%.2X ", (uint8_t)buf[i]);
-    }
-    printf("] \n");
-  } else {
-    ESP_LOGE(TAG, "Read data critical failure.");
-  }
-	
-  /* 配列で値を返す場合
-     
-  uint8_t* data = (uint8_t*) malloc(BUF_SIZE);
-  int len = uart_read_bytes( uart_num, data, read_bytes, 100 / portTICK_PERIOD_MS );
-  if (len != read_bytes){
-    ESP_LOGE(TAG, "ERROR: Received %u bytes", len);
-  }  
-  mrbc_value result = mrbc_array_new(vm, len);
-  
-  // Array インスタンス result に Fixnum インスタンスとして read データをセット
-  for ( int x = 0; x < len; ++x ) {
-    mrbc_array_set(&result, x, &mrbc_fixnum_value(data[x]));
-  }
-  
-  // Array インスタンス result を本メソッドの返り値としてセット
-  SET_RETURN(result);
-    
-  if (len > 0) {
-    ESP_LOGI(TAG, "Received %u bytes:", len);
-    printf("[ ");
-    for (int i = 0; i < len; i++) {
-      printf("0x%.2X ", (uint8_t)data[i]);
     }
     printf("] \n");
   } else {
@@ -259,11 +232,12 @@ static void mrbc_esp32_uart_write(mrb_vm* vm, mrb_value* v, int argc)
   }
 
   // 確認
-  printf("In C: [ ");
+  /*  printf("In C: [ ");
   for (int i = 0; i < bufsiz; i++) {
     printf("0x%.2X ", buf[i]);
   }
   printf("], len:%d \n", bufsiz);
+  */
   
   // 書き込み
   if ( uart_write_bytes( uart_num, (const char *) buf, bufsiz ) != bufsiz ){
@@ -323,6 +297,7 @@ void mrbc_esp32_uart_gem_init(struct VM* vm)
   mrbc_define_method(vm, uart, "read",            mrbc_esp32_uart_read);
   mrbc_define_method(vm, uart, "gets",            mrbc_esp32_uart_gets);
   mrbc_define_method(vm, uart, "write",           mrbc_esp32_uart_write);
+  mrbc_define_method(vm, uart, "puts",            mrbc_esp32_uart_write);
   mrbc_define_method(vm, uart, "clear_rx_buffer", mrbc_esp32_uart_flush);
   mrbc_define_method(vm, uart, "clear_tx_buffer", mrbc_esp32_uart_flush_input);
   mrbc_define_method(vm, uart, "clear_tx_buffer", mrbc_esp32_uart_flush_input);
