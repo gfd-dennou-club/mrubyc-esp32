@@ -165,20 +165,12 @@ uint8_t init_spiffs(){
   return 1;
 }
 
-/*!
- * UART バッファクリア
- */
-uint8_t clear_uart_buffer(){
-  //バッファークリア
-  ESP_ERROR_CHECK( uart_flush( uart_num ) );
-  ESP_ERROR_CHECK( uart_flush_input( uart_num ) );
-  return 1;  
-}
-
 /*
  * UART 初期化
  */
 uint8_t init_uart(){
+  ESP_ERROR_CHECK( uart_driver_delete(uart_num) ); // 既存ドライバの削除
+  
   uart_config_t uart_config = {
     .baud_rate = 115200,
     .data_bits = UART_DATA_8_BITS,
@@ -188,6 +180,10 @@ uint8_t init_uart(){
     .source_clk = UART_SCLK_APB,
   };
 
+  // UARTドライバのインストール
+  ESP_ERROR_CHECK( uart_driver_install(uart_num, BUF_SIZE * 2, 0, 0, NULL, 0) );
+  //ESP_ERROR_CHECK( uart_driver_install(uart_num, BUF_SIZE * 2, BUF_SIZE * 2, 0, NULL, 0) );
+
   // UARTパラメータの設定
   ESP_ERROR_CHECK( uart_param_config(uart_num, &uart_config) );
   
@@ -195,10 +191,6 @@ uint8_t init_uart(){
   if (uart_num == 2){
     ESP_ERROR_CHECK( uart_set_pin(uart_num, 17, 16, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE) );
   }
-
-  // UARTドライバのインストール
-  ESP_ERROR_CHECK( uart_driver_install(uart_num, BUF_SIZE * 2, 0, 0, NULL, 0) );
-  //ESP_ERROR_CHECK( uart_driver_install(uart_num, BUF_SIZE * 2, BUF_SIZE * 2, 0, NULL, 0) );
   
   if (uart_num == 2){  
     // 標準入出力をリダイレクト
@@ -210,7 +202,7 @@ uint8_t init_uart(){
     }
   }
   
-  clear_uart_buffer(); //clear
+  ESP_ERROR_CHECK( uart_flush( uart_num ) ); //clear
   return 1;
 }  
 
@@ -410,6 +402,9 @@ int mrbwrite_cmd_mode(
 
 void app_main(void) {
 
+  //setvbuf(stdout, NULL, _IONBF, 0); // disable buffering
+  vTaskDelay(500 / portTICK_PERIOD_MS); // 若干待ってから送信開始
+
   //************************************
   // 初期化
   //************************************
@@ -424,12 +419,15 @@ void app_main(void) {
   struct stat st;
   size_t totallen = 0;
   int write_time = 0;
+
   // SPIFFS 初期化
   init_spiffs();
-
+  vTaskDelay(100 / portTICK_PERIOD_MS);
+  
   // UART0 初期化
   init_uart();
-
+  vTaskDelay(100 / portTICK_PERIOD_MS);
+  
   //************************************
   // mrbcwrite モード開始
   //************************************
@@ -486,11 +484,11 @@ void app_main(void) {
         }else
           write_time +=1;
     }
-    clear_uart_buffer();
+    ESP_ERROR_CHECK( uart_flush( uart_num ) ); //clear
     vTaskDelay(100 / portTICK_PERIOD_MS);
   }
   //書き込みモード終了
-  printf("Kani-Board, End mrbwrite mode");
+  printf("Kani-Board, End mrbwrite mode\n");
   printf("Kani-Board, mruby/c v3.3.1 start\n");
   
   //***************************************

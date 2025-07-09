@@ -1,7 +1,12 @@
 # coding: utf-8
 #概要 summary
 
+loop do
+  puts "Hello"
+  sleep 1
+end
 
+=begin
 lux36 = ADC.new(36)
 lux34 = ADC.new(34)
 lux35 = ADC.new(35)
@@ -38,7 +43,7 @@ loop do
   servo14.pulse_width_us( 2000 )
   sleep 3
 end
-
+=end
 =begin
 led = [
   GPIO.new( 13, GPIO::OUT ), 
