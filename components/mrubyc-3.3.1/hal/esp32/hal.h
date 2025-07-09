@@ -85,10 +85,8 @@ void hal_abort(const char *s);
 */
 inline static int hal_write(int fd, const void *buf, int nbytes)
 {
-  //  return write(1, buf, nbytes);
-  //ESP_LOGI("HAL", "%.*s", nbytes, (const char *)buf);
-  //return nbytes;
-  printf("%.*s", nbytes, (const char *)buf);
+  //return write(1, buf, nbytes);
+  printf("%.*s\r\n", nbytes, (const char *)buf);
   return nbytes;
 }
 
