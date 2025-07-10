@@ -117,6 +117,34 @@ void hal_disable_irq(void)
 
 //================================================================
 /*!@brief
+  Write
+
+  @param  fd    dummy, but 1.
+  @param  buf   pointer of buffer.
+  @param  nbytes        output byte length.
+
+  Memo: Steps to use uart_putc_raw() with hal_write.
+  1. Write in main function↓
+    uart_init(uart0,115200);
+    gpio_set_function(0,GPIO_FUNC_UART);
+    gpio_set_function(1,GPIO_FUNC_UART);
+
+  2. Comment out the putchar for hal_write.
+  3. Uncomment uart_putc_raw for hal_write.
+*/
+int hal_write(int fd, const void *buf, int nbytes)
+{
+  int i = nbytes;
+  const uint8_t *p = buf;
+
+  while( --i >= 0 ) {
+    putchar( *p++ );
+  }
+
+  return nbytes;
+}
+
+/*!@brief
   abort program
 
   @param s	additional message.
@@ -124,7 +152,7 @@ void hal_disable_irq(void)
 void hal_abort(const char *s)
 {
   if( s ) {
-    write(1, s, strlen(s));
+    hal_write(1, s, strlen(s));
   }
 
   abort();

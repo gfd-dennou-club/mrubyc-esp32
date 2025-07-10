@@ -71,10 +71,10 @@ void hal_disable_irq(void);
 #endif
 
 void hal_abort(const char *s);
-
+int hal_write(int fd, const void *buf, int nbytes);
 
 /***** Inline functions *****************************************************/
-
+  
 //================================================================
 /*!@brief
   Write
@@ -83,12 +83,14 @@ void hal_abort(const char *s);
   @param  buf   pointer of buffer.
   @param  nbytes        output byte length.
 */
+/*  
 inline static int hal_write(int fd, const void *buf, int nbytes)
 {
   //return write(1, buf, nbytes);
   printf("%.*s\r\n", nbytes, (const char *)buf);
   return nbytes;
 }
+*/
 
 //================================================================
 /*!@brief
