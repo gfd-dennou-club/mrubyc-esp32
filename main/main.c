@@ -290,7 +290,7 @@ void mrbwrite_cmd_showprog(struct stat *st) {
     if(data!=NULL)
     {      
       size_t size = get_file_size("/spiffs/master.mrbc");
-      ESP_LOG_BUFFER_HEXDUMP(TAG, data, size, ESP_LOG_ERROR);  //バイトコード出力
+//      ESP_LOG_BUFFER_HEXDUMP(TAG, data, size, ESP_LOG_ERROR);  //バイトコード出力
     }
   if (stat("/spiffs/slave.mrbc", st) == 0) {
     printf("**** slave.mrbc **** \n\n");
@@ -298,7 +298,7 @@ void mrbwrite_cmd_showprog(struct stat *st) {
     if(data!=NULL)
     {      
       size_t size = get_file_size("/spiffs/slave.mrbc");
-      ESP_LOG_BUFFER_HEXDUMP(TAG, data, size, ESP_LOG_ERROR);  //バイトコード出力
+//      ESP_LOG_BUFFER_HEXDUMP(TAG, data, size, ESP_LOG_ERROR);  //バイトコード出力
     }
   }
   printf("+DONE\n\n");
@@ -372,7 +372,6 @@ int mrbwrite_cmd_mode(
     //verify
     mrbwrite_cmd_verify();
   }else if (*flag_write_mode == 1) {
-    // 書き込み
     //ファイル書き込み
     if (*ifile == 1) {
       save_spiffs_file("/spiffs/master.mrbc", len, data);
@@ -439,8 +438,8 @@ void app_main(void) {
     //取得したバイト数が正か否かで場合分け
     if (len > 0) {
       //表示
-      ESP_LOGI(TAG, "Read %d bytes", len);
-      ESP_LOG_BUFFER_HEXDUMP(TAG, data, len, ESP_LOG_INFO);
+//      ESP_LOGI(TAG, "Read %d bytes", len);
+//      ESP_LOG_BUFFER_HEXDUMP(TAG, data, len, ESP_LOG_INFO);
       
       wait = 0;  //waiting の変数のクリア
       
