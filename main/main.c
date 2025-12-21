@@ -191,7 +191,7 @@ uint8_t init_uart(){
   if (uart_num == 2){
     ESP_ERROR_CHECK( uart_set_pin(uart_num, 17, 16, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE) );
   }
-  
+
   if (uart_num == 2){  
     // 標準入出力をリダイレクト
     FILE* uart_output = fopen("/dev/uart/2", "w");
@@ -202,7 +202,6 @@ uint8_t init_uart(){
     }
   }
   
-  ESP_ERROR_CHECK( uart_flush( uart_num ) ); //clear
   return 1;
 }  
 
@@ -246,6 +245,7 @@ void mrbwrite_cmd_write(struct stat *st, uint8_t *flag_write_mode, uint8_t *ifil
 * @brief 書き込まれたバイトコードの消去
 */
 void mrbwrite_cmd_clear(struct stat *st) {
+  /*
   //ファイルを消す
   if (stat("/spiffs/master.mrbc", st) == 0) {
     unlink("/spiffs/master.mrbc");
@@ -254,6 +254,17 @@ void mrbwrite_cmd_clear(struct stat *st) {
     unlink("/spiffs/slave.mrbc");
   }
   printf("+OK \n\n");
+  */
+  
+  // format spiffs region
+  esp_err_t ret = esp_spiffs_format(NULL);
+  vTaskDelay(pdMS_TO_TICKS(50)); //wait
+  
+  if (ret == ESP_OK) {
+    printf("+OK\n\n");
+  } else {
+    printf("-ERR: Format failed (0x%x)\n\n", ret);
+  }
 }
 
 /*!
@@ -290,7 +301,7 @@ void mrbwrite_cmd_showprog(struct stat *st) {
     if(data!=NULL)
     {      
       size_t size = get_file_size("/spiffs/master.mrbc");
-//      ESP_LOG_BUFFER_HEXDUMP(TAG, data, size, ESP_LOG_ERROR);  //バイトコード出力
+      ESP_LOG_BUFFER_HEXDUMP(TAG, data, size, ESP_LOG_ERROR);  //バイトコード出力
     }
   if (stat("/spiffs/slave.mrbc", st) == 0) {
     printf("**** slave.mrbc **** \n\n");
@@ -298,7 +309,7 @@ void mrbwrite_cmd_showprog(struct stat *st) {
     if(data!=NULL)
     {      
       size_t size = get_file_size("/spiffs/slave.mrbc");
-//      ESP_LOG_BUFFER_HEXDUMP(TAG, data, size, ESP_LOG_ERROR);  //バイトコード出力
+      ESP_LOG_BUFFER_HEXDUMP(TAG, data, size, ESP_LOG_ERROR);  //バイトコード出力
     }
   }
   printf("+DONE\n\n");
@@ -431,34 +442,48 @@ void app_main(void) {
   // mrbcwrite モード開始
   //************************************
   printf("Kani-Board, Please push Enter key to mrbwite mode\n\n");
+
+  // clear buffer
+  uart_wait_tx_done(uart_num, pdMS_TO_TICKS(100));
+  uart_flush_input(uart_num);
+
   while (wait < 2) {
+    
     //バイト数の取得
     int len = uart_read_bytes(uart_num, data, BUF_SIZE, 1000 / portTICK_PERIOD_MS);
     
     //取得したバイト数が正か否かで場合分け
     if (len > 0) {
-      //表示
-//      ESP_LOGI(TAG, "Read %d bytes", len);
-//      ESP_LOG_BUFFER_HEXDUMP(TAG, data, len, ESP_LOG_INFO);
-      
       wait = 0;  //waiting の変数のクリア
+
+      int start_pos = 0;
       
-      //文字型に変換
-      for (int i = 0; i < len; i++){
-	      buffer[i] = data[i];
+      // 先頭にある改行(0x0d, 0x0a)をスキップ
+      while (start_pos < len && (data[start_pos] == 0x0d || data[start_pos] == 0x0a)) {
+	start_pos++;
+      }
+
+      //文字型に変換 
+      int idx = 0;
+      for (int i = start_pos; i < len; i++){
+          buffer[idx++] = data[i];
       }
       buffer[len] = '\0'; //末尾に終了記号
       
       if (flag_cmd_mode == 0){
-        //コマンドモードに入っていない状態で Enter (CR+LF) が打鍵された場合は
-        //コマンドモードに入るためのフラグを立てる
-        if ( data[0] == 0x0d && data[1] == 0x0a ) {
-          //ESP_LOGI(TAG, "Entering Command Mode ...");
+        // Enter (CR+LF) が打鍵された場合はフラグを立てる
+        if ( data[0] == 0x0d && data[1] == 0x0a ) {         
           printf("+OK mruby/c \n\n");
+
+	  // clear buffer
+          uart_wait_tx_done(uart_num, pdMS_TO_TICKS(100));
+          uart_flush_input(uart_num);
+	  
           flag_cmd_mode = 1;
         }
+
       } else {
-	      //コマンドモードに入っている場合
+	//コマンドモードに入っている場合
         int cmd_state = mrbwrite_cmd_mode(
           &st,
           &ifile,
@@ -468,23 +493,31 @@ void app_main(void) {
           data,
           &totallen
         );
+
+	// clear buffer
+	uart_wait_tx_done(uart_num, pdMS_TO_TICKS(100));
+	uart_flush_input(uart_num);
+	
         if (cmd_state == 1) break;
       }
+      
     } else {
-        //コマンドモードでなければカウントアップ
-        if ( flag_cmd_mode == 0) wait += 1; 
-        //書き込みモードでバイトコード受信中の時にタイムアウトさせる
-        if (flag_write_mode == 1 && totallen != 0 && write_time <= 2)
-        {
-          ESP_LOGE(TAG,"-ERR Not the specified number of bytes.\n");
-          totallen = 0;
-          flag_write_mode = 0;
-          write_time = 0;
-        }else
-          write_time +=1;
+
+      //コマンドモードでなければカウントアップ
+      if ( flag_cmd_mode == 0) wait += 1; 
+
+      //書き込みモードでバイトコード受信中の時にタイムアウトさせる
+      if (flag_write_mode == 1 && totallen != 0 && write_time <= 2){
+	ESP_LOGE(TAG,"-ERR Not the specified number of bytes.\n");
+	totallen = 0;
+	flag_write_mode = 0;
+	write_time = 0;
+      }else{
+	write_time +=1;
+      }
     }
-    ESP_ERROR_CHECK( uart_flush( uart_num ) ); //clear
-    vTaskDelay(100 / portTICK_PERIOD_MS);
+
+    vTaskDelay(10 / portTICK_PERIOD_MS);
   }
   //書き込みモード終了
   printf("Kani-Board, End mrbwrite mode\n");
