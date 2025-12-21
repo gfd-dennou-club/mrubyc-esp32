@@ -48,11 +48,30 @@ mrbc_esp32_file_close(mrb_vm* vm, mrb_value* v, int argc) {
 static void
 mrbc_esp32_file_puts(mrb_vm * vm, mrb_value * v, int argc) {
   FILE* fidfp = *((FILE **)(v[0].instance->data));
-  
+
+  /*  
   if(fputs((char *)GET_STRING_ARG(1), fidfp) == EOF)
     SET_FALSE_RETURN();
   else
     SET_TRUE_RETURN();
+  */
+
+  const char *str = (char *)GET_STRING_ARG(1);
+  
+  // 1. 文字列をファイルに書き込む
+  if(fputs(str, fidfp) == EOF) {
+    SET_FALSE_RETURN();
+    return; // 失敗したらここで終了
+  }
+
+  // 2. 改行文字 '\n' をファイルに書き込む
+  if(fputc('\n', fidfp) == EOF) {
+    // 改行の書き込みに失敗した場合も false を返す
+    SET_FALSE_RETURN();
+  } else {
+    // 文字列と改行の両方の書き込みに成功した場合のみ true を返す
+    SET_TRUE_RETURN();
+  }
 }
 
 static void

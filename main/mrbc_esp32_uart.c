@@ -222,6 +222,68 @@ static void mrbc_esp32_uart_write(mrb_vm* vm, mrb_value* v, int argc)
 {
   uint8_t *buf = 0;
   int bufsiz = 0;
+  uart_port_t uart_num = *((uart_port_t *)(v[0].instance->data));  
+
+  //第一引数は書き込みデータ
+  buf = make_output_buffer( vm, v, argc, 1, &bufsiz );
+  if (!buf){
+    SET_RETURN( mrbc_integer_value( bufsiz ) );
+    return;
+  }
+  
+  // --- 1. 末尾の改行文字を除去したサイズを計算 ---
+  int actual_data_len = bufsiz;
+  // 末尾の改行文字 (\r または \n) を削除したデータ長を計算
+  while (actual_data_len > 0) {
+    uint8_t last_char = buf[actual_data_len - 1];
+    if (last_char == '\r' || last_char == '\n') {
+      actual_data_len--; // 末尾1文字を削除とみなす
+    } else {
+      break; // 改行文字でなければ終了
+    }
+  }
+  
+  // --- 2. 新しい書き込みバッファを malloc で確保 ---
+  const int crlf_len = 2;
+  int final_bufsiz = actual_data_len + crlf_len;
+  
+  // 新しいバッファを確保
+  uint8_t *write_buf = (uint8_t *)malloc(final_bufsiz);
+  
+  if (write_buf == NULL) {
+    ESP_LOGE(TAG, "Failed to malloc write buffer.");
+    SET_RETURN( mrbc_integer_value( 0 ) );
+    return;
+  }
+  
+  // --- 3. 元のデータを新しいバッファにコピー ---
+  // 改行文字を除去した部分のみをコピー
+  if (actual_data_len > 0) {
+    memcpy(write_buf, buf, actual_data_len);
+  }
+  
+  // --- 4. 拡張された領域に "\r\n" を書き込む ---
+  write_buf[actual_data_len]     = '\r';
+  write_buf[actual_data_len + 1] = '\n';
+  
+  // --- 5. 書き込み処理 ---
+  if ( uart_write_bytes( uart_num, (const char *) write_buf, final_bufsiz ) != final_bufsiz ){
+    ESP_LOGE(TAG, "Send data critical failure.");
+  }
+  
+  // --- 6. 確保したバッファを解放 ---
+  // mallocで確保したので、ここで free() する
+  free(write_buf);
+  
+  // 戻り値は通常、書き込んだバイト数を返す
+  SET_RETURN( mrbc_integer_value( final_bufsiz ) );
+}
+ 
+/*
+static void mrbc_esp32_uart_write(mrb_vm* vm, mrb_value* v, int argc)
+{
+  uint8_t *buf = 0;
+  int bufsiz = 0;
 
   uart_port_t uart_num = *((uart_port_t *)(v[0].instance->data));  
 
@@ -231,28 +293,12 @@ static void mrbc_esp32_uart_write(mrb_vm* vm, mrb_value* v, int argc)
     SET_RETURN( mrbc_integer_value( bufsiz ) );
   }
 
-  // 確認
-  /*  printf("In C: [ ");
-  for (int i = 0; i < bufsiz; i++) {
-    printf("0x%.2X ", buf[i]);
-  }
-  printf("], len:%d \n", bufsiz);
-  */
-  
   // 書き込み
   if ( uart_write_bytes( uart_num, (const char *) buf, bufsiz ) != bufsiz ){
     ESP_LOGE(TAG, "Send data critical failure.");
   }
-
-  //  uint8_t *data = (uint8_t *)malloc(BUF_SIZE);
-  //  data = GET_STRING_ARG(1);
-  //  uint8_t length = strlen((const char *)data);
-    
-  //  if ( uart_write_bytes( uart_num, (const char *)data, strlen((const char *)data) ) != length){
-  //    ESP_LOGE(TAG, "Send data critical failure.");
-  //  }
 }
-
+*/
 
 /*! メソッド flush(uart_num)  本体:wrapper for uart_flush
 
