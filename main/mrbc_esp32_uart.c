@@ -300,18 +300,17 @@ static void mrbc_esp32_uart_write(mrb_vm* vm, mrb_value* v, int argc)
 }
 */
 
-/*! メソッド flush(uart_num)  本体:wrapper for uart_flush
+/*! 送信バッファのクリア
 
   @param uart_num UARTポート番号
 */
-static void mrbc_esp32_uart_flush(mrb_vm* vm, mrb_value* v, int argc)
+static void mrbc_esp32_uart_flush_output(mrb_vm* vm, mrb_value* v, int argc)
 {
   uart_port_t uart_num = *((uart_port_t *)(v[0].instance->data));  
-
-  uart_flush( uart_num );
+  uart_wait_tx_done(uart_num, pdMS_TO_TICKS(100));
 }
 
-/*! メソッド flush_input(uart_num)  本体:wrapper for uart_flush_input
+/*! 受信バッファのクリア
 
   @param uart_num UARTポート番号
 */
@@ -344,9 +343,8 @@ void mrbc_esp32_uart_gem_init(struct VM* vm)
   mrbc_define_method(vm, uart, "gets",            mrbc_esp32_uart_gets);
   mrbc_define_method(vm, uart, "write",           mrbc_esp32_uart_write);
   mrbc_define_method(vm, uart, "puts",            mrbc_esp32_uart_write);
-  mrbc_define_method(vm, uart, "clear_rx_buffer", mrbc_esp32_uart_flush);
-  mrbc_define_method(vm, uart, "clear_tx_buffer", mrbc_esp32_uart_flush_input);
-  mrbc_define_method(vm, uart, "clear_tx_buffer", mrbc_esp32_uart_flush_input);
+  mrbc_define_method(vm, uart, "clear_rx_buffer", mrbc_esp32_uart_flush_input);
+  mrbc_define_method(vm, uart, "clear_tx_buffer", mrbc_esp32_uart_flush_output);
   mrbc_define_method(vm, uart, "bytes_available", mrbc_esp32_uart_get_buffered_data_len);
 }
 
