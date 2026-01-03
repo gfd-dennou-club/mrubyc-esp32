@@ -28,7 +28,7 @@
 
 static const char *TAG = "mrubyc-esp32";
 
-#define MRUBYC_VERSION_STRING "mruby/c v3.3.1 RITE0300 MRBW1.2"
+#define MRUBYC_VERSION_STRING "mruby/c v3.4.0 RITE0300 MRBW1.2"
 #define BUF_SIZE (1024)
 #define MEMORY_SIZE (1024*70)
 #define RD_BUF_SIZE (BUF_SIZE)
@@ -521,7 +521,7 @@ void app_main(void) {
   }
   //書き込みモード終了
   printf("Kani-Board, End mrbwrite mode\n");
-  printf("Kani-Board, mruby/c v3.3.1 start\n");
+  printf("Kani-Board, mruby/c v3.4.0 start\n");
   
   //***************************************
   // Ruby 
