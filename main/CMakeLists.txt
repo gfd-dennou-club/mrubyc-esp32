@@ -15,7 +15,6 @@ set(srcs
 	 "mrbc_esp32_sntp.c"
 	 "mrbc_esp32_sleep.c"
 	 "mrbc_esp32_utils.c"
-#	 "mrbc_esp32_ledstrip.c"
 	 "mrblib.c"
 	 "main.c")
 
