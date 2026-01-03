@@ -67,7 +67,7 @@ static void mrbc_esp32_i2c_initialize(mrbc_vm *vm, mrbc_value v[], int argc)
 {
   //構造体の定義
   i2c_handles_t handles = {0}; // 構造体全体をゼロクリア
-  handles.i2c_freq = 10000;
+  handles.i2c_freq = 100000;   // 100 kHz
   handles.device_count = 0;
   int i2c_scl_pin = 22;
   int i2c_sda_pin = 21;  
@@ -117,11 +117,11 @@ static void mrbc_esp32_i2c_initialize(mrbc_vm *vm, mrbc_value v[], int argc)
 #ifdef CONFIG_USE_MRUBYC_DEBUG
   ESP_LOGI(TAG, "I2C initial");
   ESP_LOGI(TAG, "unit:    %i", I2C_NUM_0);
-  ESP_LOGI(TAG, "freq:    %i", i2c_freq);
   ESP_LOGI(TAG, "scl_pin: %i", i2c_scl_pin);
   ESP_LOGI(TAG, "sda_pin: %i", i2c_sda_pin);
 #endif
 }
+
 
 // I2Cデバイスハンドルを検索または作成するヘルパー関数
 // 成功した場合はハンドルを返し、失敗した場合は NULL を返す。
@@ -347,6 +347,40 @@ static void mrbc_esp32_i2c_read(mrb_vm *vm, mrb_value v[], int argc)
   SET_RETURN(ret);
 }
 
+
+static void mrbc_esp32_i2c_scan(mrbc_vm *vm, mrbc_value v[], int argc)
+{
+  i2c_handles_t *handles = (i2c_handles_t *)v[0].instance->data;
+  
+  if (handles == NULL || handles->bus_handle == NULL) {
+    SET_RETURN(mrbc_nil_value());
+    return;
+  }
+
+  mrbc_value result = mrbc_array_new(vm, 0);
+
+  // 重要：標準的なデバイスアドレス範囲 (0x08 - 0x77) のみを走査
+  // 0x00 や 0x78 以上はバスを混乱させる可能性があるため避ける
+  for (int addr = 0x08; addr <= 0x77; addr++) {
+    
+    // タイムアウトを 50ms 程度に設定
+    esp_err_t ret = i2c_master_probe(handles->bus_handle, addr, 500);
+    
+    if (ret == ESP_OK) {
+      mrbc_value addr_val = mrbc_integer_value(addr);
+      mrbc_array_push(&result, &addr_val);
+    } else if (ret == ESP_ERR_TIMEOUT) {
+      // タイムアウトが発生した場合はログを出す（デバッグ用）
+      ESP_LOGD(TAG, "Probe timeout at 0x%02X", addr);
+    }
+
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+  }
+
+  SET_RETURN(result);
+}
+
+
 /*! クラス定義処理を記述した関数
   この関数を呼ぶことでクラス I2C が定義される
 
@@ -363,5 +397,6 @@ mrbc_esp32_i2c_gem_init(struct VM* vm)
   mrbc_define_method(vm, i2c, "initialize", mrbc_esp32_i2c_initialize);
   mrbc_define_method(vm, i2c, "write",      mrbc_esp32_i2c_write);
   mrbc_define_method(vm, i2c, "read",       mrbc_esp32_i2c_read);
-  mrbc_define_method(vm, i2c, "readfrom",       mrbc_esp32_i2c_readfrom);
+  mrbc_define_method(vm, i2c, "readfrom",   mrbc_esp32_i2c_readfrom);
+  mrbc_define_method(vm, i2c, "scan",       mrbc_esp32_i2c_scan);
 }
