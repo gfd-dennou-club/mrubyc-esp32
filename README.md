@@ -8,4 +8,4 @@ Plese see https://github.com/gfd-dennou-club/mrubyc-esp32/wiki  (written in Japa
 
 + LCD module aqm0802a : https://github.com/gfd-dennou-club/mrubyc-gem-aqm0802a
 + Real Time Clock rx8035sa : https://github.com/gfd-dennou-club/mrubyc-gem-rx8035sa
-+ GROVE sensors : https://github.com/gfd-dennou-club/mrubyc-gem-grove
++ GROVE sensors : https://github.com/gfd-dennou-club/mrubyc-gem-grove/wiki
