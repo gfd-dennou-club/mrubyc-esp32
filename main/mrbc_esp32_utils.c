@@ -5,8 +5,11 @@
 #include "esp_rom_sys.h"
 #include "driver/gpio.h"
 #include "rom/ets_sys.h"
+#include "led_strip.h"
+#include "esp_log.h"
 
 #define DELAY_US 5
+static const char *TAG = "Utils";
 
 //================================================================
 /*! cast
@@ -152,12 +155,80 @@ static void mrbc_esp32_sleep_us(mrbc_vm *vm, mrbc_value v[], int argc) {
 }
 
 
+///////////////////////////////////////////
+//
+// LED strip (WS2813)
+//
+
+// 初期化: c_ws2813_init(gpio, count)
+static void c_ws2813_init(mrbc_vm *vm, mrbc_value v[], int argc) {
+    int gpio = GET_INT_ARG(1);
+    int max_leds = GET_INT_ARG(2);
+
+    // LEDストリップの基本設定 (マクロを使用して互換性を確保)
+    led_strip_config_t strip_config = {
+        .strip_gpio_num = gpio,
+        .max_leds = max_leds,
+        .led_model = LED_MODEL_WS2812, // WS2813はWS2812として制御可能
+        .flags.invert_out = false,
+    };
+
+    // RMTバックエンドの設定
+    led_strip_rmt_config_t rmt_config = {
+        .clk_src = RMT_CLK_SRC_DEFAULT,
+        .resolution_hz = 10 * 1000 * 1000, // 10MHz
+        .flags.with_dma = false,
+    };
+
+    led_strip_handle_t led_strip;
+    esp_err_t err = led_strip_new_rmt_device(&strip_config, &rmt_config, &led_strip);
+
+    if (err == ESP_OK) {
+        ESP_LOGI(TAG, "LED Strip initialized (GPIO:%d, LEDs:%d)", gpio, max_leds);
+        SET_INT_RETURN((intptr_t)led_strip);
+    } else {
+        ESP_LOGE(TAG, "Failed to initialize LED strip");
+        SET_NIL_RETURN();
+    }
+}
+
+// 色設定: c_ws2813_set_pixel(handle, index, r, g, b)
+static void c_ws2813_set_pixel(mrbc_vm *vm, mrbc_value v[], int argc) {
+    led_strip_handle_t handle = (led_strip_handle_t)GET_INT_ARG(1);
+    int index = GET_INT_ARG(2);
+    int r = GET_INT_ARG(3);
+    int g = GET_INT_ARG(4);
+    int b = GET_INT_ARG(5);
+
+    if (handle) {
+        led_strip_set_pixel(handle, index, r, g, b);
+    }
+}
+
+// 反映: c_ws2813_show(handle)
+static void c_ws2813_show(mrbc_vm *vm, mrbc_value v[], int argc) {
+    led_strip_handle_t handle = (led_strip_handle_t)GET_INT_ARG(1);
+    if (handle) {
+        led_strip_refresh(handle);
+    }
+}
+
+static void c_ws2813_clear(mrbc_vm *vm, mrbc_value v[], int argc) {
+    led_strip_handle_t handle = (led_strip_handle_t)GET_INT_ARG(1);
+    led_strip_clear(handle);
+}
+
+
 void mrbc_esp32_utils_gem_init(struct VM* vm)
 {
-  mrbc_define_method(0, mrbc_class_object, "floatCast", c_floatCast);
-  mrbc_define_method(0, mrbc_class_object, "millis",    c_millis);
-  mrbc_define_method(0, mrbc_class_object, "my9221_transmit", c_my9221_transmit);  
-  mrbc_define_method(0, mrbc_class_object, "hx711_read_raw",  mrbc_esp32_hx711_read_raw);  
-  mrbc_define_method(0, mrbc_class_object, "sleep_us", mrbc_esp32_sleep_us);
+  mrbc_define_method(0, mrbc_class_object, "floatCast",        c_floatCast);
+  mrbc_define_method(0, mrbc_class_object, "millis",           c_millis);
+  mrbc_define_method(0, mrbc_class_object, "my9221_transmit",  c_my9221_transmit);  
+  mrbc_define_method(0, mrbc_class_object, "hx711_read_raw",   mrbc_esp32_hx711_read_raw);  
+  mrbc_define_method(0, mrbc_class_object, "sleep_us",         mrbc_esp32_sleep_us);
+  mrbc_define_method(0, mrbc_class_object, "ws2813_init",      c_ws2813_init);
+  mrbc_define_method(0, mrbc_class_object, "ws2813_set_pixel", c_ws2813_set_pixel);
+  mrbc_define_method(0, mrbc_class_object, "ws2813_show",      c_ws2813_show);
+  mrbc_define_method(0, mrbc_class_object, "ws2813_clear",     c_ws2813_clear);
 }
 
