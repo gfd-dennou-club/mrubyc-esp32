@@ -13,7 +13,7 @@
 + Real Time Clock rx8035sa : https://github.com/gfd-dennou-club/mrubyc-gem-rx8035sa
 + GROVE sensors : https://github.com/gfd-dennou-club/mrubyc-gem-grove/wiki
 
-## 活用シーン
+## 利用シーン
 
 + 松江高専の関係
   + [情報工学科のマイコン/IoT演習](https://www.gfd-dennou.org/arch/iotex/)
