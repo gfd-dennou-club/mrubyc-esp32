@@ -21,4 +21,5 @@
   + 社会人向け DX 講座 
 + 地域コミュニティにて
   + [Matz葉がにロボコン](https://www.shimane-oss.org/kani-robo/)
-  + [ドジョウすくいロボコン](https://www.shimane-oss.org/dojyosukui-robo/) 
+  + [ドジョウすくいロボコン](https://www.shimane-oss.org/dojyosukui-robo/)
+  + Ruby 合宿 2025年春
