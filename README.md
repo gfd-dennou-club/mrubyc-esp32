@@ -2,7 +2,7 @@
 
 ## 利用方法
 
-利用方法の詳細は [wiki](https://github.com/gfd-dennou-club/mrubyc-esp32/wiki) をご覧ください．
+詳細は [wiki](https://github.com/gfd-dennou-club/mrubyc-esp32/wiki) をご覧ください．
 
 ## 周辺機器
 
