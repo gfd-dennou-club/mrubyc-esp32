@@ -2,7 +2,7 @@ mruby/c firmware for ESP32 with esp-idf 5.5 and mruby/c 3.4
 
 ## HOW TO USE
 
-Plese see https://github.com/gfd-dennou-club/mrubyc-esp32/wiki  (written in Japanese)
+Plese see [wiki](https://github.com/gfd-dennou-club/mrubyc-esp32/wiki)  (written in Japanese)
 
 ## Peripherals
 
