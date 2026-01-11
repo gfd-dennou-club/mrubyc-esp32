@@ -7,7 +7,7 @@
 ## 周辺機器
 
 周辺機器用のクラスライブラリは，ESP32 以外のマイコンからも利用することを想定し，別リポジトリに分けています．
-それらのリポジトリを参照してください．ない，これらのクラスライブラリは Ruby のみで書かれており，ESP-IDF (ESP32 マイコンの IDE) には依存しません．
+それらのリポジトリを参照してください．なお，これらのクラスライブラリは Ruby のみで書かれており，ESP-IDF (ESP32 マイコンの IDE) には依存しません．
 
 + LCD module aqm0802a : https://github.com/gfd-dennou-club/mrubyc-gem-aqm0802a
 + Real Time Clock rx8035sa : https://github.com/gfd-dennou-club/mrubyc-gem-rx8035sa
