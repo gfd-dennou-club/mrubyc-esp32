@@ -1,5 +1,7 @@
 本 mruby/c ファームウェア・クラスライブラリ for ESP32 は，ESP-IDF 5.5 で書かれており，mruby/c 3.4 をサポートしています．
 
+クラスライブラリは，[mruby mruby/c 共通 I/O API ガイドライン](https://github.com/mruby/microcontroller-peripheral-interface-guide) に準拠しています．
+
 ## 利用方法
 
 詳細は [wiki](https://github.com/gfd-dennou-club/mrubyc-esp32/wiki) をご覧ください．
