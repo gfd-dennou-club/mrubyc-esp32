@@ -18,6 +18,7 @@
 #include "mrbc_esp32_wifi.h"
 #include "mrbc_esp32_sntp.h"
 #include "mrbc_esp32_http_client.h"
+#include "mrbc_esp32_http_camera.h"
 #include "mrbc_esp32_sleep.h"
 #include "mrbc_esp32_spi.h"
 #include "mrbc_esp32_lcdspi.h"
@@ -25,6 +26,8 @@
 #include "mrbc_esp32_stdio.h"
 #include "mrbc_esp32_dirent.h"
 #include "mrbc_esp32_utils.h"
+
+
 
 static const char *TAG = "mrubyc-esp32";
 
@@ -554,7 +557,9 @@ void app_main(void) {
   mrbc_esp32_dirent_gem_init(0);
   ESP_LOGI(TAG, "start Utils (C) \n");
   mrbc_esp32_utils_gem_init(0);
-  
+  ESP_LOGI(TAG, "start HTTP_CAMERA (C) \n");
+  mrbc_esp32_httpcamera_gem_init(0);
+
   // Ruby 側のクラス・メソッド定義
   extern const uint8_t myclass_bytecode[];
   mrbc_run_mrblib(myclass_bytecode);

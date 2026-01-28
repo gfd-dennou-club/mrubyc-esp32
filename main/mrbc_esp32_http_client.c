@@ -13,9 +13,6 @@
 
 static char* TAG = "HTTP_CLIENT";
 
-#define MAX_HTTP_RECV_BUFFER 512
-#define MAX_HTTP_OUTPUT_BUFFER 2048
-
 char local_response_buffer[MAX_HTTP_OUTPUT_BUFFER + 1] = {0};
 
 /*! HTTP イベントハンドラ

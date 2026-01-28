@@ -20,7 +20,7 @@ menu "mrubyc-esp32 Configuration"
     default 2 if UART_NUM_2
 
   config USE_MRUBYC_HTTP_CAMERA
-    bool "USE ESP-EYE CAMERA"
+    bool "USE ESP-EYE CAMERA (idf.py add-dependency \"espressif/esp32-camera\")"
     default n
 
   config USE_MRUBYC_WS2813
