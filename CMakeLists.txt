@@ -21,8 +21,14 @@ endif()
 set(SPIFFS_DIR "${CMAKE_SOURCE_DIR}/spiffs/mrbc")
 file(MAKE_DIRECTORY ${SPIFFS_DIR})
 
-# 3. src フォルダ内の .rb ファイルを全て取得
-file(GLOB RB_SOURCES "${CMAKE_SOURCE_DIR}/src/*.rb")
+# 3. 検索対象ディレクトリの定義
+# (1) プロジェクト直下の src
+# (2) components 以下の各ディレクトリにある mrblib
+file(GLOB SRC_RB_SOURCES "${CMAKE_SOURCE_DIR}/src/*.rb")
+file(GLOB COMP_RB_SOURCES "${CMAKE_SOURCE_DIR}/components/*/mrblib/*.rb")
+
+# 全てのソースを一つのリストに統合
+set(ALL_RB_SOURCES ${SRC_RB_SOURCES} ${COMP_RB_SOURCES})
 set(MRBC_OUTPUTS "")
 
 # 4. 各 .rb ファイルに対して mrbc コンパイルコマンドを定義
