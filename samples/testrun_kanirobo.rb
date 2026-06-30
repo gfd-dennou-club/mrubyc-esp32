@@ -1,40 +1,50 @@
-# coding: utf-8
-#概要 summary
+###
+### kanirobo for ESP32 (片道ライントレース)
+###
 
-lux36 = ADC.new(36)
-lux34 = ADC.new(34)
-lux35 = ADC.new(35)
-lux2  = ADC.new(2)
+pwm27 = PWM.new(27, timer:1, frequency:50, duty:0)
+pwm14 = PWM.new(14, timer:1, frequency:50, duty:0)
 
-servo27 = PWM.new(27, timer:2, channel:3, frequency:50)
-servo14 = PWM.new(14, timer:2, channel:4, frequency:50)
+adc36 = ADC.new(36)
+adc34 = ADC.new(34)
+adc35 = ADC.new(35)
+adc2  = ADC.new(2)
 
-motor1 = GPIO.new(25, GPIO::OUT)
-motor1_pwm = PWM.new(26, timer:1, channel:1)
-motor2 = GPIO.new(32, GPIO::OUT)
-motor2_pwm = PWM.new(33, timer:1, channel:2)
+gpio13 = GPIO.new(13, GPIO::OUT)
+gpio12 = GPIO.new(12, GPIO::OUT)
+gpio25 = GPIO.new(25, GPIO::OUT)
+gpio32 = GPIO.new(32, GPIO::OUT)
+pwm26  = PWM.new(26, timer:0, frequency:1000, duty:0)
+pwm33  = PWM.new(33, timer:0, frequency:1000, duty:0)
 
-loop do
-  puts( "----------------------------------------------" )
-  puts( lux36.read_raw )
-  puts( lux34.read_raw )
-  puts( lux35.read_raw )
-  puts( lux2.read_raw )
 
-  motor1_pwm.duty( 0 )
-  motor1.write(1)
-  motor2_pwm.duty( 100 )
-  motor2.write(1)
-  servo27.pulse_width_us( 1000 )
-  servo14.pulse_width_us( 1000 )
-  sleep 3
-
-  motor1_pwm.duty( 100 )
-  motor1.write(1)
-  motor2_pwm.duty( 0 )
-  motor2.write(1)
-  servo27.pulse_width_us( 2000 )
-  servo14.pulse_width_us( 2000 )
-  sleep 3
+MIGI = 700
+HIDARI = 250
+pwm27.pulse_width_us( 1000 )
+until adc36.read_raw > MIGI && adc34.read_raw > HIDARI
+  puts("---------------")
+  puts(adc36.read_raw)
+  puts(adc34.read_raw)
+  if adc36.read_raw > MIGI
+    gpio13.write(0)
+    gpio25.write(1)
+    pwm26.duty( 100 )
+  else
+    gpio13.write(1)
+    gpio25.write(1)
+    pwm26.duty( 0 )
+  end
+  if adc34.read_raw > HIDARI
+    gpio12.write(0)
+    gpio32.write(1)
+    pwm33.duty( 100 )
+  else
+    gpio12.write(1)
+    gpio32.write(1)
+    pwm33.duty( 0 )
+  end
+  sleep(0.1)
 end
-
+pwm27.pulse_width_us( 2000 )
+sleep(1)
+pwm27.pulse_width_us( 1000 )
