@@ -123,6 +123,5 @@ mrbc_esp32_sdspi_gem_init(struct VM* vm)
   mrbc_class *sdspi = mrbc_define_class(0, "SDSPI", 0);
   mrbc_define_method(0, sdspi, "new",        mrbc_esp32_sdspi_new);
   mrbc_define_method(0, sdspi, "initialize", mrbc_esp32_sdspi_initialize); 
-  // mount メソッドの定義を削除して隠蔽
   mrbc_define_method(0, sdspi, "umount",     mrbc_esp32_sdspi_esp_vfs_fat_sdcard_unmount);
 }
