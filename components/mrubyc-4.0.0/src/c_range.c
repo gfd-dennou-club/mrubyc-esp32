@@ -1,0 +1,206 @@
+/*! @file
+  @brief
+  mruby/c Range class
+
+  <pre>
+  Copyright (C) 2015-      Kyushu Institute of Technology.
+  Copyright (C) 2015-2026  Shimane IT Open-Innovation Center.
+  Copyright (C) 2026-      Shimane Institute for Industrial Technology.
+
+  This file is distributed under BSD 3-Clause License.
+
+  </pre>
+*/
+
+/***** Feature test switches ************************************************/
+/***** System headers *******************************************************/
+//@cond
+#include "vm_config.h"
+//@endcond
+
+/***** Local headers ********************************************************/
+#include "mrubyc.h"
+
+/***** Constat values *******************************************************/
+/***** Macros ***************************************************************/
+/***** Typedefs *************************************************************/
+/***** Function prototypes **************************************************/
+/***** Local variables ******************************************************/
+/***** Global variables *****************************************************/
+/***** Signal catching functions ********************************************/
+/***** Local functions ******************************************************/
+/***** Global functions *****************************************************/
+
+//================================================================
+/*! constructor
+
+  @param  vm		pointer to VM.
+  @param  first		pointer to first value.
+  @param  last		pointer to last value.
+  @param  flag_exclude	true: exclude the end object, otherwise include.
+  @return		range object.
+*/
+mrbc_value mrbc_range_new(mrbc_vm *vm, mrbc_value *first, mrbc_value *last, int flag_exclude)
+{
+  mrbc_range *range = mrbc_alloc(vm, sizeof(mrbc_range));
+
+  *range = (mrbc_range){
+    MRBC_INIT_OBJECT_HEADER_DI(RA)
+    .flag_exclude = flag_exclude,
+    .first = *first,
+    .last = *last,
+  };
+
+  return mrbc_immediate_value(MRBC_TT_RANGE, .range = range);
+}
+
+
+//================================================================
+/*! destructor
+
+  @param  v 	pointer to target.
+*/
+void mrbc_range_delete(mrbc_value *v)
+{
+  mrbc_decref( &v->range->first );
+  mrbc_decref( &v->range->last );
+
+  mrbc_raw_free( v->range );
+}
+
+
+#if defined(MRBC_ALLOC_VMID)
+//================================================================
+/*! clear vm_id
+
+  @param  v 	pointer to target.
+*/
+void mrbc_range_clear_vm_id(mrbc_value *v)
+{
+  mrbc_set_vm_id( v->range, 0 );
+  mrbc_clear_vm_id( &v->range->first );
+  mrbc_clear_vm_id( &v->range->last );
+}
+#endif
+
+
+//================================================================
+/*! compare
+
+  @param  v1	Pointer to target.
+  @param  v2	Pointer to another target.
+  @retval 0	v1 == v2
+  @retval plus	v1 >  v2
+  @retval minus	v1 <  v2
+*/
+int mrbc_range_compare(const mrbc_value *v1, const mrbc_value *v2)
+{
+  int res;
+
+  res = mrbc_compare( &v1->range->first, &v2->range->first );
+  if( res != 0 ) return res;
+
+  res = mrbc_compare( &v1->range->last, &v2->range->last );
+  if( res != 0 ) return res;
+
+  return (int)v2->range->flag_exclude - (int)v1->range->flag_exclude;
+}
+
+
+
+//================================================================
+/*! (method) ===
+*/
+static void c_range_equal3(mrbc_vm *vm, mrbc_value v[], int argc)
+{
+  if( mrbc_type(v[0]) == MRBC_TT_CLASS ) {
+    mrbc_value result = mrbc_send( vm, v, argc, &v[1], "kind_of?", 1, &v[0] );
+    SET_RETURN( result );
+    return;
+  }
+
+  int cmp_first = mrbc_compare( &v[0].range->first, &v[1] );
+  int result = (cmp_first <= 0);
+  if( !result ) goto DONE;
+
+  int cmp_last  = mrbc_compare( &v[1], &v[0].range->last );
+  result = (v->range->flag_exclude) ? (cmp_last < 0) : (cmp_last <= 0);
+
+ DONE:
+  SET_BOOL_RETURN( result );
+}
+
+
+//================================================================
+/*! (method) first
+*/
+static void c_range_first(mrbc_vm *vm, mrbc_value v[], int argc)
+{
+  mrbc_value ret = mrbc_range_first(v);
+  SET_RETURN(ret);
+}
+
+
+//================================================================
+/*! (method) last
+*/
+static void c_range_last(mrbc_vm *vm, mrbc_value v[], int argc)
+{
+  mrbc_value ret = mrbc_range_last(v);
+  SET_RETURN(ret);
+}
+
+
+
+//================================================================
+/*! (method) exclude_end?
+*/
+static void c_range_exclude_end(mrbc_vm *vm, mrbc_value v[], int argc)
+{
+  int result = v->range->flag_exclude;
+  SET_BOOL_RETURN( result );
+}
+
+
+
+#if MRBC_USE_STRING
+//================================================================
+/*! (method) inspect, to_s
+*/
+static void c_range_inspect(mrbc_vm *vm, mrbc_value v[], int argc)
+{
+  if( mrbc_type(v[0]) == MRBC_TT_CLASS ) {
+    mrbc_object_inspect(vm, v, argc);
+    return;
+  }
+
+  mrbc_value ret = mrbc_string_new(vm, NULL, 0);
+
+  for( int i = 0; i < 2; i++ ) {
+    if( i != 0 ) mrbc_string_append_cstr( &ret, ".." );
+    mrbc_value v1 = (i == 0) ? mrbc_range_first(v) : mrbc_range_last(v);
+    mrbc_value s1 = mrbc_send( vm, v, argc, &v1, "inspect", 0 );
+    mrbc_string_append( &ret, &s1 );
+    mrbc_string_delete( &s1 );
+  }
+
+  SET_RETURN(ret);
+}
+#endif
+
+
+/* MRBC_AUTOGEN_METHOD_TABLE
+
+  CLASS("Range")
+  FILE("_autogen_class_range.h")
+
+  METHOD("===",		c_range_equal3 )
+  METHOD("first",	c_range_first )
+  METHOD("last",	c_range_last )
+  METHOD("exclude_end?", c_range_exclude_end )
+#if MRBC_USE_STRING
+  METHOD("inspect",	c_range_inspect )
+  METHOD("to_s",	c_range_inspect )
+#endif
+*/
+#include "_autogen_class_range.h"
