@@ -30,7 +30,7 @@
 
 static const char *TAG = "mrubyc-esp32";
 
-#define MRUBYC_VERSION_STRING "mruby/c v3.4.0 RITE0300 MRBW1.2"
+#define MRUBYC_VERSION_STRING "mruby/c v4.0.0 RITE0300 MRBW1.2"
 #define BUF_SIZE (1024)
 #define MEMORY_SIZE (1024*70)
 #define RD_BUF_SIZE (BUF_SIZE)
@@ -68,14 +68,15 @@ size_t get_file_size(const char *filename)
 */
 uint8_t * save_spiffs_file(const char *filename, int len, uint8_t *data)
 {
-  //  FILE* fp = fopen(filename, "ab");
-  FILE* fp = fopen(filename, "ab");
+  FILE* fp = fopen(filename, "ab"); // "ab" なので追記モード
   if (fp == NULL) {
     ESP_LOGE(TAG, "Failed to open file for writing (%s)\n", filename);
     return NULL;
   }
-  for (int i = 0; i < len; i++){
-    fwrite(&data[i], sizeof(uint8_t), 1, fp);
+  // まとめて一括書き込み
+  size_t written = fwrite(data, sizeof(uint8_t), len, fp);
+  if (written != len) {
+    ESP_LOGE(TAG, "Failed to write all data. Written: %d/%d", written, len);
   }
   fclose(fp);
   return NULL;
@@ -179,7 +180,7 @@ uint8_t init_uart(){
     .parity    = UART_PARITY_DISABLE,
     .stop_bits = UART_STOP_BITS_1,
     .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
-    .source_clk = UART_SCLK_APB,
+    .source_clk = UART_SCLK_DEFAULT,
   };
 
   // UARTドライバのインストール
@@ -467,10 +468,10 @@ void app_main(void) {
 
       //文字型に変換 
       int idx = 0;
-      for (int i = start_pos; i < len; i++){
-          buffer[idx++] = data[i];
+      for (int i = start_pos; i < len && idx < (BUF_SIZE - 1); i++){
+	buffer[idx++] = data[i];
       }
-      buffer[len] = '\0'; //末尾に終了記号
+      buffer[idx] = '\0'; // 末尾にヌル文字を入れる
       
       if (flag_cmd_mode == 0){
         // Enter (CR+LF) が打鍵された場合はフラグを立てる
@@ -523,7 +524,7 @@ void app_main(void) {
   }
   //書き込みモード終了
   printf("Kani-Board, End mrbwrite mode\n");
-  printf("Kani-Board, mruby/c v3.4.0 start\n");
+  printf("Kani-Board, mruby/c v4.0.0 start\n");
   
   //***************************************
   // Ruby 

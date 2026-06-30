@@ -27,7 +27,7 @@ static void
 mrbc_esp32_httpcamera_capture_post(mrb_vm* vm, mrb_value* v, int argc)
 {
   char* url        = (char*)GET_STRING_ARG(1);
-  char* post_data  = (char*)GET_STRING_ARG(2);
+  //  char* post_data  = (char*)GET_STRING_ARG(2);
   char* username   = NULL;
   char* password   = NULL;
  

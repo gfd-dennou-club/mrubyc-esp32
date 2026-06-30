@@ -42,3 +42,6 @@ if(TARGET spiffs_spiffs_bin)
 elseif(TARGET spiffs_bin)
     add_dependencies(spiffs_bin mrbc_user_scripts)
 endif()
+
+# idf.py spiffs-flash のエイリアスとして spiffs ターゲットを作成
+add_custom_target(spiffs DEPENDS spiffs-flash)

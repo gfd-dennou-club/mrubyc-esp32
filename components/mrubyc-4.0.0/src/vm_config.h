@@ -1,0 +1,153 @@
+/*! @file
+  @brief
+  Global configuration of mruby/c VM's
+
+  <pre>
+  Copyright (C) 2015-      Kyushu Institute of Technology.
+  Copyright (C) 2015-2026  Shimane IT Open-Innovation Center.
+  Copyright (C) 2026-      Shimane Institute for Industrial Technology.
+
+  This file is distributed under BSD 3-Clause License.
+
+  </pre>
+*/
+
+#ifndef MRBC_SRC_VM_CONFIG_H_
+#define MRBC_SRC_VM_CONFIG_H_
+
+// maximum number of VMs
+#if !defined(MAX_VM_COUNT)
+#define MAX_VM_COUNT 5
+#endif
+
+// maximum size of registers
+#if !defined(MAX_REGS_SIZE)
+#define MAX_REGS_SIZE 110
+#endif
+
+// maximum number of symbols
+#if !defined(MAX_SYMBOLS_COUNT)
+#define MAX_SYMBOLS_COUNT 1024
+#endif
+
+
+// memory management
+//  MRBC_ALLOC_16BIT or MRBC_ALLOC_24BIT
+#define MRBC_ALLOC_24BIT
+
+
+/* USE Float. Support Float class.
+   0: NOT USE
+   1: USE float
+   2: USE double
+*/
+#if !defined(MRBC_USE_FLOAT)
+#define MRBC_USE_FLOAT 2
+#endif
+
+// Use math. Support Math class.
+#if !defined(MRBC_USE_MATH)
+#define MRBC_USE_MATH 1
+#endif
+
+// USE String. Support String class.
+#if !defined(MRBC_USE_STRING)
+#define MRBC_USE_STRING 1
+#endif
+
+/* USE UTF-8 String. Enable UTF-8 encoding support for String class.
+   When enabled, String methods like size, [], []=, index work with
+   UTF-8 character indices instead of byte indices.
+   0: NOT USE (ASCII/binary mode - default)
+   1: USE UTF-8
+*/
+#if !defined(MRBC_USE_STRING_UTF8)
+#define MRBC_USE_STRING_UTF8 0
+#endif
+
+/* USE Unicode case mapping. Enable full BMP Unicode case conversion.
+   Requires MRBC_USE_STRING_UTF8 to be enabled.
+   When enabled, upcase/downcase work with Greek, Cyrillic, etc.
+   Adds ~5KB to binary size.
+   0: NOT USE (ASCII-only case conversion - default)
+   1: USE full Unicode BMP case mapping
+*/
+#if !defined(MRBC_USE_UNICODE_CASE)
+#define MRBC_USE_UNICODE_CASE 0
+#endif
+
+
+/* Hardware dependent flags
+
+  Use the MRBC_BIG_ENDIAN, MRBC_LITTLE_ENDIAN and MRBC_REQUIRE_*BIT_ALIGNMENT
+  macros.
+  for conversion functions from binary (byte array) to each data type.
+
+  (each cases)
+  Little endian, no alignment.
+   MRBC_LITTLE_ENDIAN && !MRBC_REQUIRE_32BIT_ALIGNMENT
+   (e.g.) ARM Cortex-M4, Intel x86
+
+  Big endian, no alignment.
+   MRBC_BIG_ENDIAN && !MRBC_REQUIRE_32BIT_ALIGNMENT
+   (e.g.) IBM PPC405
+
+  Little endian, 32bit alignment required.
+   MRBC_LITTLE_ENDIAN && MRBC_REQUIRE_32BIT_ALIGNMENT
+   (e.g.) ARM Cortex-M0
+
+  Big endian, 32bit alignment required.
+   MRBC_BIG_ENDIAN) && MRBC_REQUIRE_32BIT_ALIGNMENT
+   (e.g.) OpenRISC
+*/
+
+/* Endian
+   Define either MRBC_BIG_ENDIAN or MRBC_LITTLE_ENDIAN.
+*/
+#if !defined(MRBC_BIG_ENDIAN) && !defined(MRBC_LITTLE_ENDIAN)
+# define MRBC_LITTLE_ENDIAN
+#endif
+
+/* Word alignment
+   If 32bit and/or 64bit alignment is required, enable the following line.
+*/
+// #define MRBC_REQUIRE_32BIT_ALIGNMENT
+#define MRBC_REQUIRE_64BIT_ALIGNMENT
+
+
+/* Others */
+
+// Compile with debug code.
+#if !defined(NDEBUG)
+#define MRBC_DEBUG
+#endif
+
+// #define MRBC_NO_TIMER
+
+// Console new-line mode.
+// If you need to convert LF to CRLF in console output, enable the following:
+// #define MRBC_CONVERT_CRLF
+
+// If you need 64bit integer.
+// #define MRBC_INT64
+
+// If you get exception with message "Not support op_ext..." when runtime.
+// #define MRBC_SUPPORT_OP_EXT
+
+// If you use LIBC malloc instead of mruby/c malloc
+// #define MRBC_ALLOC_LIBC
+
+// Nesting level for exception printing (default 8)
+// #define MRBC_EXCEPTION_CALL_NEST_LEVEL 8
+
+// Set the following constant to 1 to enable user-defined destructors;
+// otherwise, set it to 0. The default is 1.
+// #define MRBC_INSTANCE_DESTRUCTOR 0
+
+// Override actions when some fatal errors.
+// Default behavior for MRBC_OUT_OF_MEMORY is to print error and call mrbc_hal_abort().
+// Uncomment and customize if you need different behavior:
+// #define MRBC_OUT_OF_MEMORY() mrbc_alloc_print_memory_pool(); mrbc_hal_abort(0)
+// #define MRBC_ABORT_BY_EXCEPTION(vm) mrbc_p( &vm->exception ); mrbc_hal_abort(0)
+
+#endif // MRBC_SRC_VM_CONFIG_H_

@@ -119,43 +119,56 @@ static void mrbc_esp32_uart_initialize(mrbc_vm *vm, mrbc_value v[], int argc)
 }
 
 
-/*! メソッド read( bytes )  本体:wrapper for uart_read_bytes
-
-  @param bytes          読み込むデータのバイト数
+/*! メソッド read( bytes, nonblock: 1 )  本体:wrapper for uart_read_bytes
+  @param bytes          読み込むデータの最大バイト数
+  @param nonblock       1を指定するとタイムアウト0(ノンブロッキング)で即座にリターンする
 */
 static void mrbc_esp32_uart_read(mrb_vm* vm, mrb_value* v, int argc)
 {
   uart_port_t uart_num = *((uart_port_t *)(v[0].instance->data));  
   int read_bytes = GET_INT_ARG(1);
   
-  //データ読み出し
-  mrbc_value ret = mrbc_string_new(vm, 0, read_bytes);
-  char *buf = mrbc_string_cstr(&ret);
-  
-  int len = uart_read_bytes( uart_num, buf, read_bytes, 100 / portTICK_PERIOD_MS );
-  if (len != read_bytes){
-    ESP_LOGE(TAG, "ERROR: Received %u bytes", len);
+  // デフォルトのタイムアウト時間 (100ms)
+  TickType_t timeout = 100 / portTICK_PERIOD_MS;
+
+  // オプション (キーワード引数) の解析
+  MRBC_KW_ARG(nonblock);
+  if (MRBC_ISNUMERIC(nonblock)) {
+    if (MRBC_TO_INT(nonblock) == 1) {
+      timeout = 0; // nonblock: 1 が指定された場合はブロックしない
+    }
   }
-  buf[read_bytes] = '\0';
+
+  // 読み込み用の一時バッファを確保
+  uint8_t *temp_buf = (uint8_t *)malloc(read_bytes);
+  if (temp_buf == NULL) {
+    ESP_LOGE(TAG, "Failed to malloc read buffer.");
+    SET_NIL_RETURN();
+    return;
+  }
+  
+  // データ読み出し (動的に設定した timeout を使用)
+  int len = uart_read_bytes(uart_num, temp_buf, read_bytes, timeout);
+  
+  if (len < 0) {
+    ESP_LOGE(TAG, "UART read error");
+    free(temp_buf);
+    SET_NIL_RETURN();
+    return;
+  }
+
+  if (len != read_bytes && len > 0){
+    ESP_LOGD(TAG, "Received %u / %d bytes", len, read_bytes);
+  }
+  
+  // 実際に読み込めたサイズ(len)だけでmruby/cの文字列オブジェクトを作成
+  mrbc_value ret = mrbc_string_new(vm, temp_buf, len);
+  
+  // 一時バッファを解放
+  free(temp_buf);
   
   SET_RETURN(ret);
-  
-  /* 確認 */  
-  /*
-  if (len > 0) {
-    ESP_LOGD(TAG, "Received %u bytes:", len);
-
-    printf("[ ");
-    for (int i = 0; i < len; i++) {
-      printf("0x%.2X ", (uint8_t)buf[i]);
-    }
-    printf("] \n");
-  } else {
-    ESP_LOGE(TAG, "Read data critical failure.");
-  }
-  */
 }
-
 
 /*! メソッド gets( break_r:1)
 
