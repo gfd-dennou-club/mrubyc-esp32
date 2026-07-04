@@ -80,7 +80,7 @@ static void mrbc_esp32_gpio_initialize(mrbc_vm *vm, mrbc_value v[], int argc)
   ESP_ERROR_CHECK(gpio_config(&io_conf));
 
   //出力
-  ESP_LOGD(TAG, "pin: %d, mode: %d, pull_up_en: %d", pin, io_conf.mode, io_conf.pull_up_en);
+  ESP_LOGI(TAG, "pin: %d, mode: %d, pull_up_en: %d", pin, io_conf.mode, io_conf.pull_up_en);
   //  ESP_LOGD(TAG, "pin:  %i", pin);
   //  ESP_LOGD(TAG, "mode: %i", mode);
   //  ESP_LOGD(TAG, "pull: %x", pull_mode);
