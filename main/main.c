@@ -1,11 +1,11 @@
-/* master.mrbc と slave.mrbc をどうしよう．今は前者のみ書き込み*/
-
 #include <stdio.h>
 #include "esp_log.h"
 #include "esp_spiffs.h"
 #include "esp_vfs_dev.h"
 #include "driver/uart.h"
 #include "mrubyc.h"
+#include "sdkconfig.h"
+#include "esp_rom_crc.h"  
 
 //*********************************************
 // ENABLE LIBRARY written by C
@@ -34,79 +34,23 @@ static const char *TAG = "mrubyc-esp32";
 #define BUF_SIZE (1024)
 #define MEMORY_SIZE (1024*70)
 #define RD_BUF_SIZE (BUF_SIZE)
-//static QueueHandle_t uart0_queue;
+
 static uint8_t memory_pool[MEMORY_SIZE];
 
+static FILE *g_spiffs_fp = NULL;  //書き込み中のファイルポインタを保持する変数
+static char g_current_filename[32] = ""; // 現在書き込み中のファイル名
+static uint8_t g_check_crc_enable = 0;   // CRC16チェックが有効かどうかのフラグ
+static uint16_t g_expected_crc16 = 0;    // 受信した期待値のCRC16
+
 //UART Number
-const uart_port_t uart_num = CONFIG_UART_NUM;  // make menuconfig 
-
-/*!
-* @brief SPIFFS でバイナリデータを読み込み
-* @param *filename ファイルのパス
-*/
-size_t get_file_size(const char *filename)
-{
-  FILE *fp= fopen(filename, "rb");
-  if( fp == NULL ) {
-    fprintf(stderr, "File not found (%s)\n", filename);
-    return 0;
-  }
-  
-  /* // get filesize */
-  fseek(fp, 0, SEEK_END);
-  size_t size = ftell(fp);
-  fseek(fp, 0, SEEK_SET);
-  fclose(fp);
-  
-  return size;
-}
-/*!
-* @brief SPIFFS でバイナリデータを書き込み
-* @param *filename ファイルのパス
-* @param len バイナリのサイズ
-* @param *data 書き込むバイナリ
-*/
-uint8_t * save_spiffs_file(const char *filename, int len, uint8_t *data)
-{
-  FILE* fp = fopen(filename, "ab"); // "ab" なので追記モード
-  if (fp == NULL) {
-    ESP_LOGE(TAG, "Failed to open file for writing (%s)\n", filename);
-    return NULL;
-  }
-  // まとめて一括書き込み
-  size_t written = fwrite(data, sizeof(uint8_t), len, fp);
-  if (written != len) {
-    ESP_LOGE(TAG, "Failed to write all data. Written: %d/%d", written, len);
-  }
-  fclose(fp);
-  return NULL;
-}
-
-
-/*!
-* @brief SPIFFS でバイナリデータを読み込み
-* @param *filename ファイルのパス
-*/
-uint8_t * load_spiffs_file(const char *filename)
-{
-  FILE *fp = fopen(filename, "rb");
-  if( fp == NULL ) {
-    fprintf(stderr, "File not found (%s)\n", filename);
-    return NULL;
-  }
-  
-  size_t size = get_file_size(filename);
-  // allocate memory
-  uint8_t *p = malloc(size);
-  if( p != NULL ) {
-    fread(p, sizeof(uint8_t), size, fp);
-  } else {
-    fprintf(stderr, "Memory allocate error.\n");
-  }
-  fclose(fp);
-
-  return p;
-}
+const uart_port_t uart_num = 0;  
+#if defined(CONFIG_ESP_CONSOLE_UART_TX_GPIO)
+const uint8_t uart_output_tx = CONFIG_ESP_CONSOLE_UART_TX_GPIO;
+const uint8_t uart_output_rx = CONFIG_ESP_CONSOLE_UART_RX_GPIO;
+#else
+const uint8_t uart_output_tx = 0;
+const uint8_t uart_output_rx = 0;
+#endif
 
 
 /**
@@ -137,6 +81,61 @@ for (size_t i = 0; i < size; i++) {
 }
 return crc;
 }
+
+/*!
+* @brief ESP32内蔵のROM機能を利用した高速CRC16計算
+* @note  初期値 0xFFFF (一般的な CCITT Little Endian 方式)
+*/
+uint16_t calculateCrc16(const uint8_t *data, const size_t size) {
+  return esp_rom_crc16_le(0xFFFF, data, size);
+}
+
+/*!
+* @brief SPIFFS でバイナリデータを読み込み
+* @param *filename ファイルのパス
+*/
+size_t get_file_size(const char *filename)
+{
+  FILE *fp= fopen(filename, "rb");
+  if( fp == NULL ) {
+    fprintf(stderr, "File not found (%s)\n", filename);
+    return 0;
+  }
+  
+  /* // get filesize */
+  fseek(fp, 0, SEEK_END);
+  size_t size = ftell(fp);
+  fseek(fp, 0, SEEK_SET);
+  fclose(fp);
+  
+  return size;
+}
+
+/*!
+* @brief SPIFFS でバイナリデータを読み込み
+* @param *filename ファイルのパス
+*/
+uint8_t * load_spiffs_file(const char *filename)
+{
+  FILE *fp = fopen(filename, "rb");
+  if( fp == NULL ) {
+    fprintf(stderr, "File not found (%s)\n", filename);
+    return NULL;
+  }
+  
+  size_t size = get_file_size(filename);
+  // allocate memory
+  uint8_t *p = malloc(size);
+  if( p != NULL ) {
+    fread(p, sizeof(uint8_t), size, fp);
+  } else {
+    fprintf(stderr, "Memory allocate error.\n");
+  }
+  fclose(fp);
+
+  return p;
+}
+
 
 //SPIFFS 初期化
 uint8_t init_spiffs(){
@@ -185,25 +184,9 @@ uint8_t init_uart(){
 
   // UARTドライバのインストール
   ESP_ERROR_CHECK( uart_driver_install(uart_num, BUF_SIZE * 2, 0, 0, NULL, 0) );
-  //ESP_ERROR_CHECK( uart_driver_install(uart_num, BUF_SIZE * 2, BUF_SIZE * 2, 0, NULL, 0) );
 
   // UARTパラメータの設定
   ESP_ERROR_CHECK( uart_param_config(uart_num, &uart_config) );
-  
-  // UART pin 設定
-  if (uart_num == 2){
-    ESP_ERROR_CHECK( uart_set_pin(uart_num, 17, 16, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE) );
-  }
-
-  if (uart_num == 2){  
-    // 標準入出力をリダイレクト
-    FILE* uart_output = fopen("/dev/uart/2", "w");
-    if (uart_output != NULL) {
-      setvbuf(uart_output, NULL, _IONBF, 0);
-      stdout = uart_output;
-      stderr = uart_output;
-    }
-  }
   
   return 1;
 }  
@@ -226,21 +209,93 @@ void mrbwrite_cmd_execute() {
   vTaskDelay(2000 / portTICK_PERIOD_MS);
 }
 
+
 /*!
 * @brief バイトコードの書き込み(書き込みモードの開始)
+* @param prefix ファイル名の接頭辞 ("task" または "lib")
 */
-void mrbwrite_cmd_write(struct stat *st, uint8_t *flag_write_mode, uint8_t *ifile) {
-  printf("+OK Write bytecode \n\n");
+void mrbwrite_cmd_write(struct stat *st, uint8_t *flag_write_mode, const char *prefix) {
+  g_current_filename[0] = '\0';
+  
+  // prefix_01 から prefix_99 までループで空きスロットを探す
+  for (int i = 1; i <= 99; i++) {
+    snprintf(g_current_filename, sizeof(g_current_filename), "/spiffs/%s_%02d.mrbc", prefix, i);
+    if (stat(g_current_filename, st) != 0) { 
+      // ファイルが存在しない（＝ここを新規保存先にする）
+      break;
+    }
+  }
+
+  if (g_current_filename[0] == '\0' || stat(g_current_filename, st) == 0) {
+    ESP_LOGE(TAG, "No more file slots available for %s.", prefix);
+    *flag_write_mode = 0;
+    printf("-ERR Too many files (%s)\n\n", prefix);
+    return;
+  }
+
+  // 新規ファイルを開く (wb モード)
+  g_spiffs_fp = fopen(g_current_filename, "wb");
+  if (g_spiffs_fp == NULL) {
+    ESP_LOGE(TAG, "Failed to open file for writing (%s)", g_current_filename);
+    *flag_write_mode = 0;
+    printf("-ERR File open error\n\n");
+    return;
+  }
+
   *flag_write_mode = 1;
-  // 書き込み先ファイルの決定.
-  if (stat("/spiffs/master.mrbc", st) != 0) {
-    *ifile = 1;
-  } else if (stat("/spiffs/slave.mrbc", st) != 0) {
-    *ifile = 2;
+  printf("+OK Write bytecode (%s)\n\n", g_current_filename);
+}
+
+/*!
+* @brief 開いているファイルへバイナリデータを追記書き込みする（CRC16オプション検証付き）
+*/
+void write_binary_chunk(int len, uint8_t *data, size_t *totallen, uint8_t *flag_write_mode) {
+  if (g_spiffs_fp == NULL) return;
+
+  size_t written = fwrite(data, 1, len, g_spiffs_fp);
+  if (written != len) {
+    ESP_LOGE(TAG, "Failed to write all data. Written: %d/%d", written, len);
+  }
+
+  *totallen -= written;
+
+  //アンダーフローを防ぐための処理
+  if (written >= *totallen) {
+    *totallen = 0;
   } else {
-    ESP_LOGE(TAG, "Failed to determine file to write");
-    *ifile = 0;
-    *flag_write_mode = 0; //書き込みモード終了
+    *totallen -= written;
+  }
+  
+  // すべてのバイト数を受信し終わった時の処理
+  if (*totallen == 0) {
+    fclose(g_spiffs_fp);
+    g_spiffs_fp = NULL;
+
+    // --- CRC16 の自動検証ロジック ---
+    if (g_check_crc_enable == 1) {
+      uint8_t *file_data = load_spiffs_file(g_current_filename);
+      if (file_data != NULL) {
+        size_t size = get_file_size(g_current_filename);
+        uint16_t actual_crc16 = calculateCrc16(file_data, size);
+        free(file_data); // メモリーリーク防止！
+
+        // 一致しない場合はファイルを削除して -ERR を出す
+        if (actual_crc16 != g_expected_crc16) {
+          unlink(g_current_filename); // 破損ファイルなので消去
+          printf("-ERR CRC mismatch. Expected: 0x%04X, Actual: 0x%04X\n\n", g_expected_crc16, actual_crc16);
+          *flag_write_mode = 0;
+          return;
+        }
+      } else {
+        printf("-ERR File verification read error\n\n");
+        *flag_write_mode = 0;
+        return;
+      }
+    }
+
+    // 問題なく成功した場合は +OK を出力
+    printf("+OK \n\n");
+    *flag_write_mode = 0; // 書き込みモード終了
   }
 }
 
@@ -248,17 +303,6 @@ void mrbwrite_cmd_write(struct stat *st, uint8_t *flag_write_mode, uint8_t *ifil
 * @brief 書き込まれたバイトコードの消去
 */
 void mrbwrite_cmd_clear(struct stat *st) {
-  /*
-  //ファイルを消す
-  if (stat("/spiffs/master.mrbc", st) == 0) {
-    unlink("/spiffs/master.mrbc");
-  }
-  if (stat("/spiffs/slave.mrbc", st) == 0) {
-    unlink("/spiffs/slave.mrbc");
-  }
-  printf("+OK \n\n");
-  */
-  
   // format spiffs region
   esp_err_t ret = esp_spiffs_format(NULL);
   vTaskDelay(pdMS_TO_TICKS(50)); //wait
@@ -278,6 +322,7 @@ void mrbwrite_cmd_help() {
   printf("Commands:\n");
   printf("  version  \n");
   printf("  write    \n");
+  printf("  write_lib\n");
   printf("  showprog \n");
   printf("  clear    \n");
   printf("  reset    \n");
@@ -294,29 +339,30 @@ void mrbwrite_cmd_version() {
 }
 
 /*!
-* @brief プログラムの表示
+* @brief 保存されているすべてのプログラム（lib, task）を表示
 */
 void mrbwrite_cmd_showprog(struct stat *st) {
-  //読み込み
-  if (stat("/spiffs/master.mrbc", st) == 0) {
-    printf("**** master.mrbc **** \n\n");
-    uint8_t *data = load_spiffs_file("/spiffs/master.mrbc");
-    if(data!=NULL)
-    {      
-      size_t size = get_file_size("/spiffs/master.mrbc");
-      ESP_LOG_BUFFER_HEXDUMP(TAG, data, size, ESP_LOG_ERROR);  //バイトコード出力
-    }
-  if (stat("/spiffs/slave.mrbc", st) == 0) {
-    printf("**** slave.mrbc **** \n\n");
-    uint8_t *data = load_spiffs_file("/spiffs/slave.mrbc");
-    if(data!=NULL)
-    {      
-      size_t size = get_file_size("/spiffs/slave.mrbc");
-      ESP_LOG_BUFFER_HEXDUMP(TAG, data, size, ESP_LOG_ERROR);  //バイトコード出力
+  char filename[32];
+  int found = 0;
+  const char *prefixes[] = {"lib", "task"}; // 両方を検索対象にする
+  
+  for (int p = 0; p < 2; p++) {
+    for (int i = 1; i <= 99; i++) {
+      snprintf(filename, sizeof(filename), "/spiffs/%s_%02d.mrbc", prefixes[p], i);
+      if (stat(filename, st) == 0) {
+        printf("**** %s **** \n\n", filename);
+        uint8_t *data = load_spiffs_file(filename);
+        if (data != NULL) {
+          size_t size = get_file_size(filename);
+          ESP_LOG_BUFFER_HEXDUMP(TAG, data, size, ESP_LOG_ERROR);
+          free(data);
+          found++;
+        }
+      }
     }
   }
+  if (found == 0) printf("-ERR No program files found\n");
   printf("+DONE\n\n");
-  }
 }
 
 /*!
@@ -325,10 +371,11 @@ void mrbwrite_cmd_showprog(struct stat *st) {
 void mrbwrite_cmd_verify()
 {
   //Memo:複数ファイルの書き込みを行うようにした場合はファイル名の取得して行う
-  uint8_t *data = load_spiffs_file("/spiffs/master.mrbc");
-  size_t size = get_file_size("/spiffs/master.mrbc");
+  uint8_t *data = load_spiffs_file("/spiffs/task_01.mrbc");
+  size_t size = get_file_size("/spiffs/task_01.mrbc");
   uint8_t hash = calculateCrc8(data,size);
   printf("+OK %2x\n",hash);
+  free(data);
 }
 
 /*!
@@ -352,24 +399,44 @@ int mrbwrite_cmd_mode(
     //execute
     mrbwrite_cmd_execute();
     return 1;
-  } else if (strncmp(buffer, "write", 5) == 0) {
-    //write
-    //write [バイト数]という風にコマンドが来るため後ろのバイト数を取得する
-    char * ret;
+  } else if (strncmp(buffer, "write_lib", 9) == 0) {
+    //write_lib 
     strcpy(copybuffer, buffer);
-    strtok(copybuffer," ");
-    ret = strtok(NULL, " ");
-    //char型から変換
-    for(int i = strlen(ret)-1,base = 1; 0 <= i;i--)
-    {
-      int a = ret[i] - '0';
-      if( 0<=a && a<=9)
-      {
-        *totallen += a * base;
-        base*=10;
+    strtok(copybuffer, " ");
+    char *ret_bytes = strtok(NULL, " ");
+    char *ret_crc16 = strtok(NULL, " ");
+    
+    if (ret_bytes != NULL) {
+      *totallen += atoi(ret_bytes);
+      if (ret_crc16 != NULL) {
+	g_check_crc_enable = 1;
+	g_expected_crc16 = (uint16_t)strtol(ret_crc16, NULL, 16);
+      } else {
+	g_check_crc_enable = 0;
       }
+      mrbwrite_cmd_write(st, flag_write_mode, "lib"); // プレフィックスに "lib" を指定
+    } else {
+      printf("-ERR Syntax error. Usage: write_lib [bytes] [crc16(hex, opt)]\n\n");
+    }    
+  } else if (strncmp(buffer, "write", 5) == 0) {
+    // write
+    strcpy(copybuffer, buffer);
+    strtok(copybuffer, " ");
+    char *ret_bytes = strtok(NULL, " ");
+    char *ret_crc16 = strtok(NULL, " ");
+
+    if (ret_bytes != NULL) {
+      *totallen += atoi(ret_bytes);
+      if (ret_crc16 != NULL) {
+	g_check_crc_enable = 1;
+	g_expected_crc16 = (uint16_t)strtol(ret_crc16, NULL, 16);
+      } else {
+	g_check_crc_enable = 0;
+      }
+      mrbwrite_cmd_write(st, flag_write_mode, "task"); // プレフィックスに "task" を指定
+    } else {
+      printf("-ERR Syntax error. Usage: write [bytes] [crc16(hex, opt)]\n\n");
     }
-    mrbwrite_cmd_write(st, flag_write_mode, ifile);
   } else if (strncmp(buffer, "clear", 5) == 0) {
     //clear
     mrbwrite_cmd_clear(st);
@@ -385,24 +452,10 @@ int mrbwrite_cmd_mode(
   }else if(strncmp(buffer, "verify", 6) == 0){
     //verify
     mrbwrite_cmd_verify();
-  }else if (*flag_write_mode == 1) {
-    //ファイル書き込み
-    if (*ifile == 1) {
-      save_spiffs_file("/spiffs/master.mrbc", len, data);
-    } else if (*ifile == 2){
-      save_spiffs_file("/spiffs/slave.mrbc", len, data);
-    }
-    *totallen -= len;
-    //書き込みを継続するか否か．バッファーサイズと読み込みバイト数で判断．
-     if (*totallen == 0 ){ 
-      printf("+DONE \n\n");
-      *flag_write_mode = 0; //書き込みモード終了
-    }
-  }else{
-    if(buffer[0] == 0x0d && buffer[1] == 0x0a)
-      printf("+OK mruby/c \n\n");
-    else
-      printf("-ERR Illegal command.\n\n");
+  }else if(buffer[0] == 0x0d && buffer[1] == 0x0a){
+    printf("+OK mruby/c \n\n");
+//  }else{
+//    printf("-ERR Illegal command.\n\n");
   }
   return 0;
 }
@@ -423,7 +476,7 @@ void app_main(void) {
   //************************************
  
   //変数初期化
-  uint8_t* data = (uint8_t*) malloc(BUF_SIZE);
+  uint8_t data[BUF_SIZE];
   uint8_t wait = 0;
   uint8_t flag_cmd_mode = 0;
   uint8_t flag_write_mode = 0;
@@ -431,7 +484,6 @@ void app_main(void) {
   char buffer[BUF_SIZE];
   struct stat st;
   size_t totallen = 0;
-  int write_time = 0;
 
   // SPIFFS 初期化
   init_spiffs();
@@ -444,86 +496,93 @@ void app_main(void) {
   //************************************
   // mrbcwrite モード開始
   //************************************
-  printf("Kani-Board, Please push Enter key to mrbwite mode\n\n");
+  printf("\nKani-Board, Please push Enter key to mrbwrite mode\n\n");
 
   // clear buffer
   uart_wait_tx_done(uart_num, pdMS_TO_TICKS(100));
   uart_flush_input(uart_num);
 
-  while (wait < 2) {
+  while (wait < 20) {
     
-    //バイト数の取得
-    int len = uart_read_bytes(uart_num, data, BUF_SIZE, 1000 / portTICK_PERIOD_MS);
+    // バイト数の取得. 100ms の待ち
+    int len = uart_read_bytes(uart_num, data, BUF_SIZE, 100 / portTICK_PERIOD_MS);
     
-    //取得したバイト数が正か否かで場合分け
+    // 取得したバイト数が正か否かで場合分け
     if (len > 0) {
-      wait = 0;  //waiting の変数のクリア
+      wait = 0;  // waiting の変数のクリア
 
-      int start_pos = 0;
-      
-      // 先頭にある改行(0x0d, 0x0a)をスキップ
-      while (start_pos < len && (data[start_pos] == 0x0d || data[start_pos] == 0x0a)) {
-	start_pos++;
-      }
-
-      //文字型に変換 
-      int idx = 0;
-      for (int i = start_pos; i < len && idx < (BUF_SIZE - 1); i++){
-	buffer[idx++] = data[i];
-      }
-      buffer[idx] = '\0'; // 末尾にヌル文字を入れる
-      
-      if (flag_cmd_mode == 0){
-        // Enter (CR+LF) が打鍵された場合はフラグを立てる
-        if ( data[0] == 0x0d && data[1] == 0x0a ) {         
-          printf("+OK mruby/c \n\n");
-
-	  // clear buffer
-          uart_wait_tx_done(uart_num, pdMS_TO_TICKS(100));
-          uart_flush_input(uart_num);
-	  
-          flag_cmd_mode = 1;
+      if (flag_write_mode == 1) {
+	// バイナリ書き込みモード
+        // 文字列への変換は一切行わず、直接バイナリ書き込み関数へ渡す
+        write_binary_chunk(len, data, &totallen, &flag_write_mode);
+        
+      } else {
+        // コマンドモード（通常時：文字・コマンド受信の処理）
+        int start_pos = 0;
+        
+        // 先頭にある改行(0x0d, 0x0a)をスキップ
+        while (start_pos < len && (data[start_pos] == 0x0d || data[start_pos] == 0x0a)) {
+          start_pos++;
         }
 
-      } else {
-	//コマンドモードに入っている場合
-        int cmd_state = mrbwrite_cmd_mode(
-          &st,
-          &ifile,
-          &flag_write_mode,
-          buffer,
-          len,
-          data,
-          &totallen
-        );
+        // 文字型に変換 
+        int idx = 0;
+        for (int i = start_pos; i < len && idx < (BUF_SIZE - 1); i++) {
+          buffer[idx++] = data[i];
+        }
+        buffer[idx] = '\0'; // 末尾にヌル文字を入れる
+        
+        if (flag_cmd_mode == 0) {
+          // Enter (CR+LF) が打鍵された場合はフラグを立てる
+          if (data[0] == 0x0d && data[1] == 0x0a) {         
+            printf("+OK mruby/c \n\n");
+	    
+            uart_wait_tx_done(uart_num, pdMS_TO_TICKS(100));
+            uart_flush_input(uart_num);
+            flag_cmd_mode = 1;
+          }
+        } else {
+          // コマンドモードに入っている場合
+          int cmd_state = mrbwrite_cmd_mode(
+            &st,
+            &ifile,
+            &flag_write_mode,
+            buffer,
+            len,
+            data,
+            &totallen
+          );
 
-	// clear buffer
-	uart_wait_tx_done(uart_num, pdMS_TO_TICKS(100));
-	uart_flush_input(uart_num);
-	
-        if (cmd_state == 1) break;
-      }
+          uart_wait_tx_done(uart_num, pdMS_TO_TICKS(100));
+          uart_flush_input(uart_num);
+          
+          if (cmd_state == 1) break;
+        }
+      } // else (コマンドモード処理の終わり)
       
     } else {
-
-      //コマンドモードでなければカウントアップ
-      if ( flag_cmd_mode == 0) wait += 1; 
-
-      //書き込みモードでバイトコード受信中の時にタイムアウトさせる
-      if (flag_write_mode == 1 && totallen != 0 && write_time <= 2){
-	ESP_LOGE(TAG,"-ERR Not the specified number of bytes.\n");
-	totallen = 0;
-	flag_write_mode = 0;
-	write_time = 0;
-      }else{
-	write_time +=1;
+      // コマンドモードでなければカウントアップ (タイムアウト監視)
+      if (flag_cmd_mode == 0) {
+        wait += 1; 
       }
+
+      // 書き込みモード中なのに 1秒待ってもデータが来ない(= len <= 0)なら中断
+      if (flag_write_mode == 1 && totallen != 0) {
+        ESP_LOGE(TAG, "-ERR Timeout: Data transmission interrupted.\n");
+	
+        if (g_spiffs_fp != NULL) {
+          fclose(g_spiffs_fp);
+          g_spiffs_fp = NULL;
+        }        
+        totallen = 0;
+        flag_write_mode = 0;
+      }      
     }
 
     vTaskDelay(10 / portTICK_PERIOD_MS);
   }
-  //書き込みモード終了
-  printf("Kani-Board, End mrbwrite mode\n");
+  // 書き込みモード終了
+  printf("\nKani-Board, End mrbwrite mode\n");
   printf("Kani-Board, mruby/c v4.0.0 start\n");
   
   //***************************************
@@ -539,7 +598,7 @@ void app_main(void) {
   mrbc_esp32_adc_gem_init(0);
   ESP_LOGI(TAG, "start I2C (C)\n");
   mrbc_esp32_i2c_gem_init(0);
-  if (uart_num < 2){
+  if (!(uart_output_tx == 17 && uart_output_rx == 16)){
     ESP_LOGI(TAG, "start UART (C)\n");
     mrbc_esp32_uart_gem_init(0);
   }
@@ -565,17 +624,50 @@ void app_main(void) {
   // Ruby 側のクラス・メソッド定義
   extern const uint8_t myclass_bytecode[];
   mrbc_run_mrblib(myclass_bytecode);
+
+  // SPIFFS 上の lib_%02d.mrbc を自動検索して mrblib に登録
+  ESP_LOGI(TAG, "SPIFFS mode: Loading mruby/c libraries...");
+  char lib_filename[32];
+  int lib_count = 0;
   
-  // tasks
-  ESP_LOGI(TAG, "SPIFFS mode\n");
-
-  uint8_t *master = load_spiffs_file("/spiffs/master.mrbc");
-  mrbc_create_task(master, 0);
-
-  if (stat("/spiffs/slave.mrbc", &st) == 0) {
-    uint8_t *slave = load_spiffs_file("/spiffs/slave.mrbc");
-    mrbc_create_task( slave, 0 );
+  for (int i = 1; i <= 99; i++) {
+    snprintf(lib_filename, sizeof(lib_filename), "/spiffs/lib_%02d.mrbc", i);
+    if (stat(lib_filename, &st) == 0) {
+      uint8_t *lib_bytecode = load_spiffs_file(lib_filename);
+      if (lib_bytecode != NULL) {
+        mrbc_run_mrblib(lib_bytecode);
+        lib_count++;
+        ESP_LOGI(TAG, "Loaded mrblib from file: %s", lib_filename);
+      }
+    }
   }
-
+  if (lib_count > 0) {
+    ESP_LOGI(TAG, "Total %d libraries registered successfully!", lib_count);
+  }
+  
+  // SPIFFS 上の task_%02d.mrbc を自動検索して task に登録
+  ESP_LOGI(TAG, "SPIFFS mode: Loading tasks...");
+  char filename[32];
+  int task_count = 0;
+  
+  for (int i = 1; i <= 99; i++) {
+    snprintf(filename, sizeof(filename), "/spiffs/task_%02d.mrbc", i);
+    if (stat(filename, &st) == 0) {
+      uint8_t *bytecode = load_spiffs_file(filename);
+      if (bytecode != NULL) {
+        mrbc_create_task(bytecode, 0);
+        task_count++;
+        ESP_LOGI(TAG, "Created task from file: %s", filename);
+      }
+    }
+  }
+  
+  if (task_count == 0) {
+    ESP_LOGW(TAG, "No bytecode files found in SPIFFS. Only built-in tasks will run.");
+  } else {
+    ESP_LOGI(TAG, "Total %d tasks started successfully!", task_count);
+  }
+  
   mrbc_run();
+  
 }

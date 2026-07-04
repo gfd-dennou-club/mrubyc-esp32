@@ -17,6 +17,7 @@ file(MAKE_DIRECTORY ${SPIFFS_DIR})
 
 # src フォルダ内のファイルのみを個別にコンパイル
 file(GLOB RB_SOURCES "${CMAKE_SOURCE_DIR}/src/*.rb")
+list(SORT RB_SOURCES)
 set(MRBC_OUTPUTS "")
 
 foreach(rb_file ${RB_SOURCES})
