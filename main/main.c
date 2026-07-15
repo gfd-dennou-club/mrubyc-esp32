@@ -30,14 +30,14 @@
 
 static const char *TAG = "mrubyc-esp32";
 
-#define MRUBYC_VERSION_STRING "mruby/c v4.0.0 RITE0300 MRBW1.2"
+#define MRUBYC_VERSION_STRING "mruby/c v4.0.0 RITE0400 MRBW1.2"
 #define BUF_SIZE (1024)
 #define MEMORY_SIZE (1024*70)
 #define RD_BUF_SIZE (BUF_SIZE)
 
 static uint8_t memory_pool[MEMORY_SIZE];
 
-static FILE *g_spiffs_fp = NULL;  //書き込み中のファイルポインタを保持する変数
+//static FILE *g_spiffs_fp = NULL;  
 static char g_current_filename[32] = ""; // 現在書き込み中のファイル名
 static uint8_t g_check_crc_enable = 0;   // CRC16チェックが有効かどうかのフラグ
 static uint16_t g_expected_crc16 = 0;    // 受信した期待値のCRC16
@@ -233,14 +233,15 @@ void mrbwrite_cmd_write(struct stat *st, uint8_t *flag_write_mode, const char *p
     return;
   }
 
-  // 新規ファイルを開く (wb モード)
-  g_spiffs_fp = fopen(g_current_filename, "wb");
-  if (g_spiffs_fp == NULL) {
+  // 新規ファイルを開く
+  FILE *fp = fopen(g_current_filename, "wb");
+  if (fp == NULL) {
     ESP_LOGE(TAG, "Failed to open file for writing (%s)", g_current_filename);
     *flag_write_mode = 0;
     printf("-ERR File open error\n\n");
     return;
   }
+  fclose(fp); // 一旦閉じて SPIFFS に空ファイルを確定させる
 
   *flag_write_mode = 1;
   printf("+OK Write bytecode (%s)\n\n", g_current_filename);
@@ -249,53 +250,56 @@ void mrbwrite_cmd_write(struct stat *st, uint8_t *flag_write_mode, const char *p
 /*!
 * @brief 開いているファイルへバイナリデータを追記書き込みする（CRC16オプション検証付き）
 */
+/*!
+* @brief 分割されたバイナリデータを受信し、追記書き込みと終了判定を行う
+*/
 void write_binary_chunk(int len, uint8_t *data, size_t *totallen, uint8_t *flag_write_mode) {
-  if (g_spiffs_fp == NULL) return;
+  
+  // 受信データ(len)が残りサイズ(*totallen)を上回った場合、
+  // ゴミデータが含まれているため、本当に必要な分だけを書き込む！
+  size_t write_len = (len > *totallen) ? *totallen : len;
 
-  size_t written = fwrite(data, 1, len, g_spiffs_fp);
-  if (written != len) {
-    ESP_LOGE(TAG, "Failed to write all data. Written: %d/%d", written, len);
+  // "ab" (追記) モードで毎回ファイルを開く
+  FILE *fp = fopen(g_current_filename, "ab");
+  if (fp == NULL) {
+    ESP_LOGE(TAG, "Failed to open file for appending");
+    return;
   }
 
+  // 一括で書き込み、すぐに閉じてフラッシュ（これで長大ファイルも失敗しません）
+  size_t written = fwrite(data, 1, write_len, fp);
+  fclose(fp); 
+
+  if (written != write_len) {
+    ESP_LOGE(TAG, "Failed to write all data. Written: %d/%d", written, write_len);
+  }
+
+  // 残りバイト数を減らす（ここで継続判定の準備）
   *totallen -= written;
 
-  //アンダーフローを防ぐための処理
-  if (written >= *totallen) {
-    *totallen = 0;
-  } else {
-    *totallen -= written;
-  }
-  
-  // すべてのバイト数を受信し終わった時の処理
+  // 【継続・終了判定】すべてのバイト数を受信し終わった時の処理
   if (*totallen == 0) {
-    fclose(g_spiffs_fp);
-    g_spiffs_fp = NULL;
-
+    
     // --- CRC16 の自動検証ロジック ---
     if (g_check_crc_enable == 1) {
       uint8_t *file_data = load_spiffs_file(g_current_filename);
       if (file_data != NULL) {
         size_t size = get_file_size(g_current_filename);
         uint16_t actual_crc16 = calculateCrc16(file_data, size);
-        free(file_data); // メモリーリーク防止！
+        free(file_data);
 
-        // 一致しない場合はファイルを削除して -ERR を出す
         if (actual_crc16 != g_expected_crc16) {
           unlink(g_current_filename); // 破損ファイルなので消去
           printf("-ERR CRC mismatch. Expected: 0x%04X, Actual: 0x%04X\n\n", g_expected_crc16, actual_crc16);
           *flag_write_mode = 0;
           return;
         }
-      } else {
-        printf("-ERR File verification read error\n\n");
-        *flag_write_mode = 0;
-        return;
       }
     }
 
-    // 問題なく成功した場合は +OK を出力
-    printf("+OK \n\n");
-    *flag_write_mode = 0; // 書き込みモード終了
+    // 問題なく成功した場合は +DONE を出力してモード終了
+    printf("+DONE \n\n");
+    *flag_write_mode = 0;
   }
 }
 
@@ -478,6 +482,7 @@ void app_main(void) {
   //変数初期化
   uint8_t data[BUF_SIZE];
   uint8_t wait = 0;
+  uint32_t write_timeout = 0;
   uint8_t flag_cmd_mode = 0;
   uint8_t flag_write_mode = 0;
   uint8_t ifile = 0;
@@ -510,10 +515,10 @@ void app_main(void) {
     // 取得したバイト数が正か否かで場合分け
     if (len > 0) {
       wait = 0;  // waiting の変数のクリア
-
+      write_timeout = 0;
+      
       if (flag_write_mode == 1) {
 	// バイナリ書き込みモード
-        // 文字列への変換は一切行わず、直接バイナリ書き込み関数へ渡す
         write_binary_chunk(len, data, &totallen, &flag_write_mode);
         
       } else {
@@ -568,14 +573,16 @@ void app_main(void) {
 
       // 書き込みモード中なのに 1秒待ってもデータが来ない(= len <= 0)なら中断
       if (flag_write_mode == 1 && totallen != 0) {
-        ESP_LOGE(TAG, "-ERR Timeout: Data transmission interrupted.\n");
-	
-        if (g_spiffs_fp != NULL) {
-          fclose(g_spiffs_fp);
-          g_spiffs_fp = NULL;
-        }        
-        totallen = 0;
-        flag_write_mode = 0;
+	write_timeout += 1;
+
+	// 30回連続 (100ms * 30回 = 3秒間) データが途切れたらエラーとする
+        if (write_timeout >= 30) {
+          ESP_LOGE(TAG, "-ERR Timeout: Data transmission interrupted.\n");
+    
+          totallen = 0;
+          flag_write_mode = 0;
+          write_timeout = 0;
+	}
       }      
     }
 
