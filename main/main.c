@@ -3,6 +3,9 @@
 #include "esp_spiffs.h"
 #include "esp_vfs_dev.h"
 #include "driver/uart.h"
+#include "driver/gpio.h"
+#include "freertos/queue.h"
+#include "freertos/task.h"
 #include "mrubyc.h"
 #include "sdkconfig.h"
 #include "esp_rom_crc.h"  
@@ -54,6 +57,8 @@ const uint8_t uart_output_tx = 0;
 const uint8_t uart_output_rx = 0;
 #endif
 
+// UARTからBreak信号が送られたときに再起動するかどうか（0:無効、1:有効）
+static volatile uint8_t g_break_enabled = 0;
 
 /**
  * 与えられたバイナリデータのCRC8ハッシュ値を計算する
@@ -170,6 +175,22 @@ uint8_t init_spiffs(){
 }
 
 /*
+ * Break信号でボードをソフトリセットするハンドラ
+ */
+static void uart_event_task(void *arg)
+{
+  uart_event_t event;
+  while (1) {
+    // UARTイベントを受信したときBreak信号でのみ再起動
+    if (xQueueReceive((QueueHandle_t)arg, &event, portMAX_DELAY)) {
+      if (event.type == UART_BREAK && g_break_enabled) {
+        esp_restart();
+      }
+    }
+  }
+}
+
+/*
  * UART 初期化
  */
 uint8_t init_uart(){
@@ -184,11 +205,16 @@ uint8_t init_uart(){
     .source_clk = UART_SCLK_DEFAULT,
   };
 
-  // UARTドライバのインストール
-  ESP_ERROR_CHECK( uart_driver_install(uart_num, BUF_SIZE * 2, 0, 0, NULL, 0) );
+  // UARTドライバのインストール、イベントキューへの紐づけ
+  QueueHandle_t uart_queue;
+  ESP_ERROR_CHECK( uart_driver_install(uart_num, BUF_SIZE * 2, 0, 20, &uart_queue, 0) );
 
   // UARTパラメータの設定
   ESP_ERROR_CHECK( uart_param_config(uart_num, &uart_config) );
+
+  // Break信号受信時にボードを再起動するタスクの登録
+  ESP_ERROR_CHECK( gpio_set_pull_mode(GPIO_NUM_3, GPIO_PULLDOWN_ONLY) );
+  ESP_ERROR_CHECK( xTaskCreate(uart_event_task, "uart_event_task", 3072, uart_queue, 12, NULL) == pdPASS ? ESP_OK : ESP_ERR_NO_MEM );
   
   return 1;
 }  
@@ -629,6 +655,10 @@ void app_main(void) {
   mrbc_esp32_utils_gem_init(0);
   ESP_LOGI(TAG, "start HTTP_CAMERA (C) \n");
   mrbc_esp32_httpcamera_gem_init(0);
+
+  // Break信号によるリセットの有効化
+  g_break_enabled = 1;
+
   ESP_LOGI(TAG, "start MQTT (C) \n");
   mrbc_esp32_mqtt_gem_init(0);
   ESP_LOGI(TAG, "start ESP-NOW (C) \n");
