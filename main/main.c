@@ -30,6 +30,8 @@
 #include "mrbc_esp32_dirent.h"
 #include "mrbc_esp32_utils.h"
 #include "mrbc_esp32_time.h"
+#include "mrbc_esp32_mqtt.h"
+#include "mrbc_esp32_espnow.h"
 
 static const char *TAG = "mrubyc-esp32";
 
@@ -657,6 +659,11 @@ void app_main(void) {
   // Break信号によるリセットの有効化
   g_break_enabled = 1;
 
+  ESP_LOGI(TAG, "start MQTT (C) \n");
+  mrbc_esp32_mqtt_gem_init(0);
+  ESP_LOGI(TAG, "start ESP-NOW (C) \n");
+  mrbc_esp32_espnow_gem_init(0);
+ 
   // Ruby 側のクラス・メソッド定義
   extern const uint8_t myclass_bytecode[];
   mrbc_run_mrblib(myclass_bytecode);

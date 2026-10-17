@@ -39,6 +39,8 @@ set(srcs
     "mrbc_esp32_time.c"
     "mrbc_esp32_sleep.c"
     "mrbc_esp32_utils.c"
+    "mrbc_esp32_mqtt.c"
+    "mrbc_esp32_espnow.c"
     "mrblib.c"
     "main.c")
 

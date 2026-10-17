@@ -1,4 +1,4 @@
-本 mruby/c ファームウェア・クラスライブラリ for ESP32 は，ESP-IDF 5.5 で書かれており，mruby/c 3.4 をサポートしています．
+本 mruby/c ファームウェア・クラスライブラリ for ESP32 は，ESP-IDF 6.0 で書かれており，mruby/c 4.0 をサポートしています．
 
 クラスライブラリは，[mruby mruby/c 共通 I/O API ガイドライン](https://github.com/mruby/microcontroller-peripheral-interface-guide) に準拠しています．
 
@@ -11,8 +11,6 @@
 周辺機器用のクラスライブラリは，ESP32 以外のマイコンからも利用することを想定し，別リポジトリに分けています．
 それらのリポジトリを参照してください．なお，これらのクラスライブラリは Ruby のみで書かれており，ESP-IDF (ESP32 マイコンの IDE) には依存しません．
 
-+ LCD module aqm0802a : https://github.com/gfd-dennou-club/mrubyc-gem-aqm0802a
-+ Real Time Clock rx8035sa : https://github.com/gfd-dennou-club/mrubyc-gem-rx8035sa
 + GROVE sensors : https://github.com/gfd-dennou-club/mrubyc-gem-grove/wiki
 
 ## 利用シーン

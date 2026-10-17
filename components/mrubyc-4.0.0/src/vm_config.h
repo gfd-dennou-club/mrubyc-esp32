@@ -17,7 +17,7 @@
 
 // maximum number of VMs
 #if !defined(MAX_VM_COUNT)
-#define MAX_VM_COUNT 5
+#define MAX_VM_COUNT 30
 #endif
 
 // maximum size of registers
