@@ -15,6 +15,25 @@
 //I2C Read 操作で用意されるバッファサイズ
 #define MAX_READ_LEN  32
 
+//ターゲットボードの選択．menuconfig で設定
+#if CONFIG_BOARD_ESP32
+#define SCLPIN 22
+#define SDAPIN 21
+
+#elif CONFIG_BOARD_ESP32S3
+#define SCLPIN 9
+#define SDAPIN 8
+
+#elif CONFIG_BOARD_ATOMLITE
+#define SCLPIN 32
+#define SDAPIN 26
+
+#elif CONFIG_BOARD_ATOMS3
+#define SCLPIN 1
+#define SDAPIN 2
+
+#endif
+
 static char* TAG = "I2C";
 
 // I2Cデバイスハンドルとそのアドレスを保持する構造体
@@ -69,8 +88,8 @@ static void mrbc_esp32_i2c_initialize(mrbc_vm *vm, mrbc_value v[], int argc)
   i2c_handles_t handles = {0}; // 構造体全体をゼロクリア
   handles.i2c_freq = 100000;   // 100 kHz
   handles.device_count = 0;
-  int i2c_scl_pin = 22;
-  int i2c_sda_pin = 21;  
+  int i2c_scl_pin = SCLPIN;
+  int i2c_sda_pin = SDAPIN;  
 
   //オプション解析. unit は使わない．
   MRBC_KW_ARG(frequency, freq, scl_pin, sda_pin, unit);

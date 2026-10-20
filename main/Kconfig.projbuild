@@ -15,6 +15,26 @@ menu "mrubyc-esp32 Configuration"
     default "UTC"   if TIME_ZONE_UTC
     default "JST-9" if TIME_ZONE_JST
 
+  choice
+    prompt "BOARD SELECT"
+    default BOARD_ESP32
+    config BOARD_ESP32
+      bool "ESP32 Devkit series"
+    config BOARD_ESP32S3
+      bool "ESP32 S3 Devkit series"
+    config BOARD_ATOMLITE
+      bool "Atom Lite series"
+    config BOARD_ATOMS3
+      bool "Atom S3 series"
+  endchoice      
+
+  config MRUBYC_I2C_PIN
+    string
+    default "ESP32 Devkit series"    if BOARD_ESP32
+    default "ESP32 S3 Devkit series" if BOARD_ESP32S3
+    default "Atom Lite series"       if BOARD_ATOMLITE
+    default "Atom S3 series"         if BOARD_ATOMS3
+
   config USE_MRUBYC_HTTP_CAMERA
     bool "USE ESP-EYE CAMERA (idf.py add-dependency \"espressif/esp32-camera\")"
     default n

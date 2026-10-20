@@ -2,13 +2,28 @@
 #include "esp_log.h"
 #include "esp_spiffs.h"
 #include "esp_vfs_dev.h"
-#include "driver/uart.h"
-#include "driver/gpio.h"
-#include "freertos/queue.h"
 #include "freertos/task.h"
 #include "mrubyc.h"
 #include "sdkconfig.h"
 #include "esp_rom_crc.h"  
+
+#include "driver/uart.h"
+#include "soc/soc_caps.h"
+// USB serial (ESP32-S3) か UART (ESP32) の区別
+#if SOC_USB_SERIAL_JTAG_SUPPORTED && \
+    defined(CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG) && \
+    CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG
+
+#define USE_USB_SERIAL_JTAG 1
+#include "driver/usb_serial_jtag.h"
+
+#else
+
+#define USE_USB_SERIAL_JTAG 0
+#include "driver/gpio.h"
+#include "freertos/queue.h"
+
+#endif
 
 //*********************************************
 // ENABLE LIBRARY written by C
@@ -175,6 +190,38 @@ uint8_t init_spiffs(){
 }
 
 /*
+ * 送信出力の完了処理
+ */
+static void serial_output_flush(void)
+{
+  // printf() の標準出力バッファをドライバへ渡す
+  fflush(stdout);
+
+#if !USE_USB_SERIAL_JTAG
+  // UARTの場合だけ、実際の送信完了を待つ
+  uart_wait_tx_done(uart_num, pdMS_TO_TICKS(100));
+#endif
+}
+
+#if USE_USB_SERIAL_JTAG
+/*
+ * USB Serial 初期化 
+ */
+uint8_t init_usbserial(){
+  // Configure USB SERIAL JTAG
+  usb_serial_jtag_driver_config_t usb_serial_jtag_config = {
+    .rx_buffer_size = BUF_SIZE * 2,
+    .tx_buffer_size = BUF_SIZE * 2,
+  };
+  
+  ESP_ERROR_CHECK(usb_serial_jtag_driver_install(&usb_serial_jtag_config));
+  ESP_LOGI(TAG, "USB Serial/JTAG init done");
+
+  return 1;
+}  
+
+#else
+/*
  * Break信号でボードをソフトリセットするハンドラ
  */
 static void uart_event_task(void *arg)
@@ -218,13 +265,14 @@ uint8_t init_uart(){
   
   return 1;
 }  
-
+#endif
 
 /*!
 * @brief リセットコマンド
 */
 void mrbwrite_cmd_reset() {
   printf("+OK \n\n");
+  serial_output_flush();
   vTaskDelay(2000 / portTICK_PERIOD_MS);
   esp_restart();
 }
@@ -234,6 +282,7 @@ void mrbwrite_cmd_reset() {
 */
 void mrbwrite_cmd_execute() {
   printf("+OK \n\n");
+  serial_output_flush();
   vTaskDelay(2000 / portTICK_PERIOD_MS);
 }
 
@@ -278,9 +327,6 @@ void mrbwrite_cmd_write(struct stat *st, uint8_t *flag_write_mode, const char *p
 /*!
 * @brief 開いているファイルへバイナリデータを追記書き込みする（CRC16オプション検証付き）
 */
-/*!
-* @brief 分割されたバイナリデータを受信し、追記書き込みと終了判定を行う
-*/
 void write_binary_chunk(int len, uint8_t *data, size_t *totallen, uint8_t *flag_write_mode) {
   
   // 受信データ(len)が残りサイズ(*totallen)を上回った場合、
@@ -305,7 +351,7 @@ void write_binary_chunk(int len, uint8_t *data, size_t *totallen, uint8_t *flag_
   // 残りバイト数を減らす（ここで継続判定の準備）
   *totallen -= written;
 
-  // 【継続・終了判定】すべてのバイト数を受信し終わった時の処理
+  // すべてのバイト数を受信し終わった時の処理
   if (*totallen == 0) {
     
     // --- CRC16 の自動検証ロジック ---
@@ -319,6 +365,8 @@ void write_binary_chunk(int len, uint8_t *data, size_t *totallen, uint8_t *flag_
         if (actual_crc16 != g_expected_crc16) {
           unlink(g_current_filename); // 破損ファイルなので消去
           printf("-ERR CRC mismatch. Expected: 0x%04X, Actual: 0x%04X\n\n", g_expected_crc16, actual_crc16);
+	  serial_output_flush();
+    
           *flag_write_mode = 0;
           return;
         }
@@ -327,6 +375,8 @@ void write_binary_chunk(int len, uint8_t *data, size_t *totallen, uint8_t *flag_
 
     // 問題なく成功した場合は +DONE を出力してモード終了
     printf("+DONE \n\n");
+    serial_output_flush();
+
     *flag_write_mode = 0;
   }
 }
@@ -413,16 +463,10 @@ void mrbwrite_cmd_verify()
 /*!
 * @return 0: 何もしない / 1: コマンドモードを抜けた
 */
-int mrbwrite_cmd_mode(
-  struct stat *st,
-  uint8_t *ifile,
-  uint8_t *flag_write_mode,
-  const char buffer[BUF_SIZE],
-  int len,
-  uint8_t *data,
-  size_t *totallen
-) {
-  char copybuffer[BUF_SIZE];
+int mrbwrite_cmd_mode(struct stat *st, uint8_t *ifile, uint8_t *flag_write_mode, const char buffer[BUF_SIZE], int len, uint8_t *data, size_t *totallen)
+{
+  static char copybuffer[BUF_SIZE];
+  
   //コマンドモードに入っている場合
   if (strncmp(buffer, "reset", 5) == 0) {
     //reset
@@ -484,10 +528,6 @@ int mrbwrite_cmd_mode(
   }else if(strncmp(buffer, "verify", 6) == 0){
     //verify
     mrbwrite_cmd_verify();
-  }else if(buffer[0] == 0x0d && buffer[1] == 0x0a){
-    printf("+OK mruby/c \n\n");
-//  }else{
-//    printf("-ERR Illegal command.\n\n");
   }
   return 0;
 }
@@ -508,47 +548,62 @@ void app_main(void) {
   //************************************
  
   //変数初期化
-  uint8_t data[BUF_SIZE];
+  static uint8_t data[BUF_SIZE];
   uint8_t wait = 0;
   uint32_t write_timeout = 0;
   uint8_t flag_cmd_mode = 0;
   uint8_t flag_write_mode = 0;
   uint8_t ifile = 0;
-  char buffer[BUF_SIZE];
+  static char buffer[BUF_SIZE];
   struct stat st;
   size_t totallen = 0;
 
   // SPIFFS 初期化
   init_spiffs();
   vTaskDelay(100 / portTICK_PERIOD_MS);
-  
-  // UART0 初期化
+
+  //シリアル通信
+#if USE_USB_SERIAL_JTAG  
+  init_usbserial();
+#else
   init_uart();
+#endif
+
   vTaskDelay(100 / portTICK_PERIOD_MS);
   
   //************************************
   // mrbcwrite モード開始
   //************************************
   printf("\nKani-Board, Please push Enter key to mrbwrite mode\n\n");
-
-  // clear buffer
-  uart_wait_tx_done(uart_num, pdMS_TO_TICKS(100));
-  uart_flush_input(uart_num);
-
+  serial_output_flush();
+ 
   while (wait < 20) {
     
     // バイト数の取得. 100ms の待ち
-    int len = uart_read_bytes(uart_num, data, BUF_SIZE, 100 / portTICK_PERIOD_MS);
+#if USE_USB_SERIAL_JTAG  
+    int len = usb_serial_jtag_read_bytes(data, BUF_SIZE, 100 / portTICK_PERIOD_MS);
+#else
+    int len = uart_read_bytes(uart_num,  data, BUF_SIZE, 100 / portTICK_PERIOD_MS);
+#endif
     
     // 取得したバイト数が正か否かで場合分け
     if (len > 0) {
+
+      /*
+       * 受信データ確認用デバッグ出力
+       *
+      ESP_LOGI(TAG, "RX len=%d, cmd_mode=%d, write_mode=%d",
+	       len, flag_cmd_mode, flag_write_mode);
+      ESP_LOG_BUFFER_HEXDUMP(TAG, data, len, ESP_LOG_INFO);
+      */
+      
       wait = 0;  // waiting の変数のクリア
       write_timeout = 0;
       
       if (flag_write_mode == 1) {
 	// バイナリ書き込みモード
         write_binary_chunk(len, data, &totallen, &flag_write_mode);
-        
+	
       } else {
         // コマンドモード（通常時：文字・コマンド受信の処理）
         int start_pos = 0;
@@ -567,27 +622,27 @@ void app_main(void) {
         
         if (flag_cmd_mode == 0) {
           // Enter (CR+LF) が打鍵された場合はフラグを立てる
-          if (data[0] == 0x0d && data[1] == 0x0a) {         
+          if (len >= 2 && data[0] == 0x0d && data[1] == 0x0a) {         
             printf("+OK mruby/c \n\n");
-	    
-            uart_wait_tx_done(uart_num, pdMS_TO_TICKS(100));
-            uart_flush_input(uart_num);
-            flag_cmd_mode = 1;
-          }
+	    serial_output_flush();
+	    flag_cmd_mode = 1;
+	  
+	  }
         } else {
           // コマンドモードに入っている場合
-          int cmd_state = mrbwrite_cmd_mode(
-            &st,
-            &ifile,
-            &flag_write_mode,
-            buffer,
-            len,
-            data,
-            &totallen
-          );
+	  if (buffer[0] == '\0') {
+	    /*
+	     * kaniburnerによるコマンドモード移行の再試行へ応答
+	     * 既にapp_main()側でCR/LFを除去しているため，空行は buffer[0] == '\0' になる．
+	     */
+	    printf("+OK mruby/c \n\n");
+	    serial_output_flush();
+	    continue;
+	  }
 
-          uart_wait_tx_done(uart_num, pdMS_TO_TICKS(100));
-          uart_flush_input(uart_num);
+	  int cmd_state = mrbwrite_cmd_mode(&st, &ifile, &flag_write_mode, buffer,
+					    len, data, &totallen);
+	  serial_output_flush();
           
           if (cmd_state == 1) break;
         }
@@ -619,6 +674,7 @@ void app_main(void) {
   // 書き込みモード終了
   printf("\nKani-Board, End mrbwrite mode\n");
   printf("Kani-Board, mruby/c v4.0.0 start\n");
+  serial_output_flush();
   
   //***************************************
   // Ruby 
@@ -655,14 +711,13 @@ void app_main(void) {
   mrbc_esp32_utils_gem_init(0);
   ESP_LOGI(TAG, "start HTTP_CAMERA (C) \n");
   mrbc_esp32_httpcamera_gem_init(0);
-
-  // Break信号によるリセットの有効化
-  g_break_enabled = 1;
-
   ESP_LOGI(TAG, "start MQTT (C) \n");
   mrbc_esp32_mqtt_gem_init(0);
   ESP_LOGI(TAG, "start ESP-NOW (C) \n");
   mrbc_esp32_espnow_gem_init(0);
+
+  // Break信号によるリセットの有効化
+  g_break_enabled = 1;
  
   // Ruby 側のクラス・メソッド定義
   extern const uint8_t myclass_bytecode[];
