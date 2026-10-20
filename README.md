@@ -6,6 +6,36 @@
 
 詳細は [wiki](https://github.com/gfd-dennou-club/mrubyc-esp32/wiki) をご覧ください．
 
+### ESP32 S3 (例えば，ATOM S3R) を使う場合
+
+現時点では menuconfig で設定を入れる必要があります．
+
+```
+idf.py set-target esp32s3
+
+idf.py menuconfig
+
+   (Top) > Serial flasher config
+      Flash size (4 MB)
+
+   (Top) > Partition Table
+      Partition Table (Custom partition table CSV)
+      (partitions.csv) Custom partition table CSV file
+
+   (Top) > mrubyc-esp32 Configuration
+      BOARD SELECT (Atom S3 series)
+
+   (Top) > Compiler options
+      [*] Disable new warnings introduced in GCC 15
+
+   (Top) > Component config > ESP-STDIO
+      Channel for console output (USB Serial/JTAG Controller)
+
+idf.py build
+
+idf.py flash spiffs monitor
+
+
 ## 周辺機器
 
 周辺機器用のクラスライブラリは，ESP32 以外のマイコンからも利用することを想定し，別リポジトリに分けています．
