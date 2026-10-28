@@ -8,14 +8,18 @@
 #include "driver/i2c_master.h"
 #include "esp_err.h"
 #include "esp_log.h"
+//#include "driver/gpio.h"
 
 // I2Cデバイスを最大8つまでサポート（必要に応じて数を変更）
 #define MAX_I2C_DEVICES 8 
 
-//I2C Read 操作で用意されるバッファサイズ
+// I2C Read 操作で用意されるバッファサイズ
 #define MAX_READ_LEN  32
 
-//ターゲットボードの選択．menuconfig で設定
+// タイムアウト
+#define I2C_TIMEOUT_MS 100
+
+// ターゲットボードの選択．menuconfig で設定
 #if CONFIG_BOARD_ESP32
 #define SCLPIN 22
 #define SDAPIN 21
@@ -76,12 +80,12 @@ static void mrbc_esp32_i2c_new(mrbc_vm *vm, mrbc_value v[], int argc)
   //initialize を call
   mrbc_instance_call_initialize( vm, v, argc );
   
-  vTaskDelay(100 / portTICK_PERIOD_MS);  //wait
+  vTaskDelay(pdMS_TO_TICKS(100));  //wait
 }
 
-/*! initializer
-
-*/
+/*
+ * initializer
+ */
 static void mrbc_esp32_i2c_initialize(mrbc_vm *vm, mrbc_value v[], int argc)
 {
   //構造体の定義
@@ -129,7 +133,7 @@ static void mrbc_esp32_i2c_initialize(mrbc_vm *vm, mrbc_value v[], int argc)
     ESP_LOGE(TAG, "I2C bus not initialized.");
     return;
   }
-  
+
   // instance->data を構造体へのポインタとみなして、値を代入する。
   *((i2c_handles_t *)(v[0].instance->data)) = handles;
 
@@ -144,65 +148,42 @@ static void mrbc_esp32_i2c_initialize(mrbc_vm *vm, mrbc_value v[], int argc)
 // 成功した場合はハンドルを返し、失敗した場合は NULL を返す。
 static i2c_master_dev_handle_t get_or_create_dev_handle(i2c_handles_t *handles, int i2c_addr_7)
 {
-    // 1. 既存のデバイスハンドルを検索
-    for (int i = 0; i < handles->device_count; i++) {
-        if (handles->devices[i].device_addr == i2c_addr_7) {
-            // 見つかった場合は既存のハンドルを返す
-            return handles->devices[i].dev_handle;
-        }
+  // 既存のデバイスハンドルを検索
+  for (int i = 0; i < handles->device_count; i++) {
+    if (handles->devices[i].device_addr == i2c_addr_7) {
+      // 見つかった場合は既存のハンドルを返す
+      return handles->devices[i].dev_handle;
     }
-
-    // 2. デバイスハンドルが存在しない場合、新しく作成
-    if (handles->device_count >= MAX_I2C_DEVICES) {
-        ESP_LOGE(TAG, "Exceeded max I2C device limit (%d).", MAX_I2C_DEVICES);
-        return NULL;
-    }
-
-    i2c_device_config_t dev_cfg = {
-        .dev_addr_length = I2C_ADDR_BIT_LEN_7,
-        .device_address = i2c_addr_7,
-        .scl_speed_hz = handles->i2c_freq, // 保持していた周波数を適用
-    };
-
-    i2c_master_dev_handle_t new_dev_handle;
-    
-    // デバイスの追加（初回のみ実行）
-    ESP_LOGI(TAG, "Creating I2C device handle for address 0x%X", i2c_addr_7);
-    
-    if (ESP_OK != i2c_master_bus_add_device(handles->bus_handle, &dev_cfg, &new_dev_handle)) {
-         ESP_LOGE(TAG, "Failed to add I2C device 0x%X", i2c_addr_7);
-         return NULL;
-    }
-
-    //デバイスの存在チェック
-    ESP_LOGI(TAG, "Probing I2C device 0x%X...", i2c_addr_7);
-    
-    // タイムアウト値を設定 (例: 50ms)
-    const int PROBE_TIMEOUT_MS = 50; 
-    
-    // i2c_master_probe(バスハンドル, アドレス, タイムアウト) に変更
-    esp_err_t probe_ret = i2c_master_probe(
-        handles->bus_handle, // 1. I2Cバスハンドルを渡す
-        i2c_addr_7,          // 2. デバイスアドレスを渡す
-        PROBE_TIMEOUT_MS     // 3. タイムアウトを渡す
-    ); 
-
-    if (probe_ret != ESP_OK) {
-        // プローブ失敗 (デバイスが存在しない、またはACKが返ってこない)
-        ESP_LOGE(TAG, "I2C device 0x%X not found! (Probe failed with code: 0x%X).", i2c_addr_7, probe_ret);
-        
-        // 作成したデバイスハンドルを即座に解放
-        i2c_master_bus_rm_device(new_dev_handle);
-        
-        return NULL;
-    }
-    
-    // 作成したハンドルを管理リストに追加
-    handles->devices[handles->device_count].device_addr = i2c_addr_7;
-    handles->devices[handles->device_count].dev_handle = new_dev_handle;
-    handles->device_count++;
-
-    return new_dev_handle;
+  }
+  
+  // デバイスハンドルが存在しない場合、新しく作成
+  if (handles->device_count >= MAX_I2C_DEVICES) {
+    ESP_LOGE(TAG, "Exceeded max I2C device limit (%d).", MAX_I2C_DEVICES);
+    return NULL;
+  }
+  
+  i2c_device_config_t dev_cfg = {
+    .dev_addr_length = I2C_ADDR_BIT_LEN_7,
+    .device_address = i2c_addr_7,
+    .scl_speed_hz = handles->i2c_freq, // 保持していた周波数を適用
+  };
+  
+  i2c_master_dev_handle_t new_dev_handle;
+  
+  // デバイスの追加（初回のみ実行）
+  ESP_LOGI(TAG, "Creating I2C device handle for address 0x%X", i2c_addr_7);
+  
+  if (ESP_OK != i2c_master_bus_add_device(handles->bus_handle, &dev_cfg, &new_dev_handle)) {
+    ESP_LOGE(TAG, "Failed to add I2C device 0x%X", i2c_addr_7);
+    return NULL;
+  }
+  
+  // 作成したハンドルを管理リストに追加
+  handles->devices[handles->device_count].device_addr = i2c_addr_7;
+  handles->devices[handles->device_count].dev_handle = new_dev_handle;
+  handles->device_count++;
+  
+  return new_dev_handle;
 }
 
 
@@ -215,9 +196,10 @@ static void mrbc_esp32_i2c_write(mrb_vm *vm, mrb_value v[], int argc)
   // 第一引数はアドレス
   if( argc < 1 || v[1].tt != MRBC_TT_INTEGER ) {
     ESP_LOGE(TAG, "invalid number and/or type of parameters detected");
+    return;
   }
   int i2c_addr_7 = mrbc_integer(v[1]);
-
+  
   // 第二引数は書き込みデータ
   buf = make_output_buffer( vm, v, argc, 2, &bufsiz );
   if (!buf){
@@ -228,7 +210,7 @@ static void mrbc_esp32_i2c_write(mrb_vm *vm, mrb_value v[], int argc)
   // start I2C communication
   i2c_handles_t *handles = (i2c_handles_t *)v[0].instance->data; 
 
-  if (handles == NULL) {
+  if (handles == NULL || handles->bus_handle == NULL) {
     ESP_LOGE(TAG, "I2C bus not initialized.");
     if (buf) mrbc_free( vm, buf ); 
     return;
@@ -243,13 +225,20 @@ static void mrbc_esp32_i2c_write(mrb_vm *vm, mrb_value v[], int argc)
   }
   
   //データ送信
-  ESP_ERROR_CHECK(i2c_master_transmit(current_dev_handle, buf, bufsiz, -1));
+  //  ESP_ERROR_CHECK(i2c_master_transmit(current_dev_handle, buf, bufsiz, -1));
+  esp_err_t err = i2c_master_transmit(current_dev_handle, buf, bufsiz, I2C_TIMEOUT_MS);
 
   //動的に確保したメモリの解放
   if (buf) mrbc_free( vm, buf ); 
 
-  //バッファのサイズを戻す
-  SET_RETURN( mrbc_integer_value(bufsiz) );
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG, "I2C transmit failed: %s", esp_err_to_name(err));
+    SET_RETURN(mrbc_nil_value());
+    return;
+  } else {
+    //バッファのサイズを戻す
+    SET_RETURN( mrbc_integer_value(bufsiz) );
+  }
 }
 
 
@@ -262,32 +251,39 @@ static void mrbc_esp32_i2c_readfrom(mrb_vm *vm, mrb_value v[], int argc)
   
   i2c_addr_7 = GET_INT_ARG(1);
   len  = GET_INT_ARG(2);
-
+  
   // len が MAX_READ_LEN 以下であることを検査
   if (len <= 0 || len > MAX_READ_LEN) {
     ESP_LOGE(TAG, "Invalid read length %d. Max is %d.", len, MAX_READ_LEN);
     SET_RETURN(mrbc_nil_value()); // または適切なエラー値を返す
     return;
   }
-
+  
   // start I2C communication
   i2c_handles_t *handles = (i2c_handles_t *)v[0].instance->data;   
 
-  if (handles == NULL) {
+  if (handles == NULL || handles->bus_handle == NULL) {
     ESP_LOGE(TAG, "I2C bus not initialized.");
     return;
   }
 
   current_dev_handle = get_or_create_dev_handle(handles, i2c_addr_7);
-
+  
   if (current_dev_handle == NULL) {
     ESP_LOGE(TAG, "Failed to get or create device handle.");
     return;
   }
   
   //データ受信
-  ESP_ERROR_CHECK(i2c_master_receive(current_dev_handle, buf, len, -1));
+  //ESP_ERROR_CHECK(i2c_master_receive(current_dev_handle, buf, len, -1));
+  esp_err_t err = i2c_master_receive(current_dev_handle, buf, len, I2C_TIMEOUT_MS);
 
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG, "I2C transmit (receive) failed: %s", esp_err_to_name(err));
+    SET_RETURN(mrbc_nil_value());
+    return;
+  }
+    
   // Array インスタンスを生成
   result = mrbc_array_new(vm, len);
   
@@ -311,64 +307,86 @@ static void mrbc_esp32_i2c_read(mrb_vm *vm, mrb_value v[], int argc)
   // Get parameter
   if( argc < 2 || v[1].tt != MRBC_TT_INTEGER || v[2].tt != MRBC_TT_INTEGER ){
     ESP_LOGE(TAG, "invalid number and/or type of parameters detected");
+    return;
   }  
   int i2c_addr_7 = mrbc_integer(v[1]);
   int read_bytes = mrbc_integer(v[2]);
   
-  if( read_bytes < 0 ) {
+  if( read_bytes <= 0 ) {
     ESP_LOGE(TAG, "invalid number of read_bytes detected");
+    return;
   }
-
+  
   if( argc > 2 ) {
     buf = make_output_buffer( vm, v, argc, 3, &bufsiz );
     if( !buf ) {
       SET_RETURN(ret);
+      return;
     }
   }
-
-  // メモリ確保
-  ret = mrbc_string_new(vm, 0, read_bytes);
-  uint8_t *read_buf = (uint8_t *)mrbc_string_cstr(&ret);
-
+    
   // start I2C communication
   //  i2c_handles_t handles = *((i2c_handles_t *)(v[0].instance->data));
   i2c_handles_t *handles = (i2c_handles_t *)v[0].instance->data;   
-
-  if (handles == NULL) {
+  
+  if (handles == NULL || handles->bus_handle == NULL) {
     ESP_LOGE(TAG, "I2C bus not initialized.");
     if (buf) mrbc_free( vm, buf ); 
     return;
   }
 
   current_dev_handle = get_or_create_dev_handle(handles, i2c_addr_7);
-
+  
   if (current_dev_handle == NULL) {
     ESP_LOGE(TAG, "Failed to get or create device handle.");
     if (buf) mrbc_free( vm, buf ); 
+    SET_RETURN(mrbc_nil_value());
     return;
   }
 
+  // メモリ確保
+  ret = mrbc_string_new(vm, 0, read_bytes);
+  uint8_t *read_buf = (uint8_t *)mrbc_string_cstr(&ret);
+  
   //データ受信
   if( buf == 0 ) {
     //read する場合
-    ESP_ERROR_CHECK(i2c_master_receive(current_dev_handle, read_buf, read_bytes, -1));
+    //ESP_ERROR_CHECK(i2c_master_receive(current_dev_handle, read_buf, read_bytes, -1));
+    esp_err_t err = i2c_master_receive(current_dev_handle, read_buf, read_bytes, I2C_TIMEOUT_MS);
+    if (err != ESP_OK) {
+      ESP_LOGE(TAG, "I2C receive failed: %s", esp_err_to_name(err));
+      SET_RETURN(mrbc_nil_value());
+      return;
+    }
+				    
   } else {
     //write してから read する場合
-    ESP_ERROR_CHECK(i2c_master_transmit_receive(current_dev_handle, buf, bufsiz, read_buf, read_bytes, -1));
-  }
-  
+    //ESP_ERROR_CHECK(i2c_master_transmit_receive(current_dev_handle, buf, bufsiz, read_buf, read_bytes, -1));
+    esp_err_t err = i2c_master_transmit_receive(current_dev_handle, buf, bufsiz, read_buf, read_bytes, I2C_TIMEOUT_MS);
+    if (err != ESP_OK) {
+      ESP_LOGE(TAG, "I2C transmit-receive failed: %s", esp_err_to_name(err));
+      mrbc_free(vm, buf);
+      SET_RETURN(mrbc_nil_value());      
+      return;
+    }
+  } 
+
   //動的に確保したメモリの解放
   if( buf ) mrbc_free( vm, buf );
-    
+
   //値を返す
   SET_RETURN(ret);
 }
 
 
-static void mrbc_esp32_i2c_scan(mrbc_vm *vm, mrbc_value v[], int argc)
+static void mrbc_esp32_i2c_scan(
+    mrbc_vm *vm,
+    mrbc_value v[],
+    int argc)
 {
-  i2c_handles_t *handles = (i2c_handles_t *)v[0].instance->data;
-  
+  i2c_handles_t *handles =
+      (i2c_handles_t *)v[0].instance->data;
+
   if (handles == NULL || handles->bus_handle == NULL) {
     SET_RETURN(mrbc_nil_value());
     return;
@@ -376,24 +394,29 @@ static void mrbc_esp32_i2c_scan(mrbc_vm *vm, mrbc_value v[], int argc)
 
   mrbc_value result = mrbc_array_new(vm, 0);
 
-  // 重要：標準的なデバイスアドレス範囲 (0x08 - 0x77) のみを走査
-  // 0x00 や 0x78 以上はバスを混乱させる可能性があるため避ける
+  /*
+   * バス初期化直後の状態を見る。
+   * probe実行前であることが重要。
+   */
+  //ESP_LOGI(TAG, "Before scan: SDA=%d, SCL=%d", gpio_get_level(SDAPIN), gpio_get_level(SCLPIN));
+
   for (int addr = 0x08; addr <= 0x77; addr++) {
-    
-    // タイムアウトを 50ms 程度に設定
-    esp_err_t ret = i2c_master_probe(handles->bus_handle, addr, 500);
-    
+    // ESP_LOGI(TAG, "Before probe 0x%02X: SDA=%d, SCL=%d", addr, gpio_get_level(SDAPIN), gpio_get_level(SCLPIN));
+
+    esp_err_t ret = i2c_master_probe(handles->bus_handle, addr, 50);
+
+    // ESP_LOGI(TAG, "After probe 0x%02X: ret=%s, SDA=%d, SCL=%d", addr, esp_err_to_name(ret), gpio_get_level(SDAPIN), gpio_get_level(SCLPIN));
+
     if (ret == ESP_OK) {
       mrbc_value addr_val = mrbc_integer_value(addr);
       mrbc_array_push(&result, &addr_val);
+
     } else if (ret == ESP_ERR_TIMEOUT) {
-      // タイムアウトが発生した場合はログを出す（デバッグ用）
-      ESP_LOGD(TAG, "Probe timeout at 0x%02X", addr);
+      ESP_LOGE(TAG, "I2C timeout at 0x%02X", addr );
+      break;
     }
-
-    vTaskDelay(10 / portTICK_PERIOD_MS);
   }
-
+  
   SET_RETURN(result);
 }
 
