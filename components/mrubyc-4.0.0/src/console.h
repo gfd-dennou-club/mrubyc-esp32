@@ -125,7 +125,8 @@ static inline void mrbc_printf_init( mrbc_printf_t *pf, char *buf, int size,
   pf->p = pf->buf = buf;
   pf->buf_end = buf + size - 1;
   pf->fstr = fstr;
-  pf->fmt = (struct RPrintfFormat){0};
+  //  pf->fmt = (struct RPrintfFormat){0};
+  memset(&pf->fmt, 0, sizeof(pf->fmt));
 }
 
 

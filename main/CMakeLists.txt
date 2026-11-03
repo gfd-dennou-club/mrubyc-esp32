@@ -17,6 +17,7 @@ if(CLASS_FILES)
     set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/mrblib.c" PROPERTIES GENERATED TRUE)
 endif()
 
+
 # ==============================================================================
 # メインコンポーネントのビルド設定
 # ==============================================================================
@@ -41,8 +42,16 @@ set(srcs
     "mrbc_esp32_utils.c"
     "mrbc_esp32_mqtt.c"
     "mrbc_esp32_espnow.c"
+    "mrbc_esp32_m5lcd.cpp"
     "mrblib.c"
     "main.c")
 
 idf_component_register(SRCS ${srcs}
                        INCLUDE_DIRS ".")
+
+# mruby/cのC向け初期化マクロをC++から使用すると発生する警告を抑制
+target_compile_options(
+    ${COMPONENT_LIB}
+    PRIVATE
+    $<$<COMPILE_LANGUAGE:CXX>:-Wno-missing-field-initializers>
+)
