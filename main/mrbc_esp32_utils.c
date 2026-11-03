@@ -6,14 +6,17 @@
 #include "driver/gpio.h"
 #include "rom/ets_sys.h"
 #include "esp_log.h"
-
-#ifdef CONFIG_USE_MRUBYC_WS2813
 #include "led_strip.h"
-#endif
+#include "esp_system.h"
 
 #define DELAY_US 5
 static const char *TAG = "Utils";
 
+
+static void c_restart(mrbc_vm *vm, mrbc_value *v, int argc)
+{
+    esp_restart();
+}
 
 //================================================================
 /*! cast
@@ -163,7 +166,7 @@ static void mrbc_esp32_sleep_us(mrbc_vm *vm, mrbc_value v[], int argc) {
 //
 // LED strip (WS2813)
 //
-#ifdef CONFIG_USE_MRUBYC_WS2813
+
 // 初期化: c_ws2813_init(gpio, count)
 static void c_ws2813_init(mrbc_vm *vm, mrbc_value v[], int argc) {
     int gpio = GET_INT_ARG(1);
@@ -221,20 +224,23 @@ static void c_ws2813_clear(mrbc_vm *vm, mrbc_value v[], int argc) {
     led_strip_handle_t handle = (led_strip_handle_t)GET_INT_ARG(1);
     led_strip_clear(handle);
 }
-#endif
+
 
 void mrbc_esp32_utils_gem_init(struct VM* vm)
 {
+  mrbc_class *system =
+    mrbc_define_class(0, "System", mrbc_class_object);
+  mrbc_define_method(0, system,            "restart",          c_restart);
+  
   mrbc_define_method(0, mrbc_class_object, "floatCast",        c_floatCast);
   mrbc_define_method(0, mrbc_class_object, "millis",           c_millis);
   mrbc_define_method(0, mrbc_class_object, "my9221_transmit",  c_my9221_transmit);  
   mrbc_define_method(0, mrbc_class_object, "hx711_read_raw",   mrbc_esp32_hx711_read_raw);  
   mrbc_define_method(0, mrbc_class_object, "sleep_us",         mrbc_esp32_sleep_us);
-#ifdef CONFIG_USE_MRUBYC_WS2813
+
   mrbc_define_method(0, mrbc_class_object, "ws2813_init",      c_ws2813_init);
   mrbc_define_method(0, mrbc_class_object, "ws2813_set_pixel", c_ws2813_set_pixel);
   mrbc_define_method(0, mrbc_class_object, "ws2813_show",      c_ws2813_show);
   mrbc_define_method(0, mrbc_class_object, "ws2813_clear",     c_ws2813_clear);
-#endif  
 }
 
