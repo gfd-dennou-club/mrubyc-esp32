@@ -47,6 +47,7 @@
 #include "mrbc_esp32_time.h"
 #include "mrbc_esp32_mqtt.h"
 #include "mrbc_esp32_espnow.h"
+#include "mrbc_esp32_m5lcd.h"
 
 static const char *TAG = "mrubyc-esp32";
 
@@ -715,6 +716,8 @@ void app_main(void) {
   mrbc_esp32_mqtt_gem_init(0);
   ESP_LOGI(TAG, "start ESP-NOW (C) \n");
   mrbc_esp32_espnow_gem_init(0);
+  ESP_LOGI(TAG, "start M5LCD (C) \n");
+  mrbc_esp32_m5lcd_gem_init(0);  
 
   // Break信号によるリセットの有効化
   g_break_enabled = 1;
