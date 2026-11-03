@@ -39,9 +39,5 @@ menu "mrubyc-esp32 Configuration"
     bool "USE ESP-EYE CAMERA (idf.py add-dependency \"espressif/esp32-camera\")"
     default n
 
-  config USE_MRUBYC_WS2813
-    bool "USE WS2813 RGB-LED (idf.py add-dependency \"espressif/led_strip^3.0.0\")"
-    default n
-
 endmenu
 
