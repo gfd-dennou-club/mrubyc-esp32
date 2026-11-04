@@ -1,4 +1,5 @@
 #include <M5Unified.h>
+#include "esp_log.h"
 
 extern "C" {
 #include "mrubyc.h"
@@ -109,10 +110,28 @@ static void mrbc_esp32_m5lcd_new(struct VM *vm, mrbc_value v[], int argc)
 static void mrbc_esp32_m5lcd_initialize(struct VM *vm, mrbc_value v[], int argc)
 {
   MRBC_KW_ARG(rotation);
- 
-  auto cfg = M5.config();
+
+  // 引数処理．第一引数に spi オブジェクトが必要とする．
+  // 他のクラスと形を揃えるために要求する．
+  if (argc < 1 ||
+      v[1].tt != MRBC_TT_OBJECT ||
+      v[1].instance == NULL) {
+    ESP_LOGE("M5LCD", "first argument must be an SPI object");
+    SET_FALSE_RETURN();
+    return;
+  }
+  
+  spi_host_device_t spi_unit =
+    *((spi_host_device_t *)(v[1].instance->data));
+  
+  if (spi_unit != SPI2_HOST && spi_unit != SPI3_HOST) {
+    ESP_LOGE("M5LCD", "invalid SPI host: %d", (int)spi_unit);
+    SET_FALSE_RETURN();
+    return;
+  }
 
   //ディスプレイだけ制御するための処置
+  auto cfg = M5.config();
   cfg.internal_imu = false;
   cfg.external_imu = false;  
   cfg.internal_rtc = false;
@@ -122,8 +141,15 @@ static void mrbc_esp32_m5lcd_initialize(struct VM *vm, mrbc_value v[], int argc)
   cfg.output_power = false;
   cfg.led_brightness = 0;
   cfg.clear_display = true;
-  M5.begin(cfg);
 
+  // M5.begin を使う以上は，必ず spi bus が既に初期化されているという
+  // エラーが出てしまう．そのため，ここだけログを抑制する．
+  esp_log_level_t previous_spi_log_level = esp_log_level_get("spi_common");
+  esp_log_level_set("spi_common", ESP_LOG_NONE);
+
+  M5.begin(cfg);
+  esp_log_level_set("spi_common", previous_spi_log_level);
+  
   int rotation_value = 1;
   
   if (rotation.tt != MRBC_TT_EMPTY) {
@@ -132,7 +158,6 @@ static void mrbc_esp32_m5lcd_initialize(struct VM *vm, mrbc_value v[], int argc)
       SET_FALSE_RETURN();
       return;
     }
-
     rotation_value = MRBC_TO_INT(rotation);
   }
 
