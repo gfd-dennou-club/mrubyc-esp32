@@ -127,6 +127,25 @@ static void mrbc_esp32_uart_read(mrb_vm* vm, mrb_value* v, int argc)
 {
   uart_port_t uart_num = *((uart_port_t *)(v[0].instance->data));  
   int read_bytes = GET_INT_ARG(1);
+
+  /*
+   * 引数の検査
+   */
+  if (read_bytes < 0) {
+    ESP_LOGE(TAG, "Read size must not be negative: %d", read_bytes);
+    SET_NIL_RETURN();
+    return;
+  }
+
+  /*
+   * 0バイトの場合は、空文字列を返す。
+   * malloc(0)は呼ばない。
+   */
+  if (read_bytes == 0) {
+    mrbc_value ret = mrbc_string_new_cstr(vm, "");
+    SET_RETURN(ret);
+    return;
+  }
   
   // デフォルトのタイムアウト時間 (100ms)
   TickType_t timeout = 100 / portTICK_PERIOD_MS;
@@ -221,6 +240,8 @@ static void mrbc_esp32_uart_gets(mrb_vm* vm, mrb_value* v, int argc)
   //ruby用の文字列を作成
   moji = mrbc_string_new_cstr(vm,(const char *)data);
 
+  free(data);
+  
   //ruby用の文字列を返す
   SET_RETURN(moji);
 }
