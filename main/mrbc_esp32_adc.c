@@ -69,6 +69,7 @@ static bool adc_calibration_init(adc_unit_t unit, adc_channel_t channel, adc_att
             .unit_id = unit,
             .atten = atten,
             .bitwidth = ADC_BITWIDTH_DEFAULT,
+	    .default_vref = 1100,
         };
         ret = adc_cali_create_scheme_line_fitting(&cali_config, &handle);
         if (ret == ESP_OK) {
@@ -240,12 +241,21 @@ static void mrbc_esp32_adc_read(mrb_vm *vm, mrb_value *v, int argc){
   if (hndl.unit == ADC_UNIT_1) {
 
     //キャリブレーションの実施  → ad1_cali へ入力
-    while (flag_adc1_cali == 0) {
+    if (flag_adc1_cali == 0) {
       do_calibration = adc_calibration_init(hndl.unit, hndl.channel, ADC_ATTEN, &adc1_cali);
       if (do_calibration) {
 	flag_adc1_cali = 1;
+      }else{
+	flag_adc1_cali = -1;
       }
     }
+
+    if (flag_adc1_cali != 1 || adc1_cali == NULL) {
+      ESP_LOGE(TAG, "ADC1 calibration is unavailable");
+      SET_FLOAT_RETURN(-1.0);
+      return;
+    }
+
     //電圧に変換 (adc1_cali を利用)
     ESP_ERROR_CHECK(adc_cali_raw_to_voltage(adc1_cali, adc_reading, &adc_voltage));
     ESP_LOGD(TAG, "ADC%d Channel[%d] Cali Voltage: %d mV", hndl.unit + 1, hndl.channel, adc_voltage);
@@ -253,17 +263,25 @@ static void mrbc_esp32_adc_read(mrb_vm *vm, mrb_value *v, int argc){
   else if (hndl.unit == ADC_UNIT_2) {
 
     //キャリブレーションの実施  → adc2_cali へ入力
-    while (flag_adc2_cali == 0){
+    if (flag_adc2_cali == 0){
       do_calibration = adc_calibration_init(hndl.unit, hndl.channel, ADC_ATTEN, &adc2_cali);
       if (do_calibration) {
-	flag_adc2_cali = 1;
+	flag_adc2_cali = 1; 
+      }else{
+	flag_adc2_cali = -1;
       }
     }
+
+    if (flag_adc2_cali != 1 || adc2_cali == NULL) {
+      ESP_LOGE(TAG, "ADC2 calibration is unavailable");
+      SET_FLOAT_RETURN(-1.0);
+      return;
+    }
+
     //電圧に変換 (adc2_cali を利用)
     ESP_ERROR_CHECK(adc_cali_raw_to_voltage(adc2_cali, adc_reading, &adc_voltage));
     ESP_LOGD(TAG, "ADC%d Channel[%d] Cali Voltage: %d mV", hndl.unit + 1, hndl.channel, adc_voltage);
   }
-
 
   //値を戻す. mV -> V へ変換
   SET_FLOAT_RETURN(adc_voltage * 0.001);
