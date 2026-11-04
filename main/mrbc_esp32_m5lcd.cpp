@@ -108,6 +108,8 @@ static void mrbc_esp32_m5lcd_new(struct VM *vm, mrbc_value v[], int argc)
 
 static void mrbc_esp32_m5lcd_initialize(struct VM *vm, mrbc_value v[], int argc)
 {
+  MRBC_KW_ARG(rotation);
+ 
   auto cfg = M5.config();
 
   //ディスプレイだけ制御するための処置
@@ -122,7 +124,23 @@ static void mrbc_esp32_m5lcd_initialize(struct VM *vm, mrbc_value v[], int argc)
   cfg.clear_display = true;
   M5.begin(cfg);
 
-  M5.Display.setRotation(0);
+  int rotation_value = 1;
+  
+  if (rotation.tt != MRBC_TT_EMPTY) {
+    if (!MRBC_ISNUMERIC(rotation)) {
+      ESP_LOGE("M5LCD", "rotation must be numeric");
+      SET_FALSE_RETURN();
+      return;
+    }
+
+    rotation_value = MRBC_TO_INT(rotation);
+  }
+
+  if (rotation_value < 0 || rotation_value > 3) {
+    ESP_LOGE("M5LCD", "rotation must be between 0 and 3");
+  }
+  
+  M5.Display.setRotation(rotation_value);
   M5.Display.fillScreen(TFT_BLACK);
 
   *((bool *)(v[0].instance->data)) = true;
