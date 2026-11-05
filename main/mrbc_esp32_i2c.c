@@ -28,6 +28,14 @@
 #define SCLPIN 9
 #define SDAPIN 8
 
+#elif CONFIG_BOARD_M5BASIC
+#define SCLPIN 22
+#define SDAPIN 21
+
+#elif CONFIG_BOARD_M5CORE
+#define SCLPIN 33
+#define SDAPIN 32
+
 #elif CONFIG_BOARD_ATOMLITE
 #define SCLPIN 32
 #define SDAPIN 26
