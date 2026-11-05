@@ -19,9 +19,13 @@ menu "mrubyc-esp32 Configuration"
     prompt "BOARD SELECT"
     default BOARD_ESP32
     config BOARD_ESP32
-      bool "ESP32 Devkit series"
+      bool "ESP32 Devkit series"      
     config BOARD_ESP32S3
       bool "ESP32 S3 Devkit series"
+    config BOARD_M5BASIC
+      bool "M5 stack Basic series"      
+    config BOARD_M5CORE
+      bool "M5 stack Core2/Core3 series"      
     config BOARD_ATOMLITE
       bool "Atom Lite series"
     config BOARD_ATOMS3
