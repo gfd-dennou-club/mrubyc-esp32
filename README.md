@@ -34,7 +34,16 @@ idf.py menuconfig
 idf.py build
 
 idf.py flash spiffs monitor
+```
 
+### 出力に UART2 を使う場合
+```
+idf.py menuconfig
+
+   (Top) > Component config > ESP-STDIO
+       (17) UART TX on GPIO<num>
+       (16) UART RX on GPIO<num>
+```
 
 ## 周辺機器
 
