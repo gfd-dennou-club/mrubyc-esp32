@@ -9,7 +9,24 @@
 
 #include "driver/uart.h"
 #include "soc/soc_caps.h"
+
+#if defined(CONFIG_MRBWRITE_TRANSPORT_BLE) && CONFIG_MRBWRITE_TRANSPORT_BLE
+#include <stdarg.h>
+#include <assert.h>
+#include "nvs_flash.h"
+#include "freertos/stream_buffer.h"
+#include "nimble/nimble_port.h"
+#include "nimble/nimble_port_freertos.h"
+#include "host/ble_hs.h"
+#include "host/ble_uuid.h"
+#include "services/gap/ble_svc_gap.h"
+#include "driver/gpio.h"
+#endif
+
 // USB serial (ESP32-S3) か UART (ESP32) の区別
+#if defined(CONFIG_MRBWRITE_TRANSPORT_BLE) && CONFIG_MRBWRITE_TRANSPORT_BLE
+#define USE_USB_SERIAL_JTAG 0
+#else
 #if SOC_USB_SERIAL_JTAG_SUPPORTED && \
     defined(CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG) && \
     CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG
@@ -24,6 +41,8 @@
 #include "freertos/queue.h"
 
 #endif
+
+#endif /* CONFIG_MRBWRITE_TRANSPORT_BLE */
 
 //*********************************************
 // ENABLE LIBRARY written by C
@@ -53,10 +72,12 @@ static const char *TAG = "mrubyc-esp32";
 
 #define MRUBYC_VERSION_STRING "mruby/c v4.0.0 RITE0400 MRBW1.2"
 #define BUF_SIZE (1024)
-#define MEMORY_SIZE (1024*70)
+#define MEMORY_SIZE (1024*48)
 #define RD_BUF_SIZE (BUF_SIZE)
 
-static uint8_t memory_pool[MEMORY_SIZE];
+//static uint8_t memory_pool[MEMORY_SIZE];
+static uint8_t memory_pool[MEMORY_SIZE]
+    __attribute__((aligned(4)));
 
 //static FILE *g_spiffs_fp = NULL;  
 static char g_current_filename[32] = ""; // 現在書き込み中のファイル名
@@ -190,6 +211,291 @@ uint8_t init_spiffs(){
   return 1;
 }
 
+
+int mrbc_output_write(
+  int fd,
+  const void *buf,
+  int nbytes
+)
+{
+  if (buf == NULL || nbytes <= 0) {
+    return 0;
+  }
+
+#if defined(CONFIG_MRBWRITE_TRANSPORT_BLE) && \
+    CONFIG_MRBWRITE_TRANSPORT_BLE
+
+  /*
+   * BLE未接続ならUARTへ出す。
+   *
+   * BLE接続前の起動ログや例外を
+   * 完全に失わないためのフォールバック。
+   */
+  if (g_ble_conn == BLE_HS_CONN_HANDLE_NONE) {
+    return write(
+      fd,
+      buf,
+      nbytes
+    );
+  }
+
+  const uint8_t *data =
+    (const uint8_t *)buf;
+
+  int offset = 0;
+
+  /*
+   * 標準ATT MTUは23バイト。
+   * Notificationのデータ部分は20バイト。
+   */
+  while (offset < nbytes) {
+    int length = nbytes - offset;
+
+    if (length > 20) {
+      length = 20;
+    }
+
+    struct os_mbuf *om =
+      ble_hs_mbuf_from_flat(
+        data + offset,
+        length
+      );
+
+    if (om == NULL) {
+      /*
+       * BLE送信できなかった残りは
+       * UARTへフォールバックする。
+       */
+      write(
+        fd,
+        data + offset,
+        nbytes - offset
+      );
+
+      return nbytes;
+    }
+
+    int rc = ble_gatts_notify_custom(
+      g_ble_conn,
+      g_ble_tx_handle,
+      om
+    );
+
+    if (rc != 0) {
+      /*
+       * Notificationが詰まった場合も
+       * 残りをUARTへ出す。
+       */
+      write(
+        fd,
+        data + offset,
+        nbytes - offset
+      );
+
+      return nbytes;
+    }
+
+    offset += length;
+  }
+
+  return nbytes;
+
+#else
+
+  /*
+   * USB/UART版は従来の出力。
+   */
+  return write(
+    fd,
+    buf,
+    nbytes
+  );
+
+#endif
+}
+
+#if defined(CONFIG_MRBWRITE_TRANSPORT_BLE) && CONFIG_MRBWRITE_TRANSPORT_BLE
+#define BLE_RX_STREAM_SIZE 4096
+static StreamBufferHandle_t g_ble_rx_stream;
+static uint8_t g_ble_own_addr_type;
+static uint16_t g_ble_conn = BLE_HS_CONN_HANDLE_NONE;
+static uint16_t g_ble_tx_handle;
+static const ble_uuid128_t g_ble_svc_uuid = BLE_UUID128_INIT(0x9e,0xca,0xdc,0x24,0x0e,0xe5,0xa9,0xe0,0x93,0xf3,0xa3,0xb5,0x01,0x00,0x40,0x7e);
+static const ble_uuid128_t g_ble_rx_uuid  = BLE_UUID128_INIT(0x9e,0xca,0xdc,0x24,0x0e,0xe5,0xa9,0xe0,0x93,0xf3,0xa3,0xb5,0x02,0x00,0x40,0x7e);
+static const ble_uuid128_t g_ble_tx_uuid  = BLE_UUID128_INIT(0x9e,0xca,0xdc,0x24,0x0e,0xe5,0xa9,0xe0,0x93,0xf3,0xa3,0xb5,0x03,0x00,0x40,0x7e);
+
+static int ble_rx_access(uint16_t ch, uint16_t ah, struct ble_gatt_access_ctxt *ctxt, void *arg) {
+  uint16_t total = OS_MBUF_PKTLEN(ctxt->om), off = 0;
+  uint8_t tmp[256];
+  while (off < total) {
+    uint16_t n = (total-off > sizeof(tmp)) ? sizeof(tmp) : total-off;
+    if (os_mbuf_copydata(ctxt->om, off, n, tmp) != 0) return BLE_ATT_ERR_UNLIKELY;
+    if (xStreamBufferSend(g_ble_rx_stream, tmp, n, pdMS_TO_TICKS(100)) != n) return BLE_ATT_ERR_INSUFFICIENT_RES;
+    off += n;
+  }
+  return 0;
+}
+
+static int ble_tx_access(
+    uint16_t conn_handle,
+    uint16_t attr_handle,
+    struct ble_gatt_access_ctxt *ctxt,
+    void *arg
+)
+{
+    /*
+     * ESP32からChromeBookへのNotification専用。
+     * ChromeBook側からREADやWRITEは行わない。
+     */
+    return 0;
+}
+
+static const struct ble_gatt_svc_def g_ble_svcs[] = {{
+  .type=BLE_GATT_SVC_TYPE_PRIMARY, .uuid=&g_ble_svc_uuid.u,
+  .characteristics=(struct ble_gatt_chr_def[]){
+    {.uuid=&g_ble_rx_uuid.u,.access_cb=ble_rx_access,.flags=BLE_GATT_CHR_F_WRITE|BLE_GATT_CHR_F_WRITE_NO_RSP},
+    {.uuid=&g_ble_tx_uuid.u,.access_cb = ble_tx_access,.val_handle=&g_ble_tx_handle,.flags=BLE_GATT_CHR_F_NOTIFY}, {0}}
+},{0}};
+static void ble_advertise(void);
+static int ble_gap_event(struct ble_gap_event *e, void *arg) {
+  switch (e->type) {
+    case BLE_GAP_EVENT_CONNECT:
+      if (e->connect.status == 0) g_ble_conn=e->connect.conn_handle; else ble_advertise();
+      break;
+    case BLE_GAP_EVENT_DISCONNECT: g_ble_conn=BLE_HS_CONN_HANDLE_NONE; ble_advertise(); break;
+    default: break;
+  }
+  return 0;
+}
+
+static void ble_advertise(void)
+{
+    int rc;
+
+    /*
+     * Advertising packet
+     *
+     * Web Bluetooth APIがService UUIDで
+     * Kani-Boardを絞り込めるようにする。
+     */
+    struct ble_hs_adv_fields adv_fields = {0};
+
+    adv_fields.flags =
+        BLE_HS_ADV_F_DISC_GEN |
+        BLE_HS_ADV_F_BREDR_UNSUP;
+
+    adv_fields.uuids128 =
+        (ble_uuid128_t *)&g_ble_svc_uuid;
+
+    adv_fields.num_uuids128 = 1;
+    adv_fields.uuids128_is_complete = 1;
+
+    rc = ble_gap_adv_set_fields(&adv_fields);
+
+    if (rc != 0) {
+        ESP_LOGE(
+            TAG,
+            "ble_gap_adv_set_fields failed: rc=%d",
+            rc
+        );
+        return;
+    }
+
+    /*
+     * Scan response packet
+     *
+     * Chromeのデバイス選択画面に表示する名前を
+     * Advertising packetとは別に格納する。
+     */
+    struct ble_hs_adv_fields rsp_fields = {0};
+
+    const char *name =
+        ble_svc_gap_device_name();
+
+    rsp_fields.name = (uint8_t *)name;
+    rsp_fields.name_len = strlen(name);
+    rsp_fields.name_is_complete = 1;
+
+    rc = ble_gap_adv_rsp_set_fields(&rsp_fields);
+
+    if (rc != 0) {
+        ESP_LOGE(
+            TAG,
+            "ble_gap_adv_rsp_set_fields failed: rc=%d",
+            rc
+        );
+        return;
+    }
+
+    /*
+     * Advertising parameters
+     */
+    struct ble_gap_adv_params adv_params = {0};
+
+    adv_params.conn_mode =
+        BLE_GAP_CONN_MODE_UND;
+
+    adv_params.disc_mode =
+        BLE_GAP_DISC_MODE_GEN;
+
+    rc = ble_gap_adv_start(
+        g_ble_own_addr_type,
+        NULL,
+        BLE_HS_FOREVER,
+        &adv_params,
+        ble_gap_event,
+        NULL
+    );
+
+    if (rc != 0) {
+        ESP_LOGE(
+            TAG,
+            "ble_gap_adv_start failed: rc=%d",
+            rc
+        );
+        return;
+    }
+
+    ESP_LOGI(
+        TAG,
+        "BLE advertising started: %s",
+        name
+    );
+}
+
+static void ble_on_sync(void) { ble_hs_id_infer_auto(0,&g_ble_own_addr_type); ble_advertise(); }
+static void ble_host_task(void *p) { nimble_port_run(); nimble_port_freertos_deinit(); }
+static void init_ble_transport(void) {
+  esp_err_t r=nvs_flash_init();
+  if (r==ESP_ERR_NVS_NO_FREE_PAGES || r==ESP_ERR_NVS_NEW_VERSION_FOUND) { ESP_ERROR_CHECK(nvs_flash_erase()); ESP_ERROR_CHECK(nvs_flash_init()); }
+  g_ble_rx_stream=xStreamBufferCreate(BLE_RX_STREAM_SIZE,1); assert(g_ble_rx_stream);
+  ESP_ERROR_CHECK(nimble_port_init()); ble_svc_gap_init();
+  ble_svc_gap_device_name_set(CONFIG_MRBWRITE_BLE_DEVICE_NAME);
+  ESP_ERROR_CHECK(ble_gatts_count_cfg(g_ble_svcs)); ESP_ERROR_CHECK(ble_gatts_add_svcs(g_ble_svcs));
+  ble_hs_cfg.sync_cb=ble_on_sync; nimble_port_freertos_init(ble_host_task);
+}
+static int transport_read(uint8_t *data,size_t maxlen,TickType_t wait) {
+  return (int)xStreamBufferReceive(g_ble_rx_stream,data,maxlen,wait);
+}
+static int app_printf(const char *fmt,...) {
+  char out[512]; va_list ap; va_start(ap,fmt); int n=vsnprintf(out,sizeof(out),fmt,ap); va_end(ap);
+  if (g_ble_conn != BLE_HS_CONN_HANDLE_NONE) {
+    size_t len=(n<0)?0:((size_t)n<sizeof(out)?(size_t)n:sizeof(out)-1);
+    for(size_t off=0;off<len;) { size_t part=(len-off>180)?180:len-off; struct os_mbuf *om=ble_hs_mbuf_from_flat(out+off,part); if(!om) break; if(ble_gatts_notify_custom(g_ble_conn,g_ble_tx_handle,om)!=0) break; off+=part; }
+  }
+  return n;
+}
+#define printf app_printf
+#else
+static int transport_read(uint8_t *data,size_t maxlen,TickType_t wait) {
+#if USE_USB_SERIAL_JTAG
+  return usb_serial_jtag_read_bytes(data,maxlen,wait);
+#else
+  return uart_read_bytes(uart_num,data,maxlen,wait);
+#endif
+}
+#endif
+
 /*
  * 送信出力の完了処理
  */
@@ -198,7 +504,7 @@ static void serial_output_flush(void)
   // printf() の標準出力バッファをドライバへ渡す
   fflush(stdout);
 
-#if !USE_USB_SERIAL_JTAG
+#if !defined(CONFIG_MRBWRITE_TRANSPORT_BLE) && !USE_USB_SERIAL_JTAG
   // UARTの場合だけ、実際の送信完了を待つ
   uart_wait_tx_done(uart_num, pdMS_TO_TICKS(100));
 #endif
@@ -563,8 +869,10 @@ void app_main(void) {
   init_spiffs();
   vTaskDelay(100 / portTICK_PERIOD_MS);
 
-  //シリアル通信
-#if USE_USB_SERIAL_JTAG  
+  // 書き込み用通信路
+#if defined(CONFIG_MRBWRITE_TRANSPORT_BLE) && CONFIG_MRBWRITE_TRANSPORT_BLE
+  init_ble_transport();
+#elif USE_USB_SERIAL_JTAG
   init_usbserial();
 #else
   init_uart();
@@ -578,14 +886,10 @@ void app_main(void) {
   printf("\nKani-Board, Please push Enter key to mrbwrite mode\n\n");
   serial_output_flush();
  
-  while (wait < 20) {
+  while (wait < 200) {
     
     // バイト数の取得. 100ms の待ち
-#if USE_USB_SERIAL_JTAG  
-    int len = usb_serial_jtag_read_bytes(data, BUF_SIZE, 100 / portTICK_PERIOD_MS);
-#else
-    int len = uart_read_bytes(uart_num,  data, BUF_SIZE, 100 / portTICK_PERIOD_MS);
-#endif
+    int len = transport_read(data, BUF_SIZE, pdMS_TO_TICKS(100));
     
     // 取得したバイト数が正か否かで場合分け
     if (len > 0) {
@@ -622,8 +926,9 @@ void app_main(void) {
         buffer[idx] = '\0'; // 末尾にヌル文字を入れる
         
         if (flag_cmd_mode == 0) {
-          // Enter (CR+LF) が打鍵された場合はフラグを立てる
-          if (len >= 2 && data[0] == 0x0d && data[1] == 0x0a) {         
+          // Enter (CR/LF) が送られた場合はフラグを立てる
+          if ((len >= 2 && data[0] == 0x0d && data[1] == 0x0a) ||
+              (len >= 1 && (data[0] == 0x0d || data[0] == 0x0a))) {         
             printf("+OK mruby/c \n\n");
 	    serial_output_flush();
 	    flag_cmd_mode = 1;
@@ -680,6 +985,13 @@ void app_main(void) {
   //***************************************
   // Ruby 
   //***************************************
+  ESP_LOGI(
+    TAG,
+    "mruby/c memory pool: addr=%p, size=%u, alignment=%u",
+    memory_pool,
+    (unsigned)MEMORY_SIZE,
+    (unsigned)((uintptr_t)memory_pool & 0x03)
+  );
   mrbc_init(memory_pool, MEMORY_SIZE);
 
   ESP_LOGI(TAG, "start GPIO (C)\n");

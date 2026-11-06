@@ -43,5 +43,18 @@ menu "mrubyc-esp32 Configuration"
     bool "USE ESP-EYE CAMERA (idf.py add-dependency \"espressif/esp32-camera\")"
     default n
 
+  choice MRBWRITE_TRANSPORT
+    prompt "SPIFFS writer transport"
+    default MRBWRITE_TRANSPORT_WIRED
+  config MRBWRITE_TRANSPORT_WIRED
+    bool "USB Serial/JTAG or UART"
+  config MRBWRITE_TRANSPORT_BLE
+    bool "Bluetooth LE (ChromeOS Web Bluetooth)"
+  endchoice
+  config MRBWRITE_BLE_DEVICE_NAME
+    string "BLE device name"
+    default "Kani-Board-BLE"
+    depends on MRBWRITE_TRANSPORT_BLE
+    
 endmenu
 

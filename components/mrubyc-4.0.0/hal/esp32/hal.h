@@ -87,10 +87,17 @@ void mrbc_hal_abort(const char *s);
   @param  buf   pointer of buffer.
   @param  nbytes        output byte length.
 */
+
+int mrbc_output_write(int fd, const void *buf, int nbytes);
 inline static int mrbc_hal_write(int fd, const void *buf, int nbytes)
 {
-  return write(fd, buf, nbytes);
+  return mrbc_output_write(fd, buf, nbytes);
 }
+
+//inline static int mrbc_hal_write(int fd, const void *buf, int nbytes)
+//{
+//  return write(fd, buf, nbytes);
+//}
 
 //================================================================
 /*!@brief
