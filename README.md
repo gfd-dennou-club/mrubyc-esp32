@@ -41,6 +41,7 @@ idf.py flash spiffs monitor
 idf.py menuconfig
 
    (Top) > Component config > ESP-STDIO
+       Channel for console output (Custom UART)
        (17) UART TX on GPIO<num>
        (16) UART RX on GPIO<num>
 ```
