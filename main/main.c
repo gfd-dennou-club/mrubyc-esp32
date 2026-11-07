@@ -211,109 +211,6 @@ uint8_t init_spiffs(){
   return 1;
 }
 
-
-int mrbc_output_write(
-  int fd,
-  const void *buf,
-  int nbytes
-)
-{
-  if (buf == NULL || nbytes <= 0) {
-    return 0;
-  }
-
-#if defined(CONFIG_MRBWRITE_TRANSPORT_BLE) && \
-    CONFIG_MRBWRITE_TRANSPORT_BLE
-
-  /*
-   * BLE未接続ならUARTへ出す。
-   *
-   * BLE接続前の起動ログや例外を
-   * 完全に失わないためのフォールバック。
-   */
-  if (g_ble_conn == BLE_HS_CONN_HANDLE_NONE) {
-    return write(
-      fd,
-      buf,
-      nbytes
-    );
-  }
-
-  const uint8_t *data =
-    (const uint8_t *)buf;
-
-  int offset = 0;
-
-  /*
-   * 標準ATT MTUは23バイト。
-   * Notificationのデータ部分は20バイト。
-   */
-  while (offset < nbytes) {
-    int length = nbytes - offset;
-
-    if (length > 20) {
-      length = 20;
-    }
-
-    struct os_mbuf *om =
-      ble_hs_mbuf_from_flat(
-        data + offset,
-        length
-      );
-
-    if (om == NULL) {
-      /*
-       * BLE送信できなかった残りは
-       * UARTへフォールバックする。
-       */
-      write(
-        fd,
-        data + offset,
-        nbytes - offset
-      );
-
-      return nbytes;
-    }
-
-    int rc = ble_gatts_notify_custom(
-      g_ble_conn,
-      g_ble_tx_handle,
-      om
-    );
-
-    if (rc != 0) {
-      /*
-       * Notificationが詰まった場合も
-       * 残りをUARTへ出す。
-       */
-      write(
-        fd,
-        data + offset,
-        nbytes - offset
-      );
-
-      return nbytes;
-    }
-
-    offset += length;
-  }
-
-  return nbytes;
-
-#else
-
-  /*
-   * USB/UART版は従来の出力。
-   */
-  return write(
-    fd,
-    buf,
-    nbytes
-  );
-
-#endif
-}
-
 #if defined(CONFIG_MRBWRITE_TRANSPORT_BLE) && CONFIG_MRBWRITE_TRANSPORT_BLE
 #define BLE_RX_STREAM_SIZE 4096
 static StreamBufferHandle_t g_ble_rx_stream;
@@ -495,6 +392,110 @@ static int transport_read(uint8_t *data,size_t maxlen,TickType_t wait) {
 #endif
 }
 #endif
+
+
+int mrbc_output_write(
+  int fd,
+  const void *buf,
+  int nbytes
+)
+{
+  if (buf == NULL || nbytes <= 0) {
+    return 0;
+  }
+
+#if defined(CONFIG_MRBWRITE_TRANSPORT_BLE) && \
+    CONFIG_MRBWRITE_TRANSPORT_BLE
+
+  /*
+   * BLE未接続ならUARTへ出す。
+   *
+   * BLE接続前の起動ログや例外を
+   * 完全に失わないためのフォールバック。
+   */
+  if (g_ble_conn == BLE_HS_CONN_HANDLE_NONE) {
+    return write(
+      fd,
+      buf,
+      nbytes
+    );
+  }
+
+  const uint8_t *data =
+    (const uint8_t *)buf;
+
+  int offset = 0;
+
+  /*
+   * 標準ATT MTUは23バイト。
+   * Notificationのデータ部分は20バイト。
+   */
+  while (offset < nbytes) {
+    int length = nbytes - offset;
+
+    if (length > 20) {
+      length = 20;
+    }
+
+    struct os_mbuf *om =
+      ble_hs_mbuf_from_flat(
+        data + offset,
+        length
+      );
+
+    if (om == NULL) {
+      /*
+       * BLE送信できなかった残りは
+       * UARTへフォールバックする。
+       */
+      write(
+        fd,
+        data + offset,
+        nbytes - offset
+      );
+
+      return nbytes;
+    }
+
+    int rc = ble_gatts_notify_custom(
+      g_ble_conn,
+      g_ble_tx_handle,
+      om
+    );
+
+    if (rc != 0) {
+      /*
+       * Notificationが詰まった場合も
+       * 残りをUARTへ出す。
+       */
+      write(
+        fd,
+        data + offset,
+        nbytes - offset
+      );
+
+      return nbytes;
+    }
+
+    offset += length;
+  }
+
+  return nbytes;
+
+#else
+
+  /*
+   * USB/UART版は従来の出力。
+   */
+  return write(
+    fd,
+    buf,
+    nbytes
+  );
+
+#endif
+}
+
 
 /*
  * 送信出力の完了処理
